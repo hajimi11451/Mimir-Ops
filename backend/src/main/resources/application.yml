@@ -14,3 +14,9 @@ mybatis-plus:
   global-config:
     db-config:
       id-type: auto
+
+qianfan:
+  v2:
+    base-url: https://qianfan.baidubce.com/v2
+    token: bce-v3/ALTAK-eETdXwqbr7yikyNnKRwyL/b6323d00fc89174f567a619203646c5dbd10af21
+    model-name: qianfan-lightning-128b-a19b-slim
