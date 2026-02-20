@@ -64,13 +64,14 @@ public class AiUtils {
         }
 
         systemPrompt += "请严格遵守以下输出规则：\n" +
-                "1. 如果发现异常或错误，请返回一个标准的 JSON 对象，包含以下字段内容，具体内容(除名称外)用中文回答：\n" +
+                "1. 如果发现异常或错误，请返回一个标准的 JSON 对象，包含以下字段（除名称外均用中文）：\n" +
                 "   - component: 当前组件名称\n" +
-                "   - errorSummary: 问题摘要\n" +
-                "   - analysisResult: AI分析结果（包含详细分析及建议处理方式）\n" +
+                "   - errorSummary: 问题摘要（一句话概括）\n" +
+                "   - analysisResult: 遇到的问题（仅描述现象与原因，不要写建议；可多条分点）\n" +
+                "   - suggestedActions: 建议处理方式（仅写解决步骤或建议，与 analysisResult 分开）\n" +
                 "   - riskLevel: 风险等级 (如：高、中、低、无)\n" +
-                "2. 如果日志无异常，按照这个格式继续回答，在 errorSummary、analysisResult、riskLevel 回答\"无\"，。\n" +
-                "3. 请直接返回结果，不要包含 Markdown 格式标记 (如 ```json ... ```)。";
+                "2. 如果日志无异常，上述字段中 errorSummary、analysisResult、suggestedActions 填\"无\"，riskLevel 填\"无\"。\n" +
+                "3. 直接返回 JSON，不要包含 Markdown 标记 (如 ```json)。";
 
         // 3. 调用 API
         return callQianfanApi(systemPrompt, logContent);
@@ -95,6 +96,21 @@ public class AiUtils {
 
         // 3. 调用千帆/OpenAI 兼容 API
         return callQianfanApi(systemPrompt, userQuery);
+    }
+
+    /**
+     * 让 AI 生成查找日志的 Linux 命令
+     * @param component 组件名称
+     * @param osType 操作系统类型
+     * @return Linux 命令字符串
+     */
+    public String generateLogCommand(String component, String osType) {
+        String systemPrompt = "你是一个 Linux 运维专家。根据组件名和操作系统，生成一条获取最近 50 行错误日志的命令。只返回命令字符串，不要Markdown，不要解释。优先使用标准路径。";
+        String userPrompt = String.format("OS: %s, Component: %s", osType, component);
+        // 调用现有的 callQianfanApi 方法
+        String cmd = callQianfanApi(systemPrompt, userPrompt);
+        // 简单清洗，防止 AI 返回 ```bash
+        return cmd.replace("```bash", "").replace("```", "").trim();
     }
 
     /**

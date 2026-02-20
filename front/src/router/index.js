@@ -1,23 +1,59 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import Home from '../components/Home.vue'
-import Info from '../components/ShowInfo.vue'
-
-const routes = [
-  {
-    path: '/',
-    name: 'Home',
-    component: Home
-  },
-  {
-    path: '/Info',
-    name: 'Info',
-    component: Info
-  }
-]
+import { createRouter, createWebHashHistory } from 'vue-router'
+import Login from '../views/Login.vue'
+import Register from '../views/Register.vue'
+import MainLayout from '../layouts/MainLayout.vue'
+import Dashboard from '../views/Dashboard.vue'
+import DiagnosisView from '../views/DiagnosisView.vue'
+import InfoListView from '../views/InfoListView.vue'
 
 const router = createRouter({
-  history: createWebHistory(),
-  routes
+  history: createWebHashHistory(import.meta.env.BASE_URL),
+  routes: [
+    {
+      path: '/login',
+      name: 'login',
+      component: Login,
+    },
+    {
+      path: '/',
+      redirect: '/login',
+    },
+    {
+      path: '/register',
+      name: 'register',
+      component: Register,
+    },
+    {
+      path: '/',
+      component: MainLayout,
+      children: [
+        {
+          path: '/dashboard',
+          name: 'dashboard',
+          component: Dashboard,
+          meta: {
+            title: '总览 Dashboard',
+          },
+        },
+        {
+          path: '/diagnosis',
+          name: 'diagnosis',
+          component: DiagnosisView,
+          meta: {
+            title: '监控配置',
+          },
+        },
+        {
+          path: '/info-list',
+          name: 'info-list',
+          component: InfoListView,
+          meta: {
+            title: '全部信息与告警',
+          },
+        },
+      ],
+    },
+  ],
 })
 
 export default router

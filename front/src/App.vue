@@ -1,11 +1,16 @@
+<script setup>
+import { RouterView } from 'vue-router'
+</script>
+
 <template>
-  <router-view />
+  <RouterView />
 </template>
 
 <style>
-body {
+/* Reset some basic styles if necessary, though Tailwind handles most */
+html, body {
   margin: 0;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  height: 100%;
 }
 </style>

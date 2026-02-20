@@ -18,5 +18,9 @@ mybatis-plus:
 qianfan:
   v2:
     base-url: https://qianfan.baidubce.com/v2
-    token: bce-v3/ALTAK-eETdXwqbr7yikyNnKRwyL/b6323d00fc89174f567a619203646c5dbd10af21
-    model-name: qianfan-lightning-128b-a19b-slim
+    token: bce-v3/ALTAK-kmup5yMEjURtkjmQI9Dg3/bb0fa101e24e9d654618ee21038db771bd86c00b
+    model-name: glm-4.7
+
+monitor:
+  schedule:
+    fixed-rate: 120000 # 监控采集频率，单位毫秒，默认 60000 (1分钟)

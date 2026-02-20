@@ -25,8 +25,11 @@ public class InfoServiceImpl implements InfoService {
     @Override
     public List<Information> selectAllInfo(Map<String, String> request){
         String userId = request.get("userId");
-        QueryWrapper queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("userId",userId);
+        QueryWrapper<Information> queryWrapper = new QueryWrapper<>();
+        if (userId != null && !userId.isEmpty()) {
+            queryWrapper.eq("userId", userId);
+        }
+        // 如果没有 userId，查询所有（或者查询系统日志，视需求而定，这里暂定查询所有）
         List<Information> response = informationMapper.selectList(queryWrapper);
         if (response.isEmpty()){
             return null;
@@ -57,8 +60,10 @@ public class InfoServiceImpl implements InfoService {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        QueryWrapper queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("userId",userId);
+        QueryWrapper<Information> queryWrapper = new QueryWrapper<>();
+        if (userId != null && !userId.isEmpty()) {
+            queryWrapper.eq("userId", userId);
+        }
         queryWrapper.eq("serverIp",serverIp);
         queryWrapper.eq("component",component);
         queryWrapper.eq("errorSummary",errorSummary);
@@ -109,7 +114,7 @@ public class InfoServiceImpl implements InfoService {
     @Override
     public List<UserProcess> selectAllProcess(Map<String, String> request){
         String userId = request.get("userId");
-        QueryWrapper queryWrapper = new QueryWrapper();
+        QueryWrapper<UserProcess> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("userId",userId);
         List<UserProcess> response = userProcessMapper.selectList(queryWrapper);
         if (response.isEmpty()){
@@ -138,7 +143,7 @@ public class InfoServiceImpl implements InfoService {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        QueryWrapper queryWrapper =new QueryWrapper<>();
+        QueryWrapper<UserProcess> queryWrapper =new QueryWrapper<>();
         queryWrapper.eq("userId",userId);
         queryWrapper.eq("serverIp",serverIp);
         queryWrapper.eq("component",component);

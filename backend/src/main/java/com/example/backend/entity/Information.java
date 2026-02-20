@@ -21,9 +21,11 @@ public class Information {
     private String component;
     //问题摘要
     private String errorSummary;
-    //AI分析结果（建议处理方法）
+    // AI 分析结果（遇到的问题描述）
     private String analysisResult;
-    //日志原始内容
+    // 建议处理方式（与问题分开展示）
+    private String suggestedActions;
+    // 日志原始内容
     private String rawLog;
     //风险等级
     private String riskLevel;

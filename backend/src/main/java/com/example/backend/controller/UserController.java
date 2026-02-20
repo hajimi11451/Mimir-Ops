@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -23,12 +24,15 @@ public class UserController {
     public ResponseEntity<?> register(@RequestBody Map<String, String> request) {
 
         String res =userService.register(request);
+        Map<String, Object> response = new HashMap<>();
         if (res.equals("注册成功")){
-            //返回注册 成功的response
-            return ResponseEntity.ok(res);
+            response.put("code", 200);
+            response.put("msg", res);
+            return ResponseEntity.ok(response);
         }else {
-            //返回登录失败的response
-            return ResponseEntity.status(401).body(res);
+            response.put("code", 401);
+            response.put("msg", res);
+            return ResponseEntity.status(401).body(response);
         }
 
     }
@@ -38,12 +42,15 @@ public class UserController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String,String> request) {
         String res=userService.login(request);
+        Map<String, Object> response = new HashMap<>();
         if (res.equals("登录成功")){
-            //返回登录成功的response
-            return ResponseEntity.ok(res);
+            response.put("code", 200);
+            response.put("msg", res);
+            return ResponseEntity.ok(response);
         }else {
-            //返回登录失败的response
-            return ResponseEntity.status(401).body(res);
+            response.put("code", 401);
+            response.put("msg", res);
+            return ResponseEntity.status(401).body(response);
         }
     }
 

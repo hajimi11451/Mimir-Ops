@@ -1,35 +1,25 @@
-@import './base.css';
+@import "tailwindcss";
 
-#app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  font-weight: normal;
+@theme {
+  --color-brand: #4299e1;
+  --color-brand-hover: #3182ce;
+  --color-brand-dark: #1a2530;
+  --color-brand-light: #90cdf4;
+  
+  --color-sidebar: #2d3748;
+  
+  --color-ui-bg: #f7fafc;
+  --color-ui-card: #ffffff;
+  --color-ui-border: #e2e8f0;
+  --color-ui-text: #2d3748;
+  --color-ui-subtext: #718096;
+  --color-ui-success: #48bb78;
+  --color-ui-warning: #ed8936;
+  --color-ui-error: #f56565;
+
+  --font-sans: "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
 }
 
-a,
-.green {
-  text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
-  transition: 0.4s;
-  padding: 3px;
-}
-
-@media (hover: hover) {
-  a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
-  }
-}
-
-@media (min-width: 1024px) {
-  body {
-    display: flex;
-    place-items: center;
-  }
-
-  #app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 0 2rem;
-  }
-}
+/* 7. 动效与交互反馈 */
+.btn-hover:active { transform: scale(0.98); }
+.input-focus:focus { box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1); }
