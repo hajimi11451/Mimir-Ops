@@ -86,8 +86,8 @@ public class DiagnosisController {
      * 6. 获取监控配置列表
      */
     @GetMapping("/config/list")
-    public ResponseEntity<?> listConfigs() {
-        List<com.example.backend.entity.ComponentConfig> list = diagnosisService.listConfigs();
+    public ResponseEntity<?> listConfigs(@RequestParam(required = false) String username) {
+        List<com.example.backend.entity.ComponentConfig> list = diagnosisService.listConfigs(username);
         
         Map<String, Object> response = new HashMap<>();
         response.put("code", 200);
@@ -100,9 +100,12 @@ public class DiagnosisController {
      * 7. 删除监控配置
      */
     @PostMapping("/config/delete")
-    public ResponseEntity<?> deleteConfig(@RequestBody Map<String, Long> request) {
-        Long id = request.get("id");
-        diagnosisService.deleteConfig(id);
+    public ResponseEntity<?> deleteConfig(@RequestBody Map<String, Object> request) {
+        Long id = request.get("id") == null ? null : Long.valueOf(String.valueOf(request.get("id")));
+        String username = request.get("username") == null ? null : String.valueOf(request.get("username"));
+        if (id != null) {
+            diagnosisService.deleteConfig(id, username);
+        }
         
         Map<String, Object> response = new HashMap<>();
         response.put("code", 200);

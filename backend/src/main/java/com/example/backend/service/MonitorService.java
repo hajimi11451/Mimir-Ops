@@ -3,7 +3,9 @@ package com.example.backend.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.example.backend.dto.MetricDTO;
 import com.example.backend.entity.ComponentConfig;
+import com.example.backend.entity.UserLogin;
 import com.example.backend.mapper.ComponentConfigMapper;
+import com.example.backend.mapper.UserLoginMapper;
 import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
@@ -19,13 +21,15 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.stream.Collectors;
 
 @Service
 public class MonitorService {
 
     @Autowired
     private ComponentConfigMapper componentConfigMapper;
+
+    @Autowired
+    private UserLoginMapper userLoginMapper;
 
     // IP -> History List
     private final Map<String, List<MetricDTO>> historyMap = new ConcurrentHashMap<>();
@@ -179,5 +183,30 @@ public class MonitorService {
      */
     public List<String> getMonitoredIps() {
         return new ArrayList<>(currentInfoMap.keySet());
+    }
+
+    public List<String> getMonitoredIpsByUsername(String username) {
+        if (username == null || username.isBlank()) {
+            return Collections.emptyList();
+        }
+        UserLogin user = userLoginMapper.selectOne(
+                new QueryWrapper<UserLogin>().eq("username", username)
+        );
+        if (user == null) {
+            return Collections.emptyList();
+        }
+
+        List<ComponentConfig> ownedConfigs = componentConfigMapper.selectList(
+                new QueryWrapper<ComponentConfig>()
+                        .select("DISTINCT server_ip")
+                        .eq("user_id", user.getId())
+        );
+        Set<String> ownedIps = new LinkedHashSet<>();
+        for (ComponentConfig cfg : ownedConfigs) {
+            if (cfg.getServerIp() != null && !cfg.getServerIp().isBlank()) {
+                ownedIps.add(cfg.getServerIp());
+            }
+        }
+        return new ArrayList<>(ownedIps);
     }
 }

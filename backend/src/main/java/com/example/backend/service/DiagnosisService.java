@@ -2,7 +2,9 @@ package com.example.backend.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.backend.entity.ComponentConfig;
+import com.example.backend.entity.UserLogin;
 import com.example.backend.mapper.ComponentConfigMapper;
+import com.example.backend.mapper.UserLoginMapper;
 import com.example.backend.utils.AiUtils;
 import com.example.backend.utils.SshUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +16,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -46,6 +49,9 @@ public class DiagnosisService {
     private ComponentConfigMapper componentConfigMapper;
 
     @Autowired
+    private UserLoginMapper userLoginMapper;
+
+    @Autowired
     private com.example.backend.mapper.InformationMapper informationMapper;
 
     @Autowired
@@ -53,6 +59,16 @@ public class DiagnosisService {
 
     @Autowired
     private SshUtils sshUtils;
+
+    private Long resolveUserIdFromAppUsername(String appUsername) {
+        if (!StringUtils.hasText(appUsername)) {
+            return null;
+        }
+        UserLogin user = userLoginMapper.selectOne(
+                new LambdaQueryWrapper<UserLogin>().eq(UserLogin::getUsername, appUsername)
+        );
+        return user == null ? null : user.getId();
+    }
 
     /**
      * 获取日志路径（Controller 入口）
@@ -123,7 +139,7 @@ public class DiagnosisService {
 
         // 5. 验证成功，持久化到数据库
         log.info("路径验证成功，更新数据库记录");
-        saveOrUpdateConfig(serverIp, component, configKey, guessedPath, username, password);
+        // addConfig 会按 userId 持久化，这里只返回路径，避免写入错误用户数据
         return guessedPath;
     }
 
@@ -179,8 +195,11 @@ public class DiagnosisService {
      * @throws RuntimeException 当SSH连接失败时抛出，包含错误信息
      */
     public void addConfig(ComponentConfig config) {
-        if (config.getUserId() == null) {
-            config.setUserId(DEFAULT_USER_ID);
+        Long resolvedUserId = resolveUserIdFromAppUsername(config.getAppUsername());
+        if (resolvedUserId != null) {
+            config.setUserId(resolvedUserId);
+        } else if (config.getUserId() == null) {
+            throw new RuntimeException("未识别登录用户，无法保存监控配置");
         }
 
         String serverIp = config.getServerIp();
@@ -282,11 +301,24 @@ public class DiagnosisService {
         }
     }
 
-    public java.util.List<ComponentConfig> listConfigs() {
-        return componentConfigMapper.selectList(null);
+    public List<ComponentConfig> listConfigs(String appUsername) {
+        Long userId = resolveUserIdFromAppUsername(appUsername);
+        if (userId == null) {
+            return java.util.Collections.emptyList();
+        }
+        return componentConfigMapper.selectList(new LambdaQueryWrapper<ComponentConfig>()
+                .eq(ComponentConfig::getUserId, userId));
     }
 
-    public void deleteConfig(Long id) {
+    public void deleteConfig(Long id, String appUsername) {
+        Long userId = resolveUserIdFromAppUsername(appUsername);
+        if (userId == null) {
+            return;
+        }
+        ComponentConfig cfg = componentConfigMapper.selectById(id);
+        if (cfg == null || cfg.getUserId() == null || !cfg.getUserId().equals(userId)) {
+            return;
+        }
         componentConfigMapper.deleteById(id);
     }
 

@@ -78,4 +78,14 @@ public class InfoConttroller {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/deleteAllInfo")
+    public ResponseEntity<?> deleteAllInfo(@RequestBody Map<String, String> request) {
+        int deleted = infoService.deleteAllInfo(request);
+        Map<String, Object> response = new HashMap<>();
+        response.put("code", 200);
+        response.put("msg", "删除成功");
+        response.put("data", deleted);
+        return ResponseEntity.ok(response);
+    }
+
 }

@@ -1,59 +1,69 @@
 import request from '../utils/request'
 
-/**
- * 查询所有信息
- */
-export function selectAllInfo() {
+function getCurrentUsername() {
+  try {
+    const raw = localStorage.getItem('user')
+    if (!raw) return ''
+    const user = JSON.parse(raw)
+    return user?.username || ''
+  } catch (e) {
+    return ''
+  }
+}
+
+export function selectAllInfo(username) {
   return request({
     url: '/info/selectAllInfo',
     method: 'post',
-    data: {}
+    data: { username: username || getCurrentUsername() }
   })
 }
 
-/**
- * 按条件查询信息
- * @param {Object} params { serverIp, component, riskLevel, time }
- */
 export function selectInfo(params) {
   return request({
     url: '/info/selectInfo',
     method: 'post',
-    data: params
+    data: {
+      ...(params || {}),
+      username: (params && params.username) || getCurrentUsername()
+    }
   })
 }
 
-/**
- * 存储用户处理记录
- * @param {Object} data { ... }
- */
 export function insertProcess(data) {
   return request({
     url: '/info/insertProcess',
     method: 'post',
-    data
+    data: {
+      ...(data || {}),
+      username: (data && data.username) || getCurrentUsername()
+    }
   })
 }
 
-/**
- * 查询所有处理记录
- */
-export function selectAllProcess() {
+export function selectAllProcess(username) {
   return request({
     url: '/info/selectAllProcess',
     method: 'post',
-    data: {}
+    data: { username: username || getCurrentUsername() }
   })
 }
 
-/**
- * 按条件查询处理记录
- * @param {Object} params
- */
 export function selectProcess(params) {
   return request({
     url: '/info/selectProcess',
     method: 'post',
-    data: params
+    data: {
+      ...(params || {}),
+      username: (params && params.username) || getCurrentUsername()
+    }
+  })
+}
+
+export function deleteAllInfo(username) {
+  return request({
+    url: '/info/deleteAllInfo',
+    method: 'post',
+    data: { username: username || getCurrentUsername() }
   })
 }

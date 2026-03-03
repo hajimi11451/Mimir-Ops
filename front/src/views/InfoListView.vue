@@ -1,10 +1,21 @@
 <template>
   <div>
     <div class="flex items-center justify-between mb-6">
-      <h2 class="text-xl font-bold text-ui-text">全部信息与告警</h2>
-      <span class="text-sm text-ui-subtext">
-        共 {{ total }} 条记录
-      </span>
+      <div class="flex items-center gap-3">
+        <h2 class="text-xl font-bold text-ui-text">全部信息与告警</h2>
+        <span class="text-sm text-ui-subtext">共 {{ total }} 条记录</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <el-button @click="goDashboard">退出并返回总览</el-button>
+        <el-button
+          type="danger"
+          :loading="clearing"
+          :disabled="loading || total === 0 || clearing"
+          @click="handleClearAll"
+        >
+          删除我的历史告警
+        </el-button>
+      </div>
     </div>
 
     <el-card
@@ -18,46 +29,23 @@
         stripe
         v-loading="loading"
       >
-        <!-- 时间：后端字段为 createdAt -->
-        <el-table-column
-          prop="createdAt"
-          label="时间"
-          min-width="180"
-        >
+        <el-table-column prop="createdAt" label="时间" min-width="180">
           <template #default="{ row }">
             {{ formatDate(row.createdAt) }}
           </template>
         </el-table-column>
 
-        <el-table-column
-          prop="serverIp"
-          label="服务器 IP"
-          min-width="140"
-        />
+        <el-table-column prop="serverIp" label="服务器 IP" min-width="140" />
+        <el-table-column prop="component" label="组件" min-width="120" />
 
-        <el-table-column
-          prop="component"
-          label="组件"
-          min-width="120"
-        />
-
-        <el-table-column
-          prop="riskLevel"
-          label="风险等级"
-          min-width="120"
-        >
+        <el-table-column prop="riskLevel" label="风险等级" min-width="120">
           <template #default="{ row }">
-            <el-tag
-              :type="getTagType(row.riskLevel)"
-              effect="light"
-              size="small"
-            >
+            <el-tag :type="getTagType(row.riskLevel)" effect="light" size="small">
               {{ row.riskLevel || 'Normal' }}
             </el-tag>
           </template>
         </el-table-column>
 
-        <!-- 问题摘要 -->
         <el-table-column
           prop="errorSummary"
           label="问题摘要"
@@ -68,7 +56,7 @@
             {{ row.errorSummary || '-' }}
           </template>
         </el-table-column>
-        <!-- 遇到的问题（与解决方法分开展示） -->
+
         <el-table-column
           prop="analysisResult"
           label="遇到的问题"
@@ -79,7 +67,7 @@
             {{ row.analysisResult || '-' }}
           </template>
         </el-table-column>
-        <!-- 建议处理方式 -->
+
         <el-table-column
           prop="suggestedActions"
           label="建议处理方式"
@@ -114,21 +102,20 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { selectAllInfo } from '../api/info'
+import { useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { selectAllInfo, deleteAllInfo } from '../api/info'
 
+const router = useRouter()
 const infoList = ref([])
 const loading = ref(false)
+const clearing = ref(false)
 const pageSize = 10
 const currentPage = ref(1)
 
-// 按时间排序：越新越靠前（createdAt 降序）
 const sortedList = computed(() => {
   const list = [...infoList.value]
-  return list.sort((a, b) => {
-    const timeA = parseDateToTime(a.createdAt)
-    const timeB = parseDateToTime(b.createdAt)
-    return timeB - timeA
-  })
+  return list.sort((a, b) => parseDateToTime(b.createdAt) - parseDateToTime(a.createdAt))
 })
 
 const total = computed(() => sortedList.value.length)
@@ -147,7 +134,7 @@ function parseDateToTime(value) {
   return new Date(value).getTime()
 }
 
-const formatDate = value => {
+function formatDate(value) {
   if (value == null) return ''
   if (Array.isArray(value)) {
     const [y, m, d, h, min, s] = value
@@ -156,7 +143,7 @@ const formatDate = value => {
   return new Date(value).toLocaleString()
 }
 
-const getTagType = level => {
+function getTagType(level) {
   const L = (level || '').toString()
   if (['High', 'Error', '高'].includes(L)) return 'danger'
   if (['Medium', 'Warning', '中'].includes(L)) return 'warning'
@@ -164,7 +151,7 @@ const getTagType = level => {
   return ''
 }
 
-const fetchAllInfo = async () => {
+async function fetchAllInfo() {
   loading.value = true
   try {
     const res = await selectAllInfo()
@@ -183,8 +170,39 @@ const fetchAllInfo = async () => {
   }
 }
 
+function goDashboard() {
+  router.push('/dashboard')
+}
+
+async function handleClearAll() {
+  try {
+    await ElMessageBox.confirm(
+      '该操作将删除当前登录用户的全部历史告警与信息记录，是否继续？',
+      '确认删除',
+      {
+        confirmButtonText: '确认',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+  } catch {
+    return
+  }
+
+  clearing.value = true
+  try {
+    const deleted = await deleteAllInfo()
+    ElMessage.success(`删除完成，共删除 ${deleted || 0} 条记录`)
+    await fetchAllInfo()
+  } catch (e) {
+    console.error('Failed to delete all info', e)
+    ElMessage.error(e?.message || '删除失败')
+  } finally {
+    clearing.value = false
+  }
+}
+
 onMounted(() => {
   fetchAllInfo()
 })
 </script>
-

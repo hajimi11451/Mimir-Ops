@@ -1,12 +1,16 @@
 import request from '../utils/request'
 
-/**
- * 1. 获取日志路径 (用于路径发现)
- * @param {string} serverIp 
- * @param {string} component 
- * @param {string} username (可选)
- * @param {string} password (可选)
- */
+function getCurrentUsername() {
+  try {
+    const raw = localStorage.getItem('user')
+    if (!raw) return ''
+    const user = JSON.parse(raw)
+    return user?.username || ''
+  } catch (e) {
+    return ''
+  }
+}
+
 export function getLogPath(serverIp, component, username, password) {
   return request({
     url: '/diagnosis/logPath',
@@ -15,10 +19,6 @@ export function getLogPath(serverIp, component, username, password) {
   })
 }
 
-/**
- * 2. 执行诊断 (核心功能)
- * @param {Object} data { serverIp, component, logPath }
- */
 export function executeDiagnosis(data) {
   return request({
     url: '/diagnosis/execute',
@@ -27,10 +27,6 @@ export function executeDiagnosis(data) {
   })
 }
 
-/**
- * 3. AI 智能问答 (RAG Chat)
- * @param {string} query 
- */
 export function chatWithAi(query) {
   return request({
     url: '/diagnosis/ai/chat',
@@ -39,10 +35,6 @@ export function chatWithAi(query) {
   })
 }
 
-/**
- * 4. 连接服务器 (资源管理)
- * @param {Object} serverInfo { ip, user, password, port }
- */
 export function connectServer(serverInfo) {
   return request({
     url: '/diagnosis/server/connect',
@@ -51,27 +43,34 @@ export function connectServer(serverInfo) {
   })
 }
 
-// --- 监控配置 ---
-
 export function addConfig(data) {
   return request({
     url: '/diagnosis/config/add',
     method: 'post',
-    data
+    data: {
+      ...(data || {}),
+      appUsername: (data && data.appUsername) || getCurrentUsername()
+    }
   })
 }
 
-export function listConfigs() {
+export function listConfigs(username) {
   return request({
     url: '/diagnosis/config/list',
-    method: 'get'
+    method: 'get',
+    params: {
+      username: username || getCurrentUsername()
+    }
   })
 }
 
-export function deleteConfig(id) {
+export function deleteConfig(id, username) {
   return request({
     url: '/diagnosis/config/delete',
     method: 'post',
-    data: { id }
+    data: {
+      id,
+      username: username || getCurrentUsername()
+    }
   })
 }

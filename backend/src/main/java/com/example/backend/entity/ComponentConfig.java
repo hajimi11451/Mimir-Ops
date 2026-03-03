@@ -1,6 +1,7 @@
 package com.example.backend.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -26,6 +27,12 @@ public class ComponentConfig {
      * 服务器登录密码
      */
     private String password;
+
+    /**
+     * 前端登录用户名（用于解析业务 userId），不落库
+     */
+    @TableField(exist = false)
+    private String appUsername;
     
     private String component;
     
