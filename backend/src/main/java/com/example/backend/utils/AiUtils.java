@@ -348,6 +348,7 @@ public class AiUtils {
                                                        List<Map<String, Object>> tools) {
         long start = System.currentTimeMillis();
         Map<String, Object> result = new HashMap<>();
+        // 默认返回值，避免空指针
         result.put("assistantContent", "");
         result.put("toolCalls", new ArrayList<Map<String, Object>>());
         Map<String, Object> defaultAssistantMessage = new HashMap<>();
@@ -355,31 +356,80 @@ public class AiUtils {
         defaultAssistantMessage.put("content", "");
         result.put("assistantMessage", defaultAssistantMessage);
 
+        int maxRetries = 2;
+        int attempt = 0;
+        Exception lastException = null;
+
+        while (attempt <= maxRetries) {
+            try {
+                return doCallQianfanApiWithTools(messages, tools, start);
+            } catch (Exception e) {
+                lastException = e;
+                attempt++;
+                log.warn("AI tools request failed (attempt {}/{}), elapsedMs={}, error={}", 
+                        attempt, maxRetries + 1, System.currentTimeMillis() - start, e.getMessage());
+                
+                if (attempt <= maxRetries) {
+                    try {
+                        Thread.sleep(1000L * attempt); // 指数退避
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            }
+        }
+
+        log.error("AI tools request failed after {} retries, elapsedMs={}", maxRetries + 1, System.currentTimeMillis() - start, lastException);
+        result.put("assistantContent", "AI 服务连接中断或超时，请稍后重试。");
+        return result;
+    }
+
+    private Map<String, Object> doCallQianfanApiWithTools(List<Map<String, Object>> messages,
+                                                          List<Map<String, Object>> tools,
+                                                          long start) {
+        String url = baseUrl;
+        if (!url.endsWith("/")) {
+            url += "/";
+        }
+        url += "chat/completions";
+
+        // 这里显式组装 JSON：model + messages + tools
+        Map<String, Object> requestBody = new LinkedHashMap<>();
+        requestBody.put("model", chatModelName);
+        requestBody.put("messages", messages == null ? Collections.emptyList() : messages);
+        requestBody.put("tools", tools == null ? Collections.emptyList() : tools);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Bearer " + token);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+
+        ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
+        
+        Map<String, Object> result = new HashMap<>();
+        // 默认返回值
+        result.put("assistantContent", "");
+        result.put("toolCalls", new ArrayList<Map<String, Object>>());
+        Map<String, Object> defaultAssistantMessage = new HashMap<>();
+        defaultAssistantMessage.put("role", "assistant");
+        defaultAssistantMessage.put("content", "");
+        result.put("assistantMessage", defaultAssistantMessage);
+
+        if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+            result.put("assistantContent", "AI 返回为空或状态异常。");
+            return result;
+        }
+
         try {
-            String url = baseUrl;
-            if (!url.endsWith("/")) {
-                url += "/";
-            }
-            url += "chat/completions";
-
-            // 这里显式组装 JSON：model + messages + tools
-            Map<String, Object> requestBody = new LinkedHashMap<>();
-            requestBody.put("model", chatModelName);
-            requestBody.put("messages", messages == null ? Collections.emptyList() : messages);
-            requestBody.put("tools", tools == null ? Collections.emptyList() : tools);
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("Authorization", "Bearer " + token);
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-
-            ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
-            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
-                result.put("assistantContent", "AI 返回为空或状态异常。");
-                return result;
-            }
-
             JsonNode root = objectMapper.readTree(response.getBody());
+            // 检查是否有错误字段
+            if (root.has("error")) {
+                String errorMsg = root.get("error").toString();
+                log.error("AI API returned error: {}", errorMsg);
+                throw new RuntimeException("AI API error: " + errorMsg);
+            }
+
             JsonNode choice = root.path("choices").isArray() && root.path("choices").size() > 0
                     ? root.path("choices").get(0) : null;
             if (choice == null) {
@@ -431,21 +481,15 @@ public class AiUtils {
             log.info("AI tools request success, model={}, toolCalls={}, elapsedMs={}",
                     chatModelName, toolCalls.size(), System.currentTimeMillis() - start);
             return result;
-        } catch (HttpClientErrorException e) {
-            log.error("AI tools request http error, status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString(), e);
-            result.put("assistantContent", "调用 AI 服务时发生异常。");
-            return result;
         } catch (Exception e) {
-            log.error("AI tools request exception, elapsedMs={}", System.currentTimeMillis() - start, e);
-            result.put("assistantContent", "AI 服务连接中断或超时，请稍后重试。");
-            return result;
+             throw new RuntimeException("Parse AI response failed", e);
         }
     }
 
     private RestTemplate buildRestTemplate() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(10000);
-        factory.setReadTimeout(Math.max(readTimeoutSeconds, 1) * 1000);
+        factory.setReadTimeout(Math.max(readTimeoutSeconds, 30) * 1000);
         return new RestTemplate(factory);
     }
 }

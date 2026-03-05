@@ -24,8 +24,11 @@ import java.util.regex.Pattern;
 @Service
 public class OpsAgentService {
 
-    private static final int MAX_AGENT_ROUNDS = 15;
+    private static final int DEFAULT_AGENT_ROUNDS = 15;
     private static final long SSH_TIMEOUT_SECONDS = 60;
+
+    // session -> stop flag
+    private final ConcurrentHashMap<String, java.util.concurrent.atomic.AtomicBoolean> stopFlags = new ConcurrentHashMap<>();
 
     private static final List<Pattern> HIGH_RISK_PATTERNS = Arrays.asList(
             Pattern.compile("(^|\\s)rm\\s+-rf\\s+/(\\s|$)", Pattern.CASE_INSENSITIVE),
@@ -49,12 +52,24 @@ public class OpsAgentService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    public void stopAgent(String sessionId) {
+        java.util.concurrent.atomic.AtomicBoolean flag = stopFlags.get(sessionId);
+        if (flag != null) {
+            flag.set(true);
+        }
+    }
+
+    private boolean shouldStop(String sessionId) {
+        java.util.concurrent.atomic.AtomicBoolean flag = stopFlags.get(sessionId);
+        return flag != null && flag.get();
+    }
+
     public String runAgentLoop(String userQuery,
                                String serverIp,
                                String username,
                                String password,
                                WebSocketSession session) {
-        return runAgentLoop(userQuery, serverIp, username, password, null, session);
+        return runAgentLoop(userQuery, serverIp, username, password, DEFAULT_AGENT_ROUNDS, null, session);
     }
 
     /**
@@ -65,28 +80,68 @@ public class OpsAgentService {
                                String serverIp,
                                String username,
                                String password,
+                               int maxRounds,
                                String approvedRiskCommand,
                                WebSocketSession session) {
+        return runAgentLoop(userQuery, serverIp, username, password, maxRounds, approvedRiskCommand, session, new ArrayList<>());
+    }
+
+    public String runAgentLoop(String userQuery,
+                               String serverIp,
+                               String username,
+                               String password,
+                               int maxRounds,
+                               String approvedRiskCommand,
+                               WebSocketSession session,
+                               List<Map<String, Object>> existingHistory) {
         long start = System.currentTimeMillis();
         String finalSummary = "";
+        String sessionId = session.getId();
+        
+        // 如果是首次运行（不是继续执行），则初始化停止标志
+        // 如果是继续执行，需要保留之前的停止标志状态，或者重新初始化为 false
+        // 这里选择重新初始化，确保每次 runAgentLoop 开始时都是可运行状态
+        stopFlags.put(sessionId, new java.util.concurrent.atomic.AtomicBoolean(false));
 
-        List<Map<String, Object>> messages = new ArrayList<>();
-        messages.add(systemMessage());
+        try {
+            List<Map<String, Object>> messages = existingHistory;
+            if (messages == null || messages.isEmpty()) {
+                messages = new ArrayList<>();
+                messages.add(systemMessage());
 
-        Map<String, Object> userMsg = new LinkedHashMap<>();
-        userMsg.put("role", "user");
-        userMsg.put("content", "用户目标: " + (userQuery == null ? "" : userQuery)
-                + "\n目标服务器: " + serverIp
-                + "\n请你自主分析并逐步执行，完成后必须调用 finish_task。");
-        messages.add(userMsg);
+                Map<String, Object> userMsg = new LinkedHashMap<>();
+                userMsg.put("role", "user");
+                userMsg.put("content", "用户目标: " + (userQuery == null ? "" : userQuery)
+                        + "\n目标服务器: " + serverIp
+                        + "\n请你自主分析并逐步执行，完成后必须调用 finish_task。");
+                messages.add(userMsg);
+            }
 
         List<Map<String, Object>> tools = buildTools();
-        sendProgress(session, "agent_start", "进入 Agent 自主循环", System.currentTimeMillis() - start);
+        // 只有首次运行时才发送 agent_start
+        if (existingHistory == null || existingHistory.isEmpty()) {
+            sendProgress(session, "agent_start", "进入 Agent 自主循环", System.currentTimeMillis() - start);
+        } else {
+            sendProgress(session, "agent_resume", "Agent 继续执行", System.currentTimeMillis() - start);
+        }
 
-        for (int round = 1; round <= MAX_AGENT_ROUNDS; round++) {
+        for (int round = 1; round <= maxRounds; round++) {
+            if (shouldStop(sessionId)) {
+                finalSummary = "任务已被用户强制停止。";
+                sendProgress(session, "agent_stop", finalSummary, System.currentTimeMillis() - start);
+                return finalSummary;
+            }
+
             sendProgress(session, "agent_think", "第 " + round + " 轮：AI 正在决策下一步", System.currentTimeMillis() - start);
 
             Map<String, Object> aiResp = aiUtils.callQianfanApiWithTools(messages, tools);
+            
+            if (shouldStop(sessionId)) {
+                finalSummary = "任务已被用户强制停止。";
+                sendProgress(session, "agent_stop", finalSummary, System.currentTimeMillis() - start);
+                return finalSummary;
+            }
+
             @SuppressWarnings("unchecked")
             Map<String, Object> assistantMessage = (Map<String, Object>) aiResp.getOrDefault("assistantMessage", new HashMap<>());
             @SuppressWarnings("unchecked")
@@ -116,6 +171,12 @@ public class OpsAgentService {
 
             boolean shouldStop = false;
             for (Map<String, Object> toolCall : toolCalls) {
+                if (shouldStop(sessionId)) {
+                    finalSummary = "任务已被用户强制停止。";
+                    sendProgress(session, "agent_stop", finalSummary, System.currentTimeMillis() - start);
+                    return finalSummary;
+                }
+
                 String toolCallId = String.valueOf(toolCall.getOrDefault("id", ""));
                 String toolName = String.valueOf(toolCall.getOrDefault("name", ""));
                 @SuppressWarnings("unchecked")
@@ -149,20 +210,35 @@ public class OpsAgentService {
 
                     if (isHighRiskCommand(rawCommand)
                             && (!StringUtils.hasText(approvedRiskCommand) || !rawCommand.equals(approvedRiskCommand))) {
-                        throw new HighRiskCommandException(rawCommand, "检测到高风险命令，需要用户确认后再执行。");
+                        throw new HighRiskCommandException(rawCommand, "检测到高风险命令，需要用户确认后再执行。", messages);
                     }
 
                     String safeCommand = injectSudoPassword(rawCommand, password);
                     sendProgress(session, "cmd_exec_start", "执行命令: " + safeCommand, System.currentTimeMillis() - start);
 
-                    String execResult = execWithTimeout(serverIp, username, password, safeCommand, SSH_TIMEOUT_SECONDS);
-                    appendToolMessage(messages, toolCallId, "execute_command", execResult);
+                    SshUtils.SshResult execResult = execWithTimeout(serverIp, username, password, safeCommand, SSH_TIMEOUT_SECONDS);
+                    appendToolMessage(messages, toolCallId, "execute_command", execResult.output());
 
-                    String preview = execResult == null ? "" : execResult;
+                    String preview = execResult.output() == null ? "" : execResult.output();
                     if (preview.length() > 1200) {
                         preview = preview.substring(0, 1200) + "\n...(输出已截断)";
                     }
-                    sendProgress(session, "cmd_exec_done", preview, System.currentTimeMillis() - start);
+                    
+                    if (execResult.exitCode() != 0) {
+                        try {
+                            Map<String, Object> payload = new HashMap<>();
+                            payload.put("type", "ops_progress");
+                            payload.put("stage", "cmd_exec_fail");
+                            payload.put("message", preview);
+                            payload.put("command", rawCommand);
+                            payload.put("elapsedMs", System.currentTimeMillis() - start);
+                            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(payload)));
+                        } catch (Exception e) {
+                            log.warn("Failed to send command failure progress: {}", e.getMessage());
+                        }
+                    } else {
+                        sendProgress(session, "cmd_exec_done", preview, System.currentTimeMillis() - start);
+                    }
                 }
 
                 if ("get_server_metrics".equals(toolName)) {
@@ -215,13 +291,22 @@ public class OpsAgentService {
         }
 
         if (!StringUtils.hasText(finalSummary)) {
-            finalSummary = "达到最大循环轮次(" + MAX_AGENT_ROUNDS + ")，任务未显式 finish_task，已强制结束。";
-            sendProgress(session, "agent_timeout", finalSummary, System.currentTimeMillis() - start);
+            if (shouldStop(sessionId)) {
+                finalSummary = "任务已被用户强制停止。";
+                sendProgress(session, "agent_stop", finalSummary, System.currentTimeMillis() - start);
+            } else {
+                finalSummary = "达到最大循环轮次(" + maxRounds + ")，任务未显式 finish_task，已强制结束。";
+                // 抛出超时异常，携带历史记录以便后续恢复
+                throw new AgentTimeoutException(finalSummary, messages);
+            }
         }
         return finalSummary;
+        } finally {
+            stopFlags.remove(sessionId);
+        }
     }
 
-    public String executeApprovedRiskCommand(String serverIp,
+    public SshUtils.SshResult executeApprovedRiskCommand(String serverIp,
                                              String username,
                                              String password,
                                              String command) {
@@ -328,20 +413,20 @@ public class OpsAgentService {
         }
     }
 
-    private String execWithTimeout(String serverIp,
+    private SshUtils.SshResult execWithTimeout(String serverIp,
                                    String username,
                                    String password,
                                    String command,
                                    long timeoutSeconds) {
         ExecutorService executor = Executors.newSingleThreadExecutor();
-        Future<String> future = executor.submit(() -> sshUtils.exec(serverIp, username, password, command));
+        Future<SshUtils.SshResult> future = executor.submit(() -> sshUtils.execWithResult(serverIp, username, password, command));
         try {
             return future.get(timeoutSeconds, TimeUnit.SECONDS);
         } catch (TimeoutException e) {
             future.cancel(true);
-            return "SSH Error: 命令执行超时(" + timeoutSeconds + "s)，已中断。";
+            return new SshUtils.SshResult(-1, "SSH Error: 命令执行超时(" + timeoutSeconds + "s)，已中断。");
         } catch (Exception e) {
-            return "SSH Error: " + e.getMessage();
+            return new SshUtils.SshResult(-1, "SSH Error: " + e.getMessage());
         } finally {
             executor.shutdownNow();
         }
@@ -376,11 +461,23 @@ public class OpsAgentService {
     public static class HighRiskCommandException extends RuntimeException {
         private final String command;
         private final String reason;
+        private final List<Map<String, Object>> history;
 
-        public HighRiskCommandException(String command, String reason) {
+        public HighRiskCommandException(String command, String reason, List<Map<String, Object>> history) {
             super(reason);
             this.command = command;
             this.reason = reason;
+            this.history = history;
+        }
+    }
+
+    @Getter
+    public static class AgentTimeoutException extends RuntimeException {
+        private final List<Map<String, Object>> history;
+
+        public AgentTimeoutException(String message, List<Map<String, Object>> history) {
+            super(message);
+            this.history = history;
         }
     }
 }

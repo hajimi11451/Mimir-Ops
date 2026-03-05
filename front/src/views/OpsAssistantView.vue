@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="space-y-6">
     <el-card class="bg-white rounded-[8px] shadow-sm border border-ui-border" :body-style="{ padding: '20px' }">
       <div class="flex flex-wrap items-center justify-between gap-3">
@@ -33,13 +33,14 @@
           />
         </el-select>
       </div>
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
         <el-input v-model="serverIp" placeholder="serverIp: 192.168.1.10:22" />
         <el-input v-model="username" placeholder="username: root" />
         <el-input v-model="password" type="password" show-password placeholder="password" />
         <el-checkbox v-model="execute">允许执行命令（execute=true）</el-checkbox>
+        <el-input-number v-model="maxRounds" :min="1" :max="50" controls-position="right" placeholder="最大轮数" />
       </div>
-      <p class="text-xs text-ui-subtext mt-3">默认先规划命令，不执行。勾选后会调用 SSH 在目标服务器执行。</p>
+      <p class="text-xs text-ui-subtext mt-3">默认先规划命令，不执行。勾选后会调用 SSH 在目标服务器执行。可设置 AI 循环轮数（最多 50）。</p>
     </el-card>
 
     <el-card class="bg-white rounded-[8px] shadow-sm border border-ui-border" :body-style="{ padding: '20px' }">
@@ -54,6 +55,16 @@
                 <div class="flex gap-2 pt-1">
                   <el-button size="small" type="primary" :disabled="msg.handled" @click="confirmExecute(msg)">确定执行</el-button>
                   <el-button size="small" :disabled="msg.handled" @click="cancelExecute(msg)">取消</el-button>
+                </div>
+              </div>
+            </template>
+            <template v-else-if="msg.type === 'timeout'">
+              <div class="space-y-2">
+                <div class="text-ui-warning font-semibold">任务达到最大轮数，已暂停</div>
+                <div>是否继续执行？</div>
+                <div class="flex gap-2 pt-1">
+                  <el-button size="small" type="primary" :disabled="msg.handled" @click="confirmContinue(msg)">继续执行</el-button>
+                  <el-button size="small" :disabled="msg.handled" @click="cancelContinue(msg)">停止</el-button>
                 </div>
               </div>
             </template>
@@ -84,7 +95,8 @@
               <InlineMetricsTemplate :title="msg.title" :chart-data="msg.chartData" />
             </template>
             <template v-else>
-              <div>{{ msg.content }}</div>
+              <div v-if="msg.role === 'assistant'" v-html="renderMarkdown(msg.content)" class="markdown-body"></div>
+              <div v-else>{{ msg.content }}</div>
             </template>
           </div>
         </div>
@@ -96,10 +108,18 @@
           type="textarea"
           :rows="3"
           resize="none"
+          :disabled="isAgentRunning"
           placeholder="例如：帮我安装 nginx 并设置开机自启"
           @keydown.enter.exact.prevent="sendMessage"
         />
-        <el-button type="primary" class="h-auto px-6" :disabled="!input.trim()" @click="sendMessage">发送</el-button>
+        <el-button
+          :type="isAgentRunning ? 'danger' : 'primary'"
+          class="h-auto px-6"
+          :disabled="isAgentRunning ? !connected : !input.trim()"
+          @click="isAgentRunning ? forceStop() : sendMessage()"
+        >
+          {{ isAgentRunning ? '强制停止' : '发送' }}
+        </el-button>
       </div>
     </el-card>
   </div>
@@ -109,6 +129,13 @@
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { listConfigs } from '../api/diagnosis'
 import InlineMetricsTemplate from '../components/InlineMetricsTemplate.vue'
+import MarkdownIt from 'markdown-it'
+
+const md = new MarkdownIt({
+  html: false,
+  linkify: true,
+  typographer: true,
+})
 
 const ws = ref(null)
 const connected = ref(false)
@@ -117,6 +144,8 @@ const serverIp = ref('')
 const username = ref('')
 const password = ref('')
 const execute = ref(false)
+const maxRounds = ref(15)
+const isAgentRunning = ref(false)
 const selectedSavedConnection = ref('')
 const savedConnections = ref([])
 
@@ -125,10 +154,11 @@ const messages = ref([])
 const chatBox = ref(null)
 
 const appendMessage = async (role, content) => {
+  const normalizedContent = role === 'assistant' ? toUserFriendlyText(content) : content
   if (role === 'assistant') {
     await humanLikeDelay()
   }
-  messages.value.push({ role, content, type: 'text' })
+  messages.value.push({ role, content: normalizedContent, type: 'text' })
   await nextTick()
   if (chatBox.value) {
     chatBox.value.scrollTop = chatBox.value.scrollHeight
@@ -178,6 +208,18 @@ const appendConfirmMessage = async (query, command, riskLevel) => {
   }
 }
 
+const appendTimeoutMessage = async () => {
+  messages.value.push({
+    role: 'assistant',
+    type: 'timeout',
+    handled: false,
+  })
+  await nextTick()
+  if (chatBox.value) {
+    chatBox.value.scrollTop = chatBox.value.scrollHeight
+  }
+}
+
 const appendRiskConfirmMessage = async (command, riskLevel, reason) => {
   messages.value.push({
     role: 'assistant',
@@ -216,16 +258,24 @@ const connectWs = () => {
         return
       }
       if (data.type === 'ops_progress') {
-        const progressText = `[进度] ${data.message || data.stage || '处理中'}${data.elapsedMs ? `（${data.elapsedMs}ms）` : ''}`
-        await appendMessage('assistant', progressText)
+        if (['agent_finish', 'agent_timeout', 'agent_stopped', 'finished'].includes(String(data.stage || ''))) {
+          isAgentRunning.value = false
+        }
+        const progressText = formatProgressForUser(data)
+        if (progressText) {
+          await appendMessage('assistant', progressText)
+        }
         return
       }
       if (data.type === 'ops_chat_result') {
+        isAgentRunning.value = false
         const summary = formatOpsResult(data)
         await appendMessage('assistant', summary)
 
         if (data.needRiskConfirm && data.riskCommand) {
           await appendRiskConfirmMessage(data.riskCommand, data.riskLevel, data.reply)
+        } else if (data.timeout) {
+          await appendTimeoutMessage()
         }
 
         if (!execute.value && !data.executed && data.hasCommand && data.command) {
@@ -234,6 +284,11 @@ const connectWs = () => {
         if (data.chartSuggest) {
           await appendChartActionMessage(data.chartReason, data.chartTimeRange, data.chartTemplate)
         }
+        return
+      }
+      if (data.type === 'ops_force_stop_result') {
+        isAgentRunning.value = false
+        await appendMessage('assistant', data.message || '已发送强制停止请求。')
         return
       }
       if (data.type === 'chart_data_result') {
@@ -253,11 +308,13 @@ const connectWs = () => {
 
   socket.onclose = async () => {
     connected.value = false
+    isAgentRunning.value = false
     ws.value = null
     await appendMessage('assistant', '连接已断开。')
   }
 
   socket.onerror = async () => {
+    isAgentRunning.value = false
     await appendMessage('assistant', '连接异常，请检查后端服务。')
   }
 }
@@ -269,6 +326,7 @@ const disconnectWs = () => {
 }
 
 const sendMessage = async () => {
+  if (isAgentRunning.value) return
   const text = input.value.trim()
   if (!text) return
 
@@ -288,9 +346,13 @@ const sendMessage = async () => {
     serverIp: serverIp.value,
     username: username.value,
     password: password.value,
+    maxRounds: Math.min(50, Math.max(1, Number(maxRounds.value) || 15)),
   }
 
   ws.value.send(JSON.stringify(payload))
+  if (execute.value) {
+    isAgentRunning.value = true
+  }
   input.value = ''
 }
 
@@ -316,7 +378,9 @@ const executeByConfirmation = async query => {
     serverIp: serverIp.value,
     username: username.value,
     password: password.value,
+    maxRounds: Math.min(50, Math.max(1, Number(maxRounds.value) || 15)),
   }))
+  isAgentRunning.value = true
 }
 
 const confirmExecute = async msg => {
@@ -345,6 +409,7 @@ const confirmRiskExecute = async msg => {
   }
 
   await appendMessage('assistant', '收到高风险执行确认，正在执行中...')
+  isAgentRunning.value = true
   ws.value.send(JSON.stringify({
     type: 'risk_execute',
     command: msg.command,
@@ -358,6 +423,39 @@ const cancelRiskExecute = async msg => {
   if (msg.handled) return
   msg.handled = true
   await appendMessage('assistant', '已取消高风险命令执行。')
+}
+
+const confirmContinue = async msg => {
+  if (msg.handled) return
+  msg.handled = true
+  
+  if (!connected.value || !ws.value) {
+    await appendMessage('assistant', 'WebSocket 未连接，无法继续执行。')
+    return
+  }
+
+  await appendMessage('user', '继续')
+  await appendMessage('assistant', '收到，正在继续执行中...')
+  
+  // 发送“继续”指令，后端会根据历史上下文恢复
+  const payload = {
+    type: 'ops_chat',
+    query: '继续',
+    execute: true,
+    serverIp: serverIp.value,
+    username: username.value,
+    password: password.value,
+    maxRounds: Math.min(50, Math.max(1, Number(maxRounds.value) || 15)),
+  }
+  
+  ws.value.send(JSON.stringify(payload))
+  isAgentRunning.value = true
+}
+
+const cancelContinue = async msg => {
+  if (msg.handled) return
+  msg.handled = true
+  await appendMessage('assistant', '已停止任务。')
 }
 
 const generateChart = async msg => {
@@ -388,6 +486,16 @@ const cancelChart = async msg => {
   if (msg.handled) return
   msg.handled = true
   await appendMessage('assistant', '已取消图表生成。')
+}
+
+const forceStop = async () => {
+  if (!connected.value || !ws.value) {
+    isAgentRunning.value = false
+    await appendMessage('assistant', '连接未建立，无法强制停止。')
+    return
+  }
+  ws.value.send(JSON.stringify({ type: 'ops_force_stop' }))
+  await appendMessage('assistant', '已发送强制停止请求...')
 }
 
 const loadSavedConnections = async () => {
@@ -426,32 +534,70 @@ const handleSavedConnectionChange = value => {
   password.value = target.password
 }
 
-const formatOpsResult = data => {
-  const lines = []
-  lines.push(data.executed ? '执行完成。' : '计划已生成。')
-  if (data.executed) {
-    lines.push(`结果：${shortText(data.execResult || '无返回')}`)
-  } else {
-    if (data.needRiskConfirm) {
-      lines.push('检测到高风险命令，等待你确认。')
-      lines.push(`命令：${shortText(data.riskCommand || '')}`)
-      lines.push(`原因：${shortText(data.reply || '')}`)
-      return lines.join('\n')
-    }
-    lines.push(`风险：${data.riskLevel || 'medium'}`)
-    if (data.hasCommand && data.command) {
-      lines.push(`命令：${shortText(data.command)}`)
-    } else {
-      lines.push(shortText(data.reply || 'AI 未提供可执行命令。'))
-    }
-  }
-  return lines.join('\n')
+const renderMarkdown = content => {
+  if (!content) return ''
+  return md.render(content)
 }
 
-const shortText = (text, max = 160) => {
-  const val = String(text || '').replace(/\s+/g, ' ').trim()
-  if (!val) return ''
-  return val.length <= max ? val : `${val.slice(0, max)}...`
+const formatOpsResult = data => {
+  const lines = []
+  const replySummary = toUserFriendlyText(data.reply)
+
+  if (replySummary) {
+    lines.push(replySummary)
+  } else {
+    lines.push(data.executed ? '处理完成。' : '我已整理好处理建议。')
+  }
+
+  if (data.executed) {
+    lines.push(`执行结果：\n\`\`\`\n${data.execResult || '无返回'}\n\`\`\``)
+  } else {
+    if (data.needRiskConfirm) {
+      lines.push('涉及高风险操作，需要你确认后我再继续。')
+      lines.push(`待确认命令：\`${data.riskCommand || ''}\``)
+      return lines.join('\n\n')
+    }
+    if (data.hasCommand && data.command) {
+      lines.push(`建议命令：\`${data.command}\``)
+    }
+    lines.push(`风险等级：${data.riskLevel || 'medium'}`)
+  }
+  return lines.join('\n\n')
+}
+
+const toUserFriendlyText = text => {
+  return String(text || '')
+    .replace(/第\s*\d+\s*轮[:：]?\s*/g, '')
+    .replace(/（\s*\d+\s*ms\s*）/gi, '')
+    .replace(/\(\s*\d+\s*ms\s*\)/gi, '')
+    .replace(/\[进度\]\s*/g, '')
+    .trim()
+}
+
+const formatProgressForUser = data => {
+  const stage = String(data?.stage || '')
+  const message = toUserFriendlyText(data?.message || '')
+
+  if (stage === 'cmd_exec_start') {
+    return message || '正在执行命令...'
+  }
+  if (stage === 'cmd_exec_done') {
+    return ''
+  }
+  if (stage === 'cmd_exec_fail') {
+    return `命令 “${data.command || '未知'}” 执行失败。`
+  }
+  if (stage === 'risk_exec_start') {
+    return '正在执行你确认的高风险命令...'
+  }
+  if (stage === 'risk_exec_done') {
+    return '高风险命令执行完成。'
+  }
+  if (stage === 'agent_stopped') {
+    return '任务已强制停止。'
+  }
+
+  return ''
 }
 
 const humanLikeDelay = () => {
@@ -468,3 +614,39 @@ onUnmounted(() => {
   disconnectWs()
 })
 </script>
+
+<style scoped>
+:deep(.markdown-body ul) {
+  list-style-type: disc;
+  padding-left: 1.5em;
+  margin-bottom: 0.75em;
+}
+:deep(.markdown-body ol) {
+  list-style-type: decimal;
+  padding-left: 1.5em;
+  margin-bottom: 0.75em;
+}
+:deep(.markdown-body pre) {
+  background-color: #f3f4f6;
+  padding: 1em;
+  border-radius: 0.375rem;
+  overflow-x: auto;
+  margin-bottom: 0.75em;
+}
+:deep(.markdown-body code) {
+  background-color: #f3f4f6;
+  padding: 0.2em 0.4em;
+  border-radius: 0.25rem;
+  font-family: monospace;
+}
+:deep(.markdown-body p) {
+  margin-bottom: 0.75em;
+}
+:deep(.markdown-body h1),
+:deep(.markdown-body h2),
+:deep(.markdown-body h3) {
+  font-weight: bold;
+  margin-bottom: 0.5em;
+  margin-top: 1em;
+}
+</style>

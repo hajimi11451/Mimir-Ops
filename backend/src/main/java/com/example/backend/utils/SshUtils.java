@@ -18,6 +18,8 @@ import java.util.Properties;
 @Component
 public class SshUtils {
 
+    public record SshResult(int exitCode, String output) {}
+
     /**
      * 执行 SSH 命令（默认凭据，仅兼容旧逻辑）
      */
@@ -55,7 +57,10 @@ public class SshUtils {
         }
     }
 
-    public String exec(String ip, String user, String password, String command) {
+    /**
+     * 执行 SSH 命令并返回详细结果（exitCode + output）
+     */
+    public SshResult execWithResult(String ip, String user, String password, String command) {
         log.info("正在服务器 {} 上执行命令: {}", ip, command);
 
         Session session = null;
@@ -126,19 +131,12 @@ public class SshUtils {
             int exitStatus = channel.getExitStatus();
 
             String merged = (outText + (errText.isEmpty() ? "" : errText)).trim();
-            if (exitStatus != 0) {
-                log.warn("命令执行失败，exitCode={}, output={}", exitStatus, merged);
-                if (merged.isEmpty()) {
-                    return "Command failed with exit code " + exitStatus;
-                }
-                return merged;
-            }
+            log.info("命令执行完成，exitCode={}, length={}", exitStatus, merged.length());
+            return new SshResult(exitStatus, merged);
 
-            log.info("命令执行成功，返回长度: {}", merged.length());
-            return merged;
         } catch (Exception e) {
             log.error("SSH 执行异常: {}", e.getMessage(), e);
-            return "SSH Error: " + e.getMessage();
+            return new SshResult(-1, "SSH Error: " + e.getMessage());
         } finally {
             if (channel != null) {
                 channel.disconnect();
@@ -147,6 +145,14 @@ public class SshUtils {
                 session.disconnect();
             }
         }
+    }
+
+    public String exec(String ip, String user, String password, String command) {
+        SshResult result = execWithResult(ip, user, password, command);
+        if (result.exitCode() != 0 && result.output().isEmpty()) {
+            return "Command failed with exit code " + result.exitCode();
+        }
+        return result.output();
     }
 
     private HostAndPort parseHostAndPort(String ip) {
