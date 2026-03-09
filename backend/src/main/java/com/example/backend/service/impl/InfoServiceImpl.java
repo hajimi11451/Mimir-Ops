@@ -8,6 +8,7 @@ import com.example.backend.mapper.InformationMapper;
 import com.example.backend.mapper.UserLoginMapper;
 import com.example.backend.mapper.UserProcessMapper;
 import com.example.backend.service.InfoService;
+import com.example.backend.utils.InfoNormalizationUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -42,7 +43,7 @@ public class InfoServiceImpl implements InfoService {
         }
         try {
             return Long.parseLong(userId);
-        } catch (NumberFormatException e) {
+        } catch (NumberFormatException exception) {
             return null;
         }
     }
@@ -53,17 +54,23 @@ public class InfoServiceImpl implements InfoService {
         QueryWrapper<Information> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("user_id", userId == null ? -1L : userId);
         queryWrapper.orderByDesc("created_at");
+
         List<Information> response = informationMapper.selectList(queryWrapper);
+        normalizeInformationList(response);
         return response.isEmpty() ? null : response;
     }
 
     @Override
     public List<Information> selectInfo(Map<String, String> request) {
         Long userId = resolveUserId(request);
+        String id = request.get("id");
         String serverIp = request.get("serverIp");
         String component = request.get("component");
         String errorSummary = request.get("errorSummary");
         String riskLevel = request.get("riskLevel");
+        if (riskLevel != null && !riskLevel.isBlank()) {
+            riskLevel = InfoNormalizationUtils.normalizeRiskLevel(riskLevel);
+        }
 
         LocalDateTime startTime = null;
         LocalDateTime endTime = null;
@@ -77,6 +84,9 @@ public class InfoServiceImpl implements InfoService {
 
         QueryWrapper<Information> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("user_id", userId == null ? -1L : userId);
+        if (id != null && !id.isBlank()) {
+            queryWrapper.eq("id", id);
+        }
         if (serverIp != null && !serverIp.isBlank()) {
             queryWrapper.eq("server_ip", serverIp);
         }
@@ -94,6 +104,7 @@ public class InfoServiceImpl implements InfoService {
         }
 
         List<Information> response = informationMapper.selectList(queryWrapper);
+        normalizeInformationList(response);
         return response.isEmpty() ? null : response;
     }
 
@@ -102,20 +113,28 @@ public class InfoServiceImpl implements InfoService {
         Long userId = resolveUserId(request);
         String serverIp = request.get("serverIp");
         String component = request.get("component");
+        String problemLog = resolveProblemLog(request);
         String processMethod = request.get("processMethod");
+
         LocalDateTime processTime = null;
-        if (request.get("endTime") != null) {
+        String processTimeText = request.get("processTime");
+        if (processTimeText == null || processTimeText.isBlank()) {
+            processTimeText = request.get("endTime");
+        }
+        if (processTimeText != null && !processTimeText.isBlank()) {
             try {
-                processTime = LocalDateTime.parse(request.get("endTime"));
+                processTime = LocalDateTime.parse(processTimeText);
             } catch (Exception ignored) {
             }
+        }
+        if (processTime == null) {
+            processTime = LocalDateTime.now();
         }
 
         if (userId == null
                 || serverIp == null || serverIp.isBlank()
                 || component == null || component.isBlank()
-                || processMethod == null || processMethod.isBlank()
-                || processTime == null) {
+                || processMethod == null || processMethod.isBlank()) {
             return "输入参数不能为空";
         }
 
@@ -123,11 +142,12 @@ public class InfoServiceImpl implements InfoService {
         userProcess.setUserId(userId);
         userProcess.setServerIp(serverIp);
         userProcess.setComponent(component);
+        userProcess.setProblemLog(problemLog);
         userProcess.setProcessMethod(processMethod);
         userProcess.setProcessTime(processTime);
 
-        int res = userProcessMapper.insert(userProcess);
-        return res == 1 ? "录入成功" : "录入失败";
+        int result = userProcessMapper.insert(userProcess);
+        return result == 1 ? "录入成功" : "录入失败";
     }
 
     @Override
@@ -136,6 +156,7 @@ public class InfoServiceImpl implements InfoService {
         QueryWrapper<UserProcess> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("user_id", userId == null ? -1L : userId);
         queryWrapper.orderByDesc("process_time");
+
         List<UserProcess> response = userProcessMapper.selectList(queryWrapper);
         return response.isEmpty() ? null : response;
     }
@@ -179,8 +200,39 @@ public class InfoServiceImpl implements InfoService {
         if (userId == null) {
             return 0;
         }
+
         QueryWrapper<Information> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("user_id", userId);
         return informationMapper.delete(queryWrapper);
+    }
+
+    private void normalizeInformationList(List<Information> response) {
+        if (response == null || response.isEmpty()) {
+            return;
+        }
+
+        for (Information info : response) {
+            if (info == null) {
+                continue;
+            }
+
+            String normalizedRiskLevel = InfoNormalizationUtils.normalizeRiskLevel(info.getRiskLevel());
+            info.setComponent(InfoNormalizationUtils.normalizeComponent(info.getComponent()));
+            info.setErrorSummary(InfoNormalizationUtils.normalizeText(info.getErrorSummary(), "无"));
+            info.setAnalysisResult(InfoNormalizationUtils.normalizeText(info.getAnalysisResult(), "无"));
+            info.setRiskLevel(normalizedRiskLevel);
+            info.setSuggestedActions(InfoNormalizationUtils.normalizeSuggestedActions(info.getSuggestedActions(), normalizedRiskLevel));
+        }
+    }
+
+    private String resolveProblemLog(Map<String, String> request) {
+        String[] candidates = {"problemLog", "problem", "issue", "rawLog", "logContent", "logInfo"};
+        for (String key : candidates) {
+            String value = request.get(key);
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return null;
     }
 }
