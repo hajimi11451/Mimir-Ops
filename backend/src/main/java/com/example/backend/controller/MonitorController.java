@@ -45,10 +45,12 @@ public class MonitorController {
             dashboard.put("history", history);
             Map<String, Object> current = monitorService.getRealtime(targetIp);
             dashboard.put("current", current);
+            dashboard.put("monitorEnabled", monitorService.isServerMonitorEnabledByUsername(username, targetIp));
             dashboard.put("healthState", healthService.buildHealthState(username, targetIp, current, history));
         } else {
             dashboard.put("history", List.of());
             dashboard.put("current", Map.of());
+            dashboard.put("monitorEnabled", false);
             dashboard.put("healthState", Map.of());
         }
 

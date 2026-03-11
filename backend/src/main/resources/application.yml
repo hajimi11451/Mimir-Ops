@@ -1,0 +1,55 @@
+spring:
+  application:
+    name: backend
+  datasource:
+    url: jdbc:mysql://localhost:3306/ai_ops_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  mail:
+    host: smtp.qq.com
+    port: 465
+    username: 1431668312@qq.com
+    password: whsivfyoxxyugeaa
+    protocol: smtp
+    default-encoding: UTF-8
+    properties:
+      "[mail.smtp.auth]": true
+      "[mail.smtp.ssl.enable]": true
+      "[mail.smtp.connectiontimeout]": 5000
+      "[mail.smtp.timeout]": 5000
+      "[mail.smtp.writetimeout]": 5000
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+
+qianfan:
+  v2:
+    # 千帆 OpenAI 兼容接口地址（固定到 v2）
+    base-url: https://qianfan.baidubce.com/v2
+    # 鉴权 Token
+    token: 
+    # 日志审核/日志分析使用的模型
+    audit-model-name: glm-4.7
+    # 聊天助手（含命令规划）使用的模型
+    chat-model-name: glm-4.7
+    # AI 接口读取超时时间（单位：秒）
+    read-timeout-seconds: 120
+
+monitor:
+  schedule:
+    fixed-rate: 120000 # 监控采集频率，单位毫秒，默认 60000 (1分钟)
+
+alert:
+  schedule:
+    fixed-rate: 120000
+  recheck:
+    lookback-minutes: 20
+  mail:
+    from: 1431668312@qq.com
+    cooldown-minutes: 30

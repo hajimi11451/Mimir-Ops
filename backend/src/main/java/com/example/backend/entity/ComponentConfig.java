@@ -50,6 +50,11 @@ public class ComponentConfig {
      * 是否验证通过 (0=未验证, 1=已验证)
      */
     private Integer isVerified;
+
+    /**
+     * 是否启用检测 (0=暂停, 1=启用)
+     */
+    private Integer isEnabled;
     
     private LocalDateTime updatedAt;
 }

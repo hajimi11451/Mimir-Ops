@@ -109,6 +109,68 @@ public class DiagnosisController {
         }
     }
 
+    @PostMapping("/server-monitor/stop")
+    public ResponseEntity<?> stopServerMonitor(@RequestBody Map<String, String> request) {
+        try {
+            String serverIp = request.get("serverIp");
+            String username = request.get("appUsername");
+            if (username == null || username.isBlank()) {
+                username = request.get("username");
+            }
+
+            diagnosisService.setServerMonitorEnabled(username, serverIp, false);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 200);
+            response.put("msg", "服务器监控已暂停");
+            response.put("data", Map.of("serverIp", serverIp));
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 400);
+            response.put("msg", e.getMessage());
+            response.put("data", null);
+            return ResponseEntity.badRequest().body(response);
+        } catch (Exception e) {
+            log.error("停止服务器监控时发生未知错误", e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 500);
+            response.put("msg", "服务器内部错误: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    @PostMapping("/server-monitor/resume")
+    public ResponseEntity<?> resumeServerMonitor(@RequestBody Map<String, String> request) {
+        try {
+            String serverIp = request.get("serverIp");
+            String username = request.get("appUsername");
+            if (username == null || username.isBlank()) {
+                username = request.get("username");
+            }
+
+            diagnosisService.setServerMonitorEnabled(username, serverIp, true);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 200);
+            response.put("msg", "服务器监控已恢复");
+            response.put("data", Map.of("serverIp", serverIp));
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 400);
+            response.put("msg", e.getMessage());
+            response.put("data", null);
+            return ResponseEntity.badRequest().body(response);
+        } catch (Exception e) {
+            log.error("恢复服务器监控时发生未知错误", e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 500);
+            response.put("msg", "服务器内部错误: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
     /**
      * 6. 获取监控配置列表
      */
@@ -139,6 +201,38 @@ public class DiagnosisController {
         response.put("msg", "删除成功");
         
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/config/status")
+    public ResponseEntity<?> updateConfigStatus(@RequestBody Map<String, Object> request) {
+        try {
+            Long id = request.get("id") == null ? null : Long.valueOf(String.valueOf(request.get("id")));
+            String username = request.get("appUsername") == null ? null : String.valueOf(request.get("appUsername"));
+            if (username == null || username.isBlank()) {
+                username = request.get("username") == null ? null : String.valueOf(request.get("username"));
+            }
+            Integer isEnabled = request.get("isEnabled") == null ? null : Integer.valueOf(String.valueOf(request.get("isEnabled")));
+
+            diagnosisService.updateConfigStatus(id, username, isEnabled);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 200);
+            response.put("msg", Integer.valueOf(0).equals(isEnabled) ? "监控已暂停" : "监控已恢复");
+            response.put("data", Map.of("id", id, "isEnabled", isEnabled));
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 400);
+            response.put("msg", e.getMessage());
+            response.put("data", null);
+            return ResponseEntity.badRequest().body(response);
+        } catch (Exception e) {
+            log.error("更新监控状态时发生未知错误", e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 500);
+            response.put("msg", "服务器内部错误: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
     }
 
     /**

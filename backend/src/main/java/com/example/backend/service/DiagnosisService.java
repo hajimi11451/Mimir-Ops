@@ -54,6 +54,10 @@ public class DiagnosisService {
 
     private static final String SYSTEM_MONITOR_CONFIG_VALUE = "仅监控CPU和内存";
 
+    private static final int ENABLED = 1;
+
+    private static final int DISABLED = 0;
+
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
@@ -321,6 +325,7 @@ public class DiagnosisService {
             } else {
                 existing.setIsVerified(1);
             }
+            existing.setIsEnabled(resolveEnabledValue(config.getIsEnabled()));
             componentConfigMapper.updateById(existing);
         } else {
             if (config.getConfigKey() == null) config.setConfigKey("error_log_path");
@@ -329,6 +334,7 @@ public class DiagnosisService {
             } else {
                 config.setIsVerified(1);
             }
+            config.setIsEnabled(resolveEnabledValue(config.getIsEnabled()));
             config.setUpdatedAt(java.time.LocalDateTime.now());
             componentConfigMapper.insert(config);
         }
@@ -367,7 +373,10 @@ public class DiagnosisService {
     }
 
     public List<ComponentConfig> listAllConfigsForAutoTask() {
-        List<ComponentConfig> list = componentConfigMapper.selectList(new LambdaQueryWrapper<>());
+        List<ComponentConfig> list = componentConfigMapper.selectList(
+                new LambdaQueryWrapper<ComponentConfig>()
+                        .eq(ComponentConfig::getIsEnabled, ENABLED)
+        );
         list.removeIf(config -> SYSTEM_MONITOR_CONFIG_KEY.equalsIgnoreCase(String.valueOf(config.getConfigKey())));
         return list;
     }
@@ -382,6 +391,55 @@ public class DiagnosisService {
             return;
         }
         componentConfigMapper.deleteById(id);
+    }
+
+    public void setServerMonitorEnabled(String appUsername, String serverIp, boolean enabled) {
+        Long userId = resolveUserIdFromAppUsername(appUsername);
+        if (userId == null) {
+            throw new RuntimeException("未识别登录用户，无法更新服务器监控状态");
+        }
+        if (!StringUtils.hasText(serverIp)) {
+            throw new RuntimeException("服务器 IP 不能为空");
+        }
+
+        String normalizedServerIp = serverIp.trim();
+        List<ComponentConfig> monitorConfigs = componentConfigMapper.selectList(
+                new LambdaQueryWrapper<ComponentConfig>()
+                        .eq(ComponentConfig::getUserId, userId)
+                        .eq(ComponentConfig::getServerIp, normalizedServerIp)
+                        .eq(ComponentConfig::getConfigKey, SYSTEM_MONITOR_CONFIG_KEY)
+        );
+
+        if (monitorConfigs == null || monitorConfigs.isEmpty()) {
+            throw new RuntimeException("未找到该服务器的运行中监控");
+        }
+
+        for (ComponentConfig config : monitorConfigs) {
+            if (config != null && config.getId() != null) {
+                config.setIsEnabled(enabled ? ENABLED : DISABLED);
+                config.setUpdatedAt(java.time.LocalDateTime.now());
+                componentConfigMapper.updateById(config);
+            }
+        }
+    }
+
+    public void updateConfigStatus(Long id, String appUsername, Integer isEnabled) {
+        Long userId = resolveUserIdFromAppUsername(appUsername);
+        if (userId == null) {
+            throw new RuntimeException("未识别登录用户，无法更新监控状态");
+        }
+        if (id == null) {
+            throw new RuntimeException("监控配置 ID 不能为空");
+        }
+
+        ComponentConfig config = componentConfigMapper.selectById(id);
+        if (config == null || config.getUserId() == null || !config.getUserId().equals(userId)) {
+            throw new RuntimeException("未找到对应监控配置");
+        }
+
+        config.setIsEnabled(resolveEnabledValue(isEnabled));
+        config.setUpdatedAt(java.time.LocalDateTime.now());
+        componentConfigMapper.updateById(config);
     }
 
     /**
@@ -458,10 +516,12 @@ public class DiagnosisService {
             existing.setComponent(SYSTEM_MONITOR_COMPONENT);
             existing.setConfigValue(SYSTEM_MONITOR_CONFIG_VALUE);
             existing.setIsVerified(1);
+            existing.setIsEnabled(ENABLED);
             existing.setUpdatedAt(java.time.LocalDateTime.now());
             componentConfigMapper.updateById(existing);
         } else {
             config.setIsVerified(1);
+            config.setIsEnabled(ENABLED);
             config.setUpdatedAt(java.time.LocalDateTime.now());
             componentConfigMapper.insert(config);
         }
@@ -627,6 +687,7 @@ public class DiagnosisService {
             if (StringUtils.hasText(username)) existing.setUsername(username);
             if (StringUtils.hasText(password)) existing.setPassword(password);
             existing.setIsVerified(1);
+            existing.setIsEnabled(ENABLED);
             componentConfigMapper.updateById(existing);
         } else {
             ComponentConfig newConfig = new ComponentConfig();
@@ -638,7 +699,12 @@ public class DiagnosisService {
             newConfig.setUsername(username);
             newConfig.setPassword(password);
             newConfig.setIsVerified(1);
+            newConfig.setIsEnabled(ENABLED);
             componentConfigMapper.insert(newConfig);
         }
+    }
+
+    private int resolveEnabledValue(Integer isEnabled) {
+        return isEnabled != null && isEnabled == DISABLED ? DISABLED : ENABLED;
     }
 }

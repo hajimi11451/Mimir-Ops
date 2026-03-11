@@ -208,7 +208,16 @@ const handleTestMail = async () => {
     lastTestMessage.value = `测试邮件已发送到 ${form.email || savedEmail.value}`
     ElMessage.success('测试邮件已发送，请检查收件箱')
   } catch (error) {
-    ElMessage.error(error?.message || '发送测试邮件失败')
+    const message = String(error?.message || '')
+    if (message.includes('timeout')) {
+      const targetEmail = form.email || savedEmail.value
+      lastTestMessage.value = targetEmail
+        ? `请求等待超时，邮件可能已发送到 ${targetEmail}`
+        : '请求等待超时，邮件可能已发送，请检查收件箱'
+      ElMessage.warning('请求等待超时，邮件可能已经发出，请检查收件箱')
+    } else {
+      ElMessage.error(error?.message || '发送测试邮件失败')
+    }
   } finally {
     testing.value = false
   }

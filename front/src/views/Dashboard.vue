@@ -201,20 +201,27 @@
           <div class="h-full p-4 lg:p-6">
             <div class="flex h-full min-h-0 flex-col overflow-hidden rounded-[26px] border border-ui-border bg-white shadow-sm">
               <div class="flex items-center justify-between gap-4 border-b border-ui-border bg-white/90 px-5 py-4 backdrop-blur-sm lg:px-6">
-                <button
-                  type="button"
-                  class="inline-flex items-center gap-2 rounded-full border border-ui-border bg-ui-bg px-4 py-2 text-sm font-medium text-ui-text transition-colors hover:border-brand hover:text-brand"
-                  @click="scrollToPage(0)"
-                >
-                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                  </svg>
-                  返回首页
-                </button>
+                <div class="flex items-center gap-3">
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-2 rounded-full border border-ui-border bg-ui-bg px-4 py-2 text-sm font-medium text-ui-text transition-colors hover:border-brand hover:text-brand"
+                    @click="scrollToPage(0)"
+                  >
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    返回首页
+                  </button>
+
+                
+                </div>
 
                 <div class="min-w-0 text-right">
                   <div class="text-xs uppercase tracking-[0.18em] text-ui-subtext">总览详情</div>
                   <div class="truncate text-sm font-medium text-ui-text">{{ selectedServer || '当前服务器' }}</div>
+                  <div class="mt-1 text-xs" :class="selectedMonitorEnabled ? 'text-ui-success' : 'text-ui-warning'">
+                    {{ selectedMonitorEnabled ? '状态：检测中' : '状态：已暂停检测' }}
+                  </div>
                 </div>
               </div>
 
@@ -277,8 +284,8 @@
 
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { ElMessage } from 'element-plus'
-import { addServerMonitor } from '../api/diagnosis'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { addServerMonitor, resumeServerMonitor, stopServerMonitor } from '../api/diagnosis'
 import { selectAllInfo } from '../api/info'
 import { getSystemDashboard } from '../api/monitor'
 import DashboardOverviewDetail from '../components/DashboardOverviewDetail.vue'
@@ -316,6 +323,7 @@ const lastUpdatedAt = ref('')
 
 const addMonitorDialogVisible = ref(false)
 const addMonitorLoading = ref(false)
+const stoppingMonitor = ref(false)
 const addMonitorForm = reactive({
   serverIp: '',
   username: '',
@@ -423,6 +431,11 @@ const selectedHealthState = computed(() => {
   return resolveSnapshotHealthState(snapshot, selectedServerInfoList.value)
 })
 
+const selectedMonitorEnabled = computed(() => {
+  const snapshot = serverMonitorMap.value[selectedServer.value] || {}
+  return snapshot.monitorEnabled !== false
+})
+
 const serverCards = computed(() => serverList.value.map(serverIp => {
   const snapshot = serverMonitorMap.value[serverIp] || {}
   const serverInfoList = getServerInfoList(serverIp)
@@ -432,7 +445,9 @@ const serverCards = computed(() => serverList.value.map(serverIp => {
     key: serverIp,
     type: 'server',
     serverIp,
-    subtitle: snapshot.current?.os || '等待首次 CPU / 内存采样',
+    subtitle: snapshot.monitorEnabled === false
+      ? '检测已暂停，保留状态盘展示'
+      : (snapshot.current?.os || '等待首次 CPU / 内存采样'),
     health,
     tone: getToneByLevel(health.level),
     cpuTone: buildUsageTone(health.cpuUsage),
@@ -604,6 +619,7 @@ const applyServerSnapshot = (serverIp, payload) => {
       current: payload?.current || {},
       history: Array.isArray(payload?.history) ? payload.history : [],
       healthState: hasBackendHealthState(payload?.healthState) ? payload.healthState : null,
+      monitorEnabled: payload?.monitorEnabled !== false,
       fetchedAt: Date.now(),
     },
   }
@@ -753,6 +769,50 @@ const submitAddServerMonitor = async () => {
     ElMessage.error(error?.message || '添加服务器监控失败')
   } finally {
     addMonitorLoading.value = false
+  }
+}
+
+const handleStopServerMonitor = async () => {
+  if (!selectedServer.value) {
+    ElMessage.warning('当前没有可操作的服务器监控')
+    return
+  }
+
+  const shouldDisable = selectedMonitorEnabled.value
+
+  try {
+    await ElMessageBox.confirm(
+      shouldDisable
+        ? `暂停后将暂时停止采集 ${selectedServer.value} 的 CPU 和内存数据，但状态盘仍会保留，是否继续？`
+        : `恢复后将重新开始采集 ${selectedServer.value} 的 CPU 和内存数据，是否继续？`,
+      shouldDisable ? '暂停检测' : '恢复检测',
+      {
+        confirmButtonText: shouldDisable ? '暂停检测' : '恢复检测',
+        cancelButtonText: '取消',
+        type: 'warning',
+      },
+    )
+  } catch {
+    return
+  }
+
+  stoppingMonitor.value = true
+
+  try {
+    const targetServer = selectedServer.value
+    if (shouldDisable) {
+      await stopServerMonitor(targetServer)
+      ElMessage.success(`已暂停 ${targetServer} 的服务器检测`)
+    } else {
+      await resumeServerMonitor(targetServer)
+      ElMessage.success(`已恢复 ${targetServer} 的服务器检测`)
+    }
+
+    await refreshDashboard(targetServer)
+  } catch (error) {
+    ElMessage.error(error?.message || `${shouldDisable ? '暂停' : '恢复'}服务器监控失败`)
+  } finally {
+    stoppingMonitor.value = false
   }
 }
 

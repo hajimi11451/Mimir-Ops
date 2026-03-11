@@ -160,7 +160,13 @@ public class HealthAlertTask {
                         .last("LIMIT 1")
         );
 
-        if (config == null || !StringUtils.hasText(config.getUsername()) || !StringUtils.hasText(config.getPassword())) {
+        if (config == null) {
+            return RecheckResult.falsePositive("系统监控配置已不存在，原高风险告警不再继续通知。");
+        }
+        if (Integer.valueOf(0).equals(config.getIsEnabled())) {
+            return RecheckResult.falsePositive("系统监控已暂停检测，原高风险告警不再继续通知。");
+        }
+        if (!StringUtils.hasText(config.getUsername()) || !StringUtils.hasText(config.getPassword())) {
             String note = "系统监控告警二次复检失败：未找到可用的 SSH 监控配置，已按原高风险告警处理。";
             return RecheckResult.confirmed(buildFallbackHighRiskInfo(alert, note, MONITOR_RECHECK_ACTIONS), note);
         }
@@ -192,8 +198,10 @@ public class HealthAlertTask {
         );
 
         if (config == null) {
-            String note = "日志告警二次复检失败：未找到对应的组件监控配置，已按原高风险告警处理。";
-            return RecheckResult.confirmed(buildFallbackHighRiskInfo(alert, note, DIAGNOSIS_RECHECK_ACTIONS), note);
+            return RecheckResult.falsePositive("对应日志监控配置已不存在，原高风险告警不再继续通知。");
+        }
+        if (Integer.valueOf(0).equals(config.getIsEnabled())) {
+            return RecheckResult.falsePositive("对应日志监控已暂停检测，原高风险告警不再继续通知。");
         }
 
         try {

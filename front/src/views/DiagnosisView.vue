@@ -242,40 +242,63 @@
               </span>
             </template>
           </el-table-column>
+          
 
           <el-table-column
             label="状态"
             min-width="120"
           >
-            <template #default>
-              <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                监控中
+            <template #default="{ row }">
+              <span
+                class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
+                :class="Number(row.isEnabled) === 0 ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'"
+              >
+                {{ Number(row.isEnabled) === 0 ? '已暂停' : '监控中' }}
               </span>
             </template>
           </el-table-column>
 
           <el-table-column
             label="操作"
-            align="right"
-            width="120"
+            align="left"
+            width="220"
           >
             <template #default="{ row }">
-              <el-popconfirm
-                title="确定要停止该监控任务吗？"
-                confirm-button-text="确定"
-                cancel-button-text="取消"
-                @confirm="handleDelete(row.id)"
-              >
-                <template #reference>
-                  <el-button
-                    link
-                    type="danger"
-                    class="text-red-600 hover:text-red-900 text-sm font-medium"
-                  >
-                    删除
-                  </el-button>
-                </template>
-              </el-popconfirm>
+              <div class="flex items-center justify-end gap-3">
+                <el-popconfirm
+                  :title="Number(row.isEnabled) === 0 ? '确定要恢复该监控任务吗？' : '确定要暂停该监控任务吗？'"
+                  confirm-button-text="确定"
+                  cancel-button-text="取消"
+                  @confirm="handleToggleStatus(row)"
+                >
+                  <template #reference>
+                    <el-button
+                      link
+                      :type="Number(row.isEnabled) === 0 ? 'primary' : 'warning'"
+                      class="text-sm font-medium"
+                    >
+                      {{ Number(row.isEnabled) === 0 ? '恢复检测' : '暂停检测' }}
+                    </el-button>
+                  </template>
+                </el-popconfirm>
+
+                <el-popconfirm
+                  title="确定要删除该监控任务吗？"
+                  confirm-button-text="确定"
+                  cancel-button-text="取消"
+                  @confirm="handleDelete(row.id)"
+                >
+                  <template #reference>
+                    <el-button
+                      link
+                      type="danger"
+                      class="text-red-600 hover:text-red-900 text-sm font-medium"
+                    >
+                      删除
+                    </el-button>
+                  </template>
+                </el-popconfirm>
+              </div>
             </template>
           </el-table-column>
         </el-table>
@@ -293,7 +316,8 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { getLogPath, addConfig, listConfigs, deleteConfig } from '../api/diagnosis'
+import { ElMessage } from 'element-plus'
+import { getLogPath, addConfig, listConfigs, deleteConfig, updateConfigStatus } from '../api/diagnosis'
 
 const config = reactive({
   serverIp: '',
@@ -386,12 +410,25 @@ const fetchConfigs = async () => {
 }
 
 const handleDelete = async id => {
-  if (!confirm('确定要停止该监控任务吗？')) return
   try {
     await deleteConfig(id)
+    ElMessage.success('监控任务已删除')
     fetchConfigs()
   } catch (error) {
     console.error('Failed to delete config', error)
+    ElMessage.error(error?.message || '删除监控任务失败')
+  }
+}
+
+const handleToggleStatus = async row => {
+  try {
+    const nextEnabled = Number(row?.isEnabled) === 0 ? 1 : 0
+    await updateConfigStatus(row.id, nextEnabled)
+    ElMessage.success(nextEnabled === 1 ? '监控已恢复' : '监控已暂停')
+    fetchConfigs()
+  } catch (error) {
+    console.error('Failed to update config status', error)
+    ElMessage.error(error?.message || '更新监控状态失败')
   }
 }
 

@@ -37,6 +37,7 @@ public class MonitorService {
     private static final String MONITOR_FAILURE_COMPONENT = "系统监控";
     private static final String MONITOR_FAILURE_SUMMARY = "SSH服务器网络异常";
     private static final String MONITOR_FAILURE_ANALYSIS = "采集不到 CPU 和内存数据，请检查 SSH 连接、服务器网络状态以及目标主机是否可达。";
+    private static final String SYSTEM_MONITOR_CONFIG_KEY = "system_monitor";
     private static final Pattern NUMERIC_PATTERN = Pattern.compile("-?\\d+(?:\\.\\d+)?");
 
     @Autowired
@@ -68,7 +69,9 @@ public class MonitorService {
     public void collectMetrics() {
         // 1. 获取所有配置的服务器 (去重，取第一个配置)
         List<ComponentConfig> configs = componentConfigMapper.selectList(new QueryWrapper<ComponentConfig>()
-                .select("DISTINCT server_ip, username, password"));
+                .select("DISTINCT server_ip, username, password")
+                .eq("config_key", SYSTEM_MONITOR_CONFIG_KEY)
+                .eq("is_enabled", 1));
         
         // 简单的去重逻辑 (按IP)
         Map<String, ComponentConfig> uniqueServers = new HashMap<>();
@@ -221,6 +224,8 @@ public class MonitorService {
         List<ComponentConfig> configs = componentConfigMapper.selectList(
                 new QueryWrapper<ComponentConfig>()
                         .select("DISTINCT user_id, server_ip")
+                        .eq("config_key", SYSTEM_MONITOR_CONFIG_KEY)
+                        .eq("is_enabled", 1)
                         .eq("server_ip", serverIp)
         );
 
@@ -291,6 +296,7 @@ public class MonitorService {
         List<ComponentConfig> ownedConfigs = componentConfigMapper.selectList(
                 new QueryWrapper<ComponentConfig>()
                         .select("DISTINCT server_ip")
+                        .eq("config_key", SYSTEM_MONITOR_CONFIG_KEY)
                         .eq("user_id", user.getId())
         );
         Set<String> ownedIps = new LinkedHashSet<>();
@@ -300,6 +306,29 @@ public class MonitorService {
             }
         }
         return new ArrayList<>(ownedIps);
+    }
+
+    public boolean isServerMonitorEnabledByUsername(String username, String serverIp) {
+        if (username == null || username.isBlank() || serverIp == null || serverIp.isBlank()) {
+            return false;
+        }
+
+        UserLogin user = userLoginMapper.selectOne(
+                new QueryWrapper<UserLogin>().eq("username", username)
+        );
+        if (user == null || user.getId() == null) {
+            return false;
+        }
+
+        ComponentConfig config = componentConfigMapper.selectOne(
+                new QueryWrapper<ComponentConfig>()
+                        .eq("user_id", user.getId())
+                        .eq("server_ip", serverIp.trim())
+                        .eq("config_key", SYSTEM_MONITOR_CONFIG_KEY)
+                        .orderByDesc("updated_at")
+                        .last("LIMIT 1")
+        );
+        return config != null && !Integer.valueOf(0).equals(config.getIsEnabled());
     }
 
     /**
@@ -384,6 +413,14 @@ public class MonitorService {
             sample.put("error", e.getMessage());
             return sample;
         }
+    }
+
+    public void clearServerCache(String serverIp) {
+        if (serverIp == null || serverIp.isBlank()) {
+            return;
+        }
+        historyMap.remove(serverIp.trim());
+        currentInfoMap.remove(serverIp.trim());
     }
 
     private int calcPointsByRange(String timeRange, long intervalMs) {

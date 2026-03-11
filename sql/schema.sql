@@ -49,6 +49,7 @@ CREATE TABLE `componentconfig` (
   `config_key` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '配置项 (固定为 error_log_path)',
   `config_value` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '路径值',
   `is_verified` tinyint(1) DEFAULT '0' COMMENT '是否验证通过',
+  `is_enabled` tinyint(1) DEFAULT '1' COMMENT '是否启用检测',
   `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='组件配置表';

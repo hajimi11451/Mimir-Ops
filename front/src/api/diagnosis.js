@@ -65,6 +65,40 @@ export function addServerMonitor(data) {
   })
 }
 
+export function stopServerMonitor(serverIp, appUsername) {
+  return request({
+    url: '/diagnosis/server-monitor/stop',
+    method: 'post',
+    data: {
+      serverIp,
+      appUsername: appUsername || getCurrentUsername()
+    }
+  })
+}
+
+export function resumeServerMonitor(serverIp, appUsername) {
+  return request({
+    url: '/diagnosis/server-monitor/resume',
+    method: 'post',
+    data: {
+      serverIp,
+      appUsername: appUsername || getCurrentUsername()
+    }
+  })
+}
+
+export function updateConfigStatus(id, isEnabled, appUsername) {
+  return request({
+    url: '/diagnosis/config/status',
+    method: 'post',
+    data: {
+      id,
+      isEnabled,
+      appUsername: appUsername || getCurrentUsername()
+    }
+  })
+}
+
 export function listConfigs(username) {
   return request({
     url: '/diagnosis/config/list',

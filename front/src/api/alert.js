@@ -36,6 +36,7 @@ export function sendAlertTestMail(data) {
   return request({
     url: '/api/alert/test',
     method: 'post',
+    timeout: 30000,
     data: {
       ...(data || {}),
       username: (data && data.username) || getCurrentUsername(),
