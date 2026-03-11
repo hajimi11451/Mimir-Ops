@@ -15,6 +15,8 @@ public class UserLogin {
     private Long id;
     //用户名称
     private String username;
+    //邮箱（用于告警通知）
+    private String email;
     //密码
     private String password;
     //账户创建时间

@@ -41,7 +41,6 @@
               <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <h3 class="text-lg font-bold text-ui-text">服务器状态盘</h3>
-                  <p class="mt-1 text-sm text-ui-subtext">参考你给的小盘样式改成横向阵列，首页只监控 CPU 与内存，不监控组件。</p>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-3">
@@ -221,7 +220,7 @@
 
               <div class="flex-1 min-h-0 bg-ui-bg p-4 lg:p-6">
                 <DashboardOverviewDetail
-                  class="h-full"
+                  class="dashboard-detail-panel h-full"
                   :health-state="selectedHealthState"
                   :info-list="selectedServerInfoList"
                   :loading-info="loadingInfo"
@@ -230,7 +229,6 @@
                   :loading-monitor="loadingMonitor"
                   :current-info="currentInfo"
                   :history-data="historyData"
-                  @server-change="handleServerChange"
                 />
               </div>
             </div>
@@ -402,26 +400,33 @@ const buildPendingHealthState = infoItems => {
   }
 }
 
-const selectedHealthState = computed(() => {
-  const hasData = currentInfo.value && Object.keys(currentInfo.value).length > 0
+const hasBackendHealthState = healthState => healthState && typeof healthState === 'object' && Object.keys(healthState).length > 0
 
+const resolveSnapshotHealthState = (snapshot, infoItems) => {
+  if (hasBackendHealthState(snapshot?.healthState)) {
+    return snapshot.healthState
+  }
+
+  const hasData = snapshot?.current && Object.keys(snapshot.current).length > 0
   if (!hasData) {
-    return buildPendingHealthState(selectedServerInfoList.value)
+    return buildPendingHealthState(infoItems)
   }
 
   return resolveSystemHealth({
-    currentInfo: currentInfo.value,
-    infoList: selectedServerInfoList.value,
+    currentInfo: snapshot.current || {},
+    infoList: infoItems,
   })
+}
+
+const selectedHealthState = computed(() => {
+  const snapshot = serverMonitorMap.value[selectedServer.value] || {}
+  return resolveSnapshotHealthState(snapshot, selectedServerInfoList.value)
 })
 
 const serverCards = computed(() => serverList.value.map(serverIp => {
   const snapshot = serverMonitorMap.value[serverIp] || {}
   const serverInfoList = getServerInfoList(serverIp)
-  const hasData = snapshot.current && Object.keys(snapshot.current).length > 0
-  const health = hasData
-    ? resolveSystemHealth({ currentInfo: snapshot.current || {}, infoList: serverInfoList })
-    : buildPendingHealthState(serverInfoList)
+  const health = resolveSnapshotHealthState(snapshot, serverInfoList)
 
   return {
     key: serverIp,
@@ -598,6 +603,7 @@ const applyServerSnapshot = (serverIp, payload) => {
       serverIp,
       current: payload?.current || {},
       history: Array.isArray(payload?.history) ? payload.history : [],
+      healthState: hasBackendHealthState(payload?.healthState) ? payload.healthState : null,
       fetchedAt: Date.now(),
     },
   }
@@ -691,12 +697,6 @@ const refreshDashboard = async preferredServer => {
   } finally {
     loadingMonitor.value = false
   }
-}
-
-const handleServerChange = async serverIp => {
-  selectedServer.value = serverIp
-  syncSelectedSnapshot()
-  await fetchServerSnapshot(serverIp)
 }
 
 const scrollCardIntoViewByIp = serverIp => {
@@ -863,6 +863,10 @@ onUnmounted(() => {
 
 .server-slide-add {
   width: clamp(280px, 30vw, 340px);
+}
+
+.dashboard-detail-panel :deep(.el-select) {
+  display: none !important;
 }
 
 .server-dot {

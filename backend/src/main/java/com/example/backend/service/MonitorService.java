@@ -3,13 +3,18 @@ package com.example.backend.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.example.backend.dto.MetricDTO;
 import com.example.backend.entity.ComponentConfig;
+import com.example.backend.entity.Information;
 import com.example.backend.entity.UserLogin;
 import com.example.backend.mapper.ComponentConfigMapper;
+import com.example.backend.mapper.InformationMapper;
 import com.example.backend.mapper.UserLoginMapper;
+import com.example.backend.utils.InfoNormalizationUtils;
 import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -17,20 +22,31 @@ import org.springframework.stereotype.Service;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class MonitorService {
+
+    private static final String MONITOR_FAILURE_COMPONENT = "系统监控";
+    private static final String MONITOR_FAILURE_SUMMARY = "SSH服务器网络异常";
+    private static final String MONITOR_FAILURE_ANALYSIS = "采集不到 CPU 和内存数据，请检查 SSH 连接、服务器网络状态以及目标主机是否可达。";
+    private static final Pattern NUMERIC_PATTERN = Pattern.compile("-?\\d+(?:\\.\\d+)?");
 
     @Autowired
     private ComponentConfigMapper componentConfigMapper;
 
     @Autowired
     private UserLoginMapper userLoginMapper;
+
+    @Autowired
+    private InformationMapper informationMapper;
 
     @Value("${monitor.schedule.fixed-rate:60000}")
     private long monitorFixedRateMs;
@@ -45,7 +61,10 @@ public class MonitorService {
      * 定时任务：每隔一段时间执行一次 (由 monitor.schedule.fixed-rate 配置，默认 60000ms)
      * 遍历数据库中的服务器配置，远程采集 CPU 和内存使用率
      */
-    @Scheduled(fixedRateString = "${monitor.schedule.fixed-rate:60000}")
+    @Scheduled(
+            initialDelayString = "${monitor.schedule.fixed-rate:60000}",
+            fixedRateString = "${monitor.schedule.fixed-rate:60000}"
+    )
     public void collectMetrics() {
         // 1. 获取所有配置的服务器 (去重，取第一个配置)
         List<ComponentConfig> configs = componentConfigMapper.selectList(new QueryWrapper<ComponentConfig>()
@@ -70,6 +89,12 @@ public class MonitorService {
         }
     }
 
+    @EventListener(ApplicationReadyEvent.class)
+    public void collectMetricsOnStartup() {
+        System.out.println("应用启动完成，立即执行一次 CPU/内存采集");
+        collectMetrics();
+    }
+
     private void collectServerMetrics(ComponentConfig server) {
         String ip = server.getServerIp();
         String user = server.getUsername();
@@ -86,13 +111,13 @@ public class MonitorService {
             // 获取 CPU 使用率 (使用 vmstat 获取空闲率，然后用 100 减去)
             // vmstat 1 2 取第二行数据
             String cpuCmd = "vmstat 1 2 | tail -1 | awk '{print 100 - $15}'";
-            String memCmd = "free -m | grep Mem | awk '{print $3/$2 * 100}'";
+            String memCmd = "awk '/MemTotal/ {total=$2} /MemAvailable/ {avail=$2} END {if (total>0 && avail>=0) print (total-avail)/total*100}' /proc/meminfo";
             String uptimeCmd = "uptime -p";
             String osCmd = "cat /etc/os-release | grep PRETTY_NAME | cut -d= -f2 | tr -d '\"'";
             String totalMemCmd = "free -h | grep Mem | awk '{print $2}'";
 
-            double cpuUsage = parseDouble(sshExec(ip, user, password, cpuCmd));
-            double memUsage = parseDouble(sshExec(ip, user, password, memCmd));
+            double cpuUsage = parseMetricValue(sshExec(ip, user, password, cpuCmd), "CPU");
+            double memUsage = parseMetricValue(sshExec(ip, user, password, memCmd), "内存");
             String upTime = sshExec(ip, user, password, uptimeCmd).trim();
             String os = sshExec(ip, user, password, osCmd).trim();
             String totalMem = sshExec(ip, user, password, totalMemCmd).trim();
@@ -126,7 +151,7 @@ public class MonitorService {
 
         } catch (Exception e) {
             System.err.println("采集服务器 " + ip + " 失败: " + e.getMessage());
-            // 可以记录一个空的或错误状态，这里简单跳过
+            createMonitorFailureInfo(ip, e.getMessage());
         }
     }
 
@@ -160,11 +185,74 @@ public class MonitorService {
         }
     }
 
-    private double parseDouble(String str) {
+    private double parseMetricValue(String str, String metricName) {
+        String raw = str == null ? "" : str.trim();
+        if (isNetworkFailure(raw)) {
+            throw new RuntimeException(MONITOR_FAILURE_SUMMARY);
+        }
+
         try {
-            return Double.parseDouble(str.trim());
+            return Double.parseDouble(raw);
         } catch (Exception e) {
-            return 0.0;
+            Matcher matcher = NUMERIC_PATTERN.matcher(raw.replace(",", "."));
+            if (matcher.find()) {
+                return Double.parseDouble(matcher.group());
+            }
+            throw new RuntimeException(metricName + "数据采集失败");
+        }
+    }
+
+    private boolean isNetworkFailure(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return false;
+        }
+
+        return raw.startsWith("SSH Error:")
+                || raw.contains("Connection timed out")
+                || raw.contains("Connection refused")
+                || raw.contains("No route to host")
+                || raw.contains("Read timed out")
+                || raw.contains("Auth fail")
+                || raw.contains("timeout")
+                || raw.contains("refused");
+    }
+
+    private void createMonitorFailureInfo(String serverIp, String detailMessage) {
+        List<ComponentConfig> configs = componentConfigMapper.selectList(
+                new QueryWrapper<ComponentConfig>()
+                        .select("DISTINCT user_id, server_ip")
+                        .eq("server_ip", serverIp)
+        );
+
+        if (configs == null || configs.isEmpty()) {
+            return;
+        }
+
+        Set<Long> userIds = new LinkedHashSet<>();
+        for (ComponentConfig config : configs) {
+            if (config != null && config.getUserId() != null) {
+                userIds.add(config.getUserId());
+            }
+        }
+
+        String normalizedRiskLevel = InfoNormalizationUtils.normalizeRiskLevel("高");
+        String normalizedRawLog = InfoNormalizationUtils.normalizeText(detailMessage, MONITOR_FAILURE_SUMMARY);
+
+        for (Long userId : userIds) {
+            Information info = new Information();
+            info.setUserId(userId);
+            info.setServerIp(serverIp);
+            info.setComponent(MONITOR_FAILURE_COMPONENT);
+            info.setErrorSummary(MONITOR_FAILURE_SUMMARY);
+            info.setAnalysisResult(MONITOR_FAILURE_ANALYSIS);
+            info.setSuggestedActions(InfoNormalizationUtils.normalizeSuggestedActions(
+                    "检查 SSH 网络连通性；确认服务器在线；检查 SSH 端口、账号密码和防火墙配置。",
+                    normalizedRiskLevel
+            ));
+            info.setRawLog(normalizedRawLog);
+            info.setRiskLevel(normalizedRiskLevel);
+            info.setCreatedAt(LocalDateTime.now());
+            informationMapper.insert(info);
         }
     }
 
@@ -254,13 +342,13 @@ public class MonitorService {
 
         try {
             String cpuCmd = "vmstat 1 2 | tail -1 | awk '{print 100 - $15}'";
-            String memCmd = "free -m | grep Mem | awk '{print $3/$2 * 100}'";
+            String memCmd = "awk '/MemTotal/ {total=$2} /MemAvailable/ {avail=$2} END {if (total>0 && avail>=0) print (total-avail)/total*100}' /proc/meminfo";
             String uptimeCmd = "uptime -p";
             String osCmd = "cat /etc/os-release | grep PRETTY_NAME | cut -d= -f2 | tr -d '\"'";
             String totalMemCmd = "free -h | grep Mem | awk '{print $2}'";
 
-            double cpuUsage = parseDouble(sshExec(serverIp, username, password, cpuCmd));
-            double memUsage = parseDouble(sshExec(serverIp, username, password, memCmd));
+            double cpuUsage = parseMetricValue(sshExec(serverIp, username, password, cpuCmd), "CPU");
+            double memUsage = parseMetricValue(sshExec(serverIp, username, password, memCmd), "内存");
             String upTime = sshExec(serverIp, username, password, uptimeCmd).trim();
             String os = sshExec(serverIp, username, password, osCmd).trim();
             String totalMem = sshExec(serverIp, username, password, totalMemCmd).trim();

@@ -6,6 +6,7 @@ import com.example.backend.mapper.UserLoginMapper;
 import com.example.backend.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.Map;
 
@@ -34,6 +35,7 @@ public class UserServiceImpl implements UserService {
     public String register(Map<String, String> request) {
         String username = request.get("username");
         String password = request.get("password");
+        String email = request.get("email");
         QueryWrapper<UserLogin> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("username", username);
         UserLogin user = userLoginMapper.selectOne(queryWrapper);
@@ -43,6 +45,7 @@ public class UserServiceImpl implements UserService {
         UserLogin newUser = new UserLogin();
         newUser.setUsername(username);
         newUser.setPassword(password);
+        newUser.setEmail(StringUtils.hasText(email) ? email.trim() : null);
         userLoginMapper.insert(newUser);
         return "注册成功";
     }

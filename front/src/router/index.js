@@ -7,6 +7,7 @@ import DiagnosisView from '../views/DiagnosisView.vue'
 import InfoListView from '../views/InfoListView.vue'
 import InfoDetailView from '../views/InfoDetailView.vue'
 import OpsAssistantView from '../views/OpsAssistantView.vue'
+import AlertSettingsView from '../views/AlertSettingsView.vue'
 
 const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
@@ -67,6 +68,14 @@ const router = createRouter({
           component: InfoDetailView,
           meta: {
             title: '告警详情',
+          },
+        },
+        {
+          path: '/alert-settings',
+          name: 'alert-settings',
+          component: AlertSettingsView,
+          meta: {
+            title: '邮箱通知设置',
           },
         },
       ],

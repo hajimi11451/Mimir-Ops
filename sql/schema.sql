@@ -7,6 +7,7 @@ USE `ai_ops_db`;
 CREATE TABLE `userlogin` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `username` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '用户名',
+  `email` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '告警接收邮箱',
   `password` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '密码',
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`),

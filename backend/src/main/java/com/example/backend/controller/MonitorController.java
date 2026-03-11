@@ -1,6 +1,7 @@
 package com.example.backend.controller;
 
 import com.example.backend.dto.MetricDTO;
+import com.example.backend.service.HealthService;
 import com.example.backend.service.MonitorService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,6 +19,9 @@ public class MonitorController {
 
     @Autowired
     private MonitorService monitorService;
+
+    @Autowired
+    private HealthService healthService;
 
     @GetMapping("/dashboard")
     public Map<String, Object> getDashboardData(@RequestParam(required = false) String ip,
@@ -41,9 +45,11 @@ public class MonitorController {
             dashboard.put("history", history);
             Map<String, Object> current = monitorService.getRealtime(targetIp);
             dashboard.put("current", current);
+            dashboard.put("healthState", healthService.buildHealthState(username, targetIp, current, history));
         } else {
             dashboard.put("history", List.of());
             dashboard.put("current", Map.of());
+            dashboard.put("healthState", Map.of());
         }
 
         return dashboard;

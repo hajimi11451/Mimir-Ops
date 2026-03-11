@@ -2,6 +2,7 @@ package com.example.backend.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.backend.entity.ComponentConfig;
+import com.example.backend.entity.Information;
 import com.example.backend.entity.UserLogin;
 import com.example.backend.mapper.ComponentConfigMapper;
 import com.example.backend.mapper.UserLoginMapper;
@@ -543,58 +544,70 @@ public class DiagnosisService {
 
     public void diagnoseAndSave(ComponentConfig config) {
         try {
-            // 1. 获取日志路径 (如果为空，尝试自动发现)
-            String logPath = config.getConfigValue();
-            if (!StringUtils.hasText(logPath)) {
-                logPath = getLogPath(config.getServerIp(), config.getComponent(), config.getUsername(), config.getPassword());
-            }
-            
-            // 2. 执行诊断
-            Map<String, Object> result = executeDiagnosis(config.getServerIp(), config.getComponent(), logPath, config.getUsername(), config.getPassword());
-            
-            String analysis = (String) result.get("analysis");
-            boolean noLogData = Boolean.TRUE.equals(result.get("noLogData"));
-            boolean fetchFailure = Boolean.TRUE.equals(result.get("fetchFailure"));
-            boolean aiException = isAiExceptionResponse(analysis);
-            
-            // 3. 保存结果到 Information 表（需设置 userId 否则插入失败）
-            com.example.backend.entity.Information info = new com.example.backend.entity.Information();
-            info.setUserId(config.getUserId() != null ? config.getUserId() : DEFAULT_USER_ID);
-            info.setServerIp(config.getServerIp());
-            info.setComponent(InfoNormalizationUtils.normalizeComponent(config.getComponent()));
-            if (fetchFailure) {
-                String normalizedRiskLevel = InfoNormalizationUtils.normalizeRiskLevel(String.valueOf(result.get("riskLevel")));
-                info.setErrorSummary(InfoNormalizationUtils.normalizeText((String) result.get("summary"), SSH_FETCH_FAILURE_SUMMARY));
-                info.setAnalysisResult(InfoNormalizationUtils.normalizeText((String) result.get("rawLog"), SSH_FETCH_FAILURE_SUMMARY));
-                info.setSuggestedActions(InfoNormalizationUtils.normalizeSuggestedActions(
-                        "检查目标服务器 SSH 连通性、账号密码、端口和日志路径权限；确认日志文件存在且可读。",
-                        normalizedRiskLevel
-                ));
-                info.setRiskLevel(normalizedRiskLevel);
-            } else if (noLogData) {
-                String normalizedRiskLevel = InfoNormalizationUtils.normalizeRiskLevel("无");
-                info.setErrorSummary(InfoNormalizationUtils.normalizeText("无", "无"));
-                info.setAnalysisResult(InfoNormalizationUtils.normalizeText("无", "无"));
-                info.setSuggestedActions(InfoNormalizationUtils.normalizeSuggestedActions("", normalizedRiskLevel));
-                info.setRiskLevel(normalizedRiskLevel);
-            } else if (aiException) {
-                String normalizedRiskLevel = InfoNormalizationUtils.normalizeRiskLevel("高");
-                info.setErrorSummary(InfoNormalizationUtils.normalizeText(AI_EXCEPTION_STORED_MESSAGE, "无"));
-                info.setAnalysisResult(InfoNormalizationUtils.normalizeText(AI_EXCEPTION_STORED_MESSAGE, "无"));
-                info.setSuggestedActions(InfoNormalizationUtils.normalizeSuggestedActions(AI_EXCEPTION_STORED_MESSAGE, normalizedRiskLevel));
-                info.setRiskLevel(normalizedRiskLevel);
-            } else {
-                parseAndSetAiResult(info, analysis, result, config.getComponent());
-            }
-            info.setRawLog(InfoNormalizationUtils.normalizeText((String) result.get("rawLog"), "无"));
-            info.setCreatedAt(java.time.LocalDateTime.now());
-            
+            Information info = buildDiagnosisInfo(config);
             informationMapper.insert(info);
             log.info("自动诊断完成并保存: {} - {}", config.getServerIp(), config.getComponent());
-            
         } catch (Exception e) {
             log.error("自动诊断失败: {} - {}", config.getServerIp(), config.getComponent(), e);
         }
+    }
+
+    public Information buildDiagnosisInfo(ComponentConfig config) {
+        if (config == null) {
+            throw new RuntimeException("诊断配置不能为空");
+        }
+
+        String logPath = config.getConfigValue();
+        if (!StringUtils.hasText(logPath)) {
+            logPath = getLogPath(config.getServerIp(), config.getComponent(), config.getUsername(), config.getPassword());
+        }
+
+        Map<String, Object> result = executeDiagnosis(
+                config.getServerIp(),
+                config.getComponent(),
+                logPath,
+                config.getUsername(),
+                config.getPassword()
+        );
+
+        String analysis = (String) result.get("analysis");
+        boolean noLogData = Boolean.TRUE.equals(result.get("noLogData"));
+        boolean fetchFailure = Boolean.TRUE.equals(result.get("fetchFailure"));
+        boolean aiException = isAiExceptionResponse(analysis);
+
+        Information info = new Information();
+        info.setUserId(config.getUserId() != null ? config.getUserId() : DEFAULT_USER_ID);
+        info.setServerIp(config.getServerIp());
+        info.setComponent(InfoNormalizationUtils.normalizeComponent(config.getComponent()));
+
+        if (fetchFailure) {
+            String normalizedRiskLevel = InfoNormalizationUtils.normalizeRiskLevel(String.valueOf(result.get("riskLevel")));
+            info.setErrorSummary(InfoNormalizationUtils.normalizeText((String) result.get("summary"), SSH_FETCH_FAILURE_SUMMARY));
+            info.setAnalysisResult(InfoNormalizationUtils.normalizeText((String) result.get("rawLog"), SSH_FETCH_FAILURE_SUMMARY));
+            info.setSuggestedActions(InfoNormalizationUtils.normalizeSuggestedActions(
+                    "检查目标服务器 SSH 连通性、账号密码、端口和日志路径权限；确认日志文件存在且可读。",
+                    normalizedRiskLevel
+            ));
+            info.setRiskLevel(normalizedRiskLevel);
+        } else if (noLogData) {
+            String normalizedRiskLevel = InfoNormalizationUtils.normalizeRiskLevel("无");
+            info.setErrorSummary(InfoNormalizationUtils.normalizeText("无", "无"));
+            info.setAnalysisResult(InfoNormalizationUtils.normalizeText("无", "无"));
+            info.setSuggestedActions(InfoNormalizationUtils.normalizeSuggestedActions("", normalizedRiskLevel));
+            info.setRiskLevel(normalizedRiskLevel);
+        } else if (aiException) {
+            String normalizedRiskLevel = InfoNormalizationUtils.normalizeRiskLevel("高");
+            info.setErrorSummary(InfoNormalizationUtils.normalizeText(AI_EXCEPTION_STORED_MESSAGE, "无"));
+            info.setAnalysisResult(InfoNormalizationUtils.normalizeText(AI_EXCEPTION_STORED_MESSAGE, "无"));
+            info.setSuggestedActions(InfoNormalizationUtils.normalizeSuggestedActions(AI_EXCEPTION_STORED_MESSAGE, normalizedRiskLevel));
+            info.setRiskLevel(normalizedRiskLevel);
+        } else {
+            parseAndSetAiResult(info, analysis, result, config.getComponent());
+        }
+
+        info.setRawLog(InfoNormalizationUtils.normalizeText((String) result.get("rawLog"), "无"));
+        info.setCreatedAt(java.time.LocalDateTime.now());
+        return info;
     }
 
     /**

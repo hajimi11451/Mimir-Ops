@@ -56,6 +56,17 @@
           </svg>
           <span class="text-sm" :class="{ 'font-semibold': $route.path.startsWith('/info-list') }">全部信息与告警</span>
         </router-link>
+
+        <router-link
+          to="/alert-settings"
+          class="group flex items-center px-6 py-3 transition-colors border-l-4"
+          :class="$route.path === '/alert-settings' ? 'bg-dark border-brand text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white border-transparent'"
+        >
+          <svg class="mr-3 h-5 w-5" :class="$route.path === '/alert-settings' ? 'text-brand' : 'group-hover:text-gray-300'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8m-18 8h18a2 2 0 002-2V8a2 2 0 00-2-2H3a2 2 0 00-2 2v6a2 2 0 002 2z" />
+          </svg>
+          <span class="text-sm" :class="{ 'font-semibold': $route.path === '/alert-settings' }">邮箱通知设置</span>
+        </router-link>
       </nav>
     </aside>
 
