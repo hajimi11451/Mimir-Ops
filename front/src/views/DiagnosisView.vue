@@ -1,8 +1,8 @@
 <template>
-  <div class="mx-auto max-w-7xl space-y-6">
+  <div class="workspace-cool-glass mx-auto max-w-7xl space-y-6">
     <!-- 1. 添加监控配置区 -->
     <el-card
-      class="bg-white rounded-[8px] shadow-sm border border-ui-border"
+      class="glass-card rounded-[30px]"
       :body-style="{ padding: '24px' }"
     >
       <h2 class="text-lg font-bold mb-4 text-ui-text flex items-center">
@@ -35,7 +35,7 @@
         <template #default>
           <div class="text-sm">
             {{ errorMessage }}
-            <div class="mt-2 text-xs text-gray-600">
+            <div class="mt-2 text-xs text-ui-subtext">
               请检查 IP、账号和密码后重试。
             </div>
           </div>
@@ -61,7 +61,7 @@
             <el-input
               v-model="config.serverIp"
               placeholder="192.168.1.10 或 192.168.1.10:2222"
-              class="w-full border-ui-border rounded-lg shadow-sm focus:ring-brand focus:border-brand bg-white transition-all"
+              class="w-full border-ui-border rounded-lg shadow-sm focus:ring-brand focus:border-brand transition-all"
               clearable
             />
           </el-form-item>
@@ -74,7 +74,7 @@
             <el-input
               v-model="config.username"
               placeholder="root"
-              class="w-full border-ui-border rounded-lg shadow-sm focus:ring-brand focus:border-brand bg-white transition-all"
+              class="w-full border-ui-border rounded-lg shadow-sm focus:ring-brand focus:border-brand transition-all"
               clearable
             />
           </el-form-item>
@@ -89,7 +89,7 @@
               type="password"
               placeholder="请输入密码"
               show-password
-              class="w-full border-ui-border rounded-lg shadow-sm focus:ring-brand focus:border-brand bg-white transition-all"
+              class="w-full border-ui-border rounded-lg shadow-sm focus:ring-brand focus:border-brand transition-all"
             />
           </el-form-item>
 
@@ -103,7 +103,7 @@
               v-model="config.component"
               @blur="handleComponentChange"
               placeholder="如 MySQL"
-              class="w-full border-ui-border rounded-lg shadow-sm focus:ring-brand focus:border-brand bg-white transition-all"
+              class="w-full border-ui-border rounded-lg shadow-sm focus:ring-brand focus:border-brand transition-all"
               clearable
             />
           </el-form-item>
@@ -135,7 +135,7 @@
               <el-input
                 v-model="config.logPath"
                 placeholder="留空自动探测"
-                class="w-full border-ui-border rounded-lg shadow-sm focus:ring-brand focus:border-brand bg-white transition-all"
+                class="w-full border-ui-border rounded-lg shadow-sm focus:ring-brand focus:border-brand transition-all"
                 clearable
               />
               <div v-if="pathLoading" class="absolute right-3 top-3">
@@ -178,7 +178,7 @@
 
     <!-- 2. 监控列表 -->
     <el-card
-      class="bg-white rounded-[8px] shadow-sm border border-ui-border"
+      class="glass-card rounded-[30px]"
       :body-style="{ padding: '24px' }"
     >
       <h2 class="text-lg font-bold mb-4 text-ui-text flex items-center">
@@ -204,8 +204,8 @@
           style="width: 100%"
           border
           stripe
-          :header-cell-class-name="() => 'bg-gray-50 text-gray-500 text-xs font-medium uppercase tracking-wider'"
-          :cell-class-name="() => 'text-sm text-gray-700'"
+          :header-cell-class-name="() => 'text-xs font-medium uppercase tracking-wider text-ui-subtext'"
+          :cell-class-name="() => 'text-sm text-ui-text'"
         >
           <el-table-column
             prop="serverIp"
@@ -250,8 +250,8 @@
           >
             <template #default="{ row }">
               <span
-                class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
-                :class="Number(row.isEnabled) === 0 ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'"
+                class="glass-chip px-2.5 py-1 text-xs leading-5 font-semibold"
+                :class="getMonitorStatusClass(row.isEnabled)"
               >
                 {{ Number(row.isEnabled) === 0 ? '已暂停' : '监控中' }}
               </span>
@@ -305,7 +305,7 @@
 
         <div
           v-if="monitorList.length === 0"
-          class="px-6 py-12 text-center text-gray-500 text-sm"
+          class="px-6 py-12 text-center text-ui-subtext text-sm"
         >
           暂无监控配置
         </div>
@@ -332,6 +332,12 @@ const pathLoading = ref(false)
 const loading = ref(false)
 const monitorList = ref([])
 const errorMessage = ref('')
+
+const getMonitorStatusClass = isEnabled => (
+  Number(isEnabled) === 0
+    ? 'border-amber-200/30 bg-amber-400/10 text-ui-warning'
+    : 'border-emerald-200/30 bg-emerald-400/10 text-ui-success'
+)
 
 const handleComponentChange = async () => {
   if (!config.serverIp || !config.component) return

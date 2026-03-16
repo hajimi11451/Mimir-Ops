@@ -1,14 +1,14 @@
 <template>
   <div class="space-y-2">
     <div class="text-xs text-ui-subtext">{{ title }}</div>
-    <div class="bg-white border border-ui-border rounded p-2">
+    <div class="rounded-[18px] border border-white/22 bg-white/14 p-2 shadow-[0_18px_34px_-28px_rgba(15,23,42,0.22)] backdrop-blur-xl">
       <div ref="chartRef" class="h-[260px] w-full"></div>
     </div>
     <div v-if="template === 'health_overview'" class="grid grid-cols-2 gap-2 text-xs">
-      <div class="bg-gray-50 rounded p-2">CPU 平均: {{ summary.avgCpu ?? 0 }}%</div>
-      <div class="bg-gray-50 rounded p-2">CPU 峰值: {{ summary.maxCpu ?? 0 }}%</div>
-      <div class="bg-gray-50 rounded p-2">内存平均: {{ summary.avgMem ?? 0 }}%</div>
-      <div class="bg-gray-50 rounded p-2">内存峰值: {{ summary.maxMem ?? 0 }}%</div>
+      <div class="rounded-[14px] border border-white/20 bg-white/12 p-2 backdrop-blur-xl">CPU 平均: {{ summary.avgCpu ?? 0 }}%</div>
+      <div class="rounded-[14px] border border-white/20 bg-white/12 p-2 backdrop-blur-xl">CPU 峰值: {{ summary.maxCpu ?? 0 }}%</div>
+      <div class="rounded-[14px] border border-white/20 bg-white/12 p-2 backdrop-blur-xl">内存平均: {{ summary.avgMem ?? 0 }}%</div>
+      <div class="rounded-[14px] border border-white/20 bg-white/12 p-2 backdrop-blur-xl">内存峰值: {{ summary.maxMem ?? 0 }}%</div>
     </div>
   </div>
 </template>
@@ -66,4 +66,3 @@ onBeforeUnmount(() => {
   }
 })
 </script>
-

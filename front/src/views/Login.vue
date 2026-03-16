@@ -20,17 +20,17 @@
         </div>
 
         <div class="relative z-10 mt-8 grid gap-4 sm:grid-cols-3">
-          <div class="rounded-[24px] border border-white/12 bg-white/8 p-5 backdrop-blur-sm">
+          <div class="rounded-[24px] border border-white/18 bg-white/12 p-5 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.38)] backdrop-blur-[24px]">
             <div class="text-xs uppercase tracking-[0.22em] text-slate-300">监控</div>
             <div class="mt-3 text-2xl font-semibold">1 屏</div>
             <p class="mt-2 text-sm text-slate-300">CPU、内存、告警同屏查看。</p>
           </div>
-          <div class="rounded-[24px] border border-white/12 bg-white/8 p-5 backdrop-blur-sm">
+          <div class="rounded-[24px] border border-white/18 bg-white/12 p-5 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.38)] backdrop-blur-[24px]">
             <div class="text-xs uppercase tracking-[0.22em] text-slate-300">诊断</div>
             <div class="mt-3 text-2xl font-semibold">AI</div>
             <p class="mt-2 text-sm text-slate-300">自动分析日志并生成处理建议。</p>
           </div>
-          <div class="rounded-[24px] border border-white/12 bg-white/8 p-5 backdrop-blur-sm">
+          <div class="rounded-[24px] border border-white/18 bg-white/12 p-5 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.38)] backdrop-blur-[24px]">
             <div class="text-xs uppercase tracking-[0.22em] text-slate-300">处置</div>
             <div class="mt-3 text-2xl font-semibold">闭环</div>
             <p class="mt-2 text-sm text-slate-300">从建议到执行，保留完整记录。</p>
@@ -38,7 +38,7 @@
         </div>
       </section>
 
-      <section class="w-full rounded-[32px] border border-white/70 bg-white/88 p-6 shadow-[0_30px_80px_-44px_rgba(15,23,42,0.35)] backdrop-blur-sm sm:p-8 lg:w-[440px]">
+      <section class="w-full rounded-[32px] border border-white/42 bg-white/18 p-6 shadow-[0_34px_88px_-48px_rgba(15,23,42,0.46)] backdrop-blur-[30px] sm:p-8 lg:w-[440px]">
         <div class="space-y-2">
           <span class="inline-flex rounded-full bg-brand/8 px-3 py-1 text-xs font-semibold tracking-[0.18em] text-brand">登录</span>
           <h2 class="text-2xl font-semibold tracking-[-0.03em] text-ui-text">进入控制台</h2>
@@ -139,3 +139,4 @@ const handleLogin = async () => {
   }
 }
 </script>
+

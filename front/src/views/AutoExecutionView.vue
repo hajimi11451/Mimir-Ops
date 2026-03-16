@@ -1,5 +1,5 @@
 <template>
-  <div class="mx-auto max-w-7xl space-y-6">
+  <div class="workspace-cool-glass mx-auto max-w-7xl space-y-6">
     <div class="flex items-center justify-between mb-6">
       <div class="flex items-center gap-3">
         <h2 class="text-xl font-bold text-ui-text">处置记录</h2>
@@ -14,7 +14,7 @@
     </div>
 
     <el-card
-      class="bg-white rounded-[8px] shadow-sm border border-ui-border mb-6"
+      class="glass-card mb-6 rounded-[30px]"
       :body-style="{ padding: '20px' }"
     >
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -37,7 +37,7 @@
     </el-card>
 
     <el-card
-      class="bg-white rounded-[8px] shadow-sm border border-ui-border"
+      class="glass-card rounded-[30px]"
       :body-style="{ padding: '0' }"
     >
       <el-table
@@ -94,7 +94,7 @@
         </el-table-column>
       </el-table>
 
-      <div v-if="total > 0" class="flex justify-end py-4 px-4 border-t border-ui-border">
+      <div v-if="total > 0" class="glass-table-footer flex justify-end rounded-none border-x-0 border-b-0 px-4 py-4">
         <el-pagination
           v-model:current-page="currentPage"
           :page-size="pageSize"
@@ -112,16 +112,16 @@
       destroy-on-close
     >
       <div v-if="selectedProcess" class="space-y-5">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="rounded-lg border border-ui-border bg-ui-bg px-4 py-3">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div class="glass-subcard px-4 py-3">
             <div class="text-xs text-ui-subtext mb-1">时间</div>
             <div class="text-sm text-ui-text">{{ formatDate(selectedProcess.processTime) }}</div>
           </div>
-          <div class="rounded-lg border border-ui-border bg-ui-bg px-4 py-3">
+          <div class="glass-subcard px-4 py-3">
             <div class="text-xs text-ui-subtext mb-1">服务器 IP</div>
             <div class="text-sm text-ui-text">{{ selectedProcess.serverIp || '-' }}</div>
           </div>
-          <div class="rounded-lg border border-ui-border bg-ui-bg px-4 py-3">
+          <div class="glass-subcard px-4 py-3">
             <div class="text-xs text-ui-subtext mb-1">组件</div>
             <div class="text-sm text-ui-text">{{ selectedProcess.component || '-' }}</div>
           </div>
@@ -129,14 +129,14 @@
 
         <div>
           <div class="text-sm font-semibold text-ui-text mb-2">问题</div>
-          <div class="rounded-lg border border-ui-border bg-ui-bg px-4 py-3 whitespace-pre-wrap text-sm leading-6 text-ui-text">
+          <div class="glass-code-block px-4 py-3 whitespace-pre-wrap text-sm leading-6 text-ui-text">
             {{ selectedProcess.problemLog || '-' }}
           </div>
         </div>
 
         <div>
           <div class="text-sm font-semibold text-ui-text mb-2">处置</div>
-          <div class="rounded-lg border border-ui-border bg-ui-bg px-4 py-3 whitespace-pre-wrap text-sm leading-6 text-ui-text">
+          <div class="glass-code-block px-4 py-3 whitespace-pre-wrap text-sm leading-6 text-ui-text">
             {{ selectedProcess.processMethod || '-' }}
           </div>
         </div>

@@ -1,5 +1,5 @@
 <template>
-  <div class="mx-auto max-w-6xl space-y-6">
+  <div class="workspace-cool-glass mx-auto max-w-6xl space-y-6">
     <div class="flex items-center justify-between gap-3">
       <div>
         <h2 class="text-xl font-bold text-ui-text">告警详情</h2>
@@ -14,11 +14,11 @@
       </div>
     </div>
 
-    <el-skeleton :rows="8" animated v-if="loading" />
+    <el-skeleton v-if="loading" :rows="8" animated />
 
     <template v-else-if="info">
-      <el-card class="bg-white rounded-[8px] shadow-sm border border-ui-border" :body-style="{ padding: '20px' }">
-        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <el-card class="glass-card rounded-[30px]" :body-style="{ padding: '20px' }">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div class="text-lg font-semibold text-ui-text">{{ info.errorSummary || '未命名告警' }}</div>
           <el-tag :type="getTagType(info.riskLevel)" effect="light">{{ formattedRiskLevel }}</el-tag>
         </div>
@@ -33,14 +33,14 @@
         </el-descriptions>
       </el-card>
 
-      <el-card class="bg-white rounded-[8px] shadow-sm border border-ui-border" :body-style="{ padding: '20px' }">
+      <el-card class="glass-card rounded-[30px]" :body-style="{ padding: '20px' }">
         <template #header>
           <div class="font-semibold text-ui-text">问题详情</div>
         </template>
-        <pre class="detail-pre">{{ info.analysisResult || '-' }}</pre>
+        <pre class="glass-code-block detail-pre">{{ info.analysisResult || '-' }}</pre>
       </el-card>
 
-      <el-card class="bg-white rounded-[8px] shadow-sm border border-ui-border" :body-style="{ padding: '20px' }">
+      <el-card class="glass-card rounded-[30px]" :body-style="{ padding: '20px' }">
         <template #header>
           <div class="font-semibold text-ui-text">处理建议</div>
         </template>
@@ -49,10 +49,10 @@
           <div
             v-for="(action, index) in actionList"
             :key="`${index}-${action}`"
-            class="border border-ui-border rounded-lg p-4 bg-ui-bg flex flex-col gap-3 md:flex-row md:items-start md:justify-between"
+            class="glass-subcard flex flex-col gap-3 p-4 md:flex-row md:items-start md:justify-between"
           >
-            <div class="text-sm text-ui-text leading-6 flex-1">
-              <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-brand/10 text-brand text-xs font-semibold mr-2">
+            <div class="flex-1 text-sm leading-6 text-ui-text">
+              <span class="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand/10 text-xs font-semibold text-brand">
                 {{ index + 1 }}
               </span>
               {{ action }}
@@ -69,11 +69,11 @@
         <el-empty v-else description="无处理建议" />
       </el-card>
 
-      <el-card class="bg-white rounded-[8px] shadow-sm border border-ui-border" :body-style="{ padding: '20px' }">
+      <el-card class="glass-card rounded-[30px]" :body-style="{ padding: '20px' }">
         <template #header>
           <div class="font-semibold text-ui-text">原始日志</div>
         </template>
-        <pre class="detail-pre raw-log">{{ info.rawLog || '-' }}</pre>
+        <pre class="glass-code-block detail-pre raw-log">{{ info.rawLog || '-' }}</pre>
       </el-card>
     </template>
 
@@ -203,7 +203,7 @@ function buildAssistantPrompt(record, action) {
     record?.errorSummary ? `问题摘要：${record.errorSummary}` : '',
     record?.analysisResult ? `问题详情：${record.analysisResult}` : '',
     `我选择的处理方式：${action}`,
-    '请直接开始排查并执行必要命令，完成后返回执行结果、风险与回滚说明。'
+    '请直接开始排查并执行必要命令，完成后返回执行结果、风险与回滚说明。',
   ].filter(Boolean).join('\n')
 }
 
@@ -242,7 +242,7 @@ async function handleSelectAction(action, index) {
       component: info.value.component || '',
       problemLog: info.value.rawLog || '',
       processMethod: action,
-      processTime: formatProcessTime()
+      processTime: formatProcessTime(),
     })
 
     sessionStorage.setItem(PENDING_TASK_KEY, JSON.stringify({
@@ -251,7 +251,7 @@ async function handleSelectAction(action, index) {
       component: info.value.component || '',
       selectedAction: action,
       autoExecute: true,
-      sourceInfoId: info.value.id || ''
+      sourceInfoId: info.value.id || '',
     }))
 
     ElMessage.success('已记录处理方式，正在跳转灵枢助手执行')
@@ -277,8 +277,8 @@ async function handleDeleteCurrent() {
       {
         confirmButtonText: '删除',
         cancelButtonText: '取消',
-        type: 'warning'
-      }
+        type: 'warning',
+      },
     )
   } catch {
     return
@@ -317,15 +317,7 @@ onMounted(() => {
 
 <style scoped>
 .detail-pre {
-  white-space: pre-wrap;
-  word-break: break-word;
-  line-height: 1.75;
-  color: #1f2937;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 16px;
-  margin: 0;
+  max-width: 100%;
 }
 
 .raw-log {
@@ -333,4 +325,3 @@ onMounted(() => {
   overflow: auto;
 }
 </style>
-

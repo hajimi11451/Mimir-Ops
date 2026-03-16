@@ -1,13 +1,13 @@
 <template>
-  <div class="mx-auto max-w-7xl space-y-5">
-    <el-card class="bg-white rounded-[8px] shadow-sm border border-ui-border" :body-style="{ padding: '20px' }">
+  <div class="workspace-cool-glass mx-auto max-w-7xl space-y-5">
+    <el-card class="glass-card rounded-[30px]" :body-style="{ padding: '20px' }">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 class="text-lg font-bold text-ui-text">运维助手</h2>
           <p class="text-xs text-ui-subtext mt-1">对话、规划、执行</p>
         </div>
         <div class="flex items-center gap-2">
-          <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium" :class="connected ? 'bg-green-50 text-ui-success' : 'bg-gray-100 text-ui-subtext'">
+          <span class="glass-chip px-2.5 py-1 text-xs font-medium" :class="connected ? 'border-emerald-200/30 bg-emerald-400/10 text-ui-success' : 'border-slate-200/20 bg-slate-200/8 text-ui-subtext'">
             {{ connected ? '在线' : '离线' }}
           </span>
           <el-button size="small" @click="connectWs" :disabled="connected">连接</el-button>
@@ -16,7 +16,7 @@
       </div>
     </el-card>
 
-    <el-card class="bg-white rounded-[8px] shadow-sm border border-ui-border" :body-style="{ padding: '20px' }">
+    <el-card class="glass-card rounded-[30px]" :body-style="{ padding: '20px' }">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <el-select
           v-model="selectedSavedConnection"
@@ -43,10 +43,15 @@
       <p class="text-xs text-ui-subtext mt-3">默认只规划；勾选后通过 SSH 执行。</p>
     </el-card>
 
-    <el-card class="bg-white rounded-[8px] shadow-sm border border-ui-border" :body-style="{ padding: '20px' }">
-      <div ref="chatBox" class="h-[460px] overflow-y-auto bg-ui-bg border border-ui-border rounded-lg p-4 space-y-3">
+    <el-card class="glass-card rounded-[30px]" :body-style="{ padding: '20px' }">
+      <div ref="chatBox" class="glass-subcard h-[460px] overflow-y-auto p-4 space-y-3">
         <div v-for="(msg, idx) in messages" :key="idx" class="flex" :class="msg.role === 'user' ? 'justify-end' : 'justify-start'">
-          <div class="max-w-[85%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap" :class="msg.role === 'user' ? 'bg-brand text-white' : 'bg-white border border-ui-border text-ui-text'">
+          <div
+            class="max-w-[85%] rounded-[18px] px-3 py-2 text-sm whitespace-pre-wrap"
+            :class="msg.role === 'user'
+              ? 'bg-[linear-gradient(135deg,rgba(37,99,235,0.94),rgba(96,165,250,0.9))] text-white shadow-[0_18px_40px_-28px_rgba(37,99,235,0.7)]'
+              : 'glass-soft border border-white/18 text-ui-text shadow-[0_18px_32px_-28px_rgba(15,23,42,0.22)]'"
+          >
             <div class="font-semibold text-xs mb-1 opacity-80">{{ msg.role === 'user' ? '你' : '运维助手' }}</div>
             <template v-if="msg.type === 'confirm'">
               <div class="space-y-2">
@@ -727,16 +732,18 @@ onUnmounted(() => {
   margin-bottom: 0.75em;
 }
 :deep(.markdown-body pre) {
-  background-color: #f3f4f6;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.08));
   padding: 1em;
-  border-radius: 0.375rem;
+  border-radius: 0.75rem;
   overflow-x: auto;
   margin-bottom: 0.75em;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(18px);
 }
 :deep(.markdown-body code) {
-  background-color: #f3f4f6;
+  background: rgba(255, 255, 255, 0.18);
   padding: 0.2em 0.4em;
-  border-radius: 0.25rem;
+  border-radius: 0.35rem;
   font-family: monospace;
 }
 :deep(.markdown-body p) {

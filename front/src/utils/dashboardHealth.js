@@ -44,10 +44,10 @@ export const normalizeRiskLevel = level => {
 
 export const getAlertClass = level => {
   const map = {
-    高: 'bg-red-50 border-ui-error',
-    中: 'bg-orange-50 border-ui-warning',
-    低: 'bg-blue-50 border-brand',
-    无: 'bg-gray-50 border-gray-300',
+    高: 'border-red-200/30 bg-red-400/10',
+    中: 'border-amber-200/30 bg-amber-400/10',
+    低: 'border-sky-200/30 bg-sky-400/10',
+    无: 'border-white/20 bg-white/10',
   }
 
   return map[normalizeRiskLevel(level)] || map.无

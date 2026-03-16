@@ -1,6 +1,6 @@
 <template>
-  <div class="mx-auto max-w-5xl space-y-6">
-    <el-card v-loading="loadingContact" shadow="never" class="border border-ui-border">
+  <div class="workspace-cool-glass mx-auto max-w-5xl space-y-6">
+    <el-card v-loading="loadingContact" shadow="never" class="glass-card rounded-[30px]">
       <template #header>
         <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
@@ -83,10 +83,8 @@
         </el-col>
 
         <el-col :xs="24" :lg="9">
-          <el-card shadow="never" class="border border-ui-border bg-ui-bg">
-            <template #header>
-              <span class="font-semibold text-ui-text">当前状态</span>
-            </template>
+          <div class="glass-subcard rounded-[26px] p-5">
+            <div class="mb-4 font-semibold text-ui-text">当前状态</div>
 
             <el-descriptions :column="1" border>
               <el-descriptions-item label="当前用户">
@@ -110,7 +108,7 @@
               show-icon
               :title="savedEmail ? '已配置邮箱，可发送通知。' : '未配置邮箱，当前不会自动通知。'"
             />
-          </el-card>
+          </div>
         </el-col>
       </el-row>
     </el-card>

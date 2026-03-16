@@ -4,7 +4,7 @@
 
     <div class="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col gap-4 px-3 py-4 sm:px-5 lg:flex-row lg:px-6">
       <aside class="shrink-0 lg:w-[92px]">
-        <div class="flex rounded-[28px] border border-white/70 bg-white/68 p-2 shadow-[0_26px_60px_-38px_rgba(15,23,42,0.32)] backdrop-blur-sm lg:h-full lg:flex-col">
+        <div class="flex rounded-[28px] border border-white/45 bg-white/18 p-2 shadow-[0_30px_70px_-42px_rgba(15,23,42,0.38)] backdrop-blur-[30px] lg:h-full lg:flex-col">
           <nav class="grid flex-1 grid-cols-3 gap-2 sm:grid-cols-6 lg:grid-cols-1">
             <router-link
               v-for="item in navItems"
@@ -12,12 +12,12 @@
               :to="item.path"
               class="group flex min-w-0 flex-col items-center gap-2 rounded-[20px] px-2 py-3 text-center transition-all duration-200"
               :class="isActive(item)
-                ? 'bg-[linear-gradient(180deg,rgba(37,99,235,0.12),rgba(37,99,235,0.04))] text-brand shadow-[inset_0_0_0_1px_rgba(37,99,235,0.12)]'
+                ? 'bg-[linear-gradient(180deg,rgba(255,255,255,0.28),rgba(255,255,255,0.12))] text-brand shadow-[inset_0_0_0_1px_rgba(96,165,250,0.16),0_18px_30px_-26px_rgba(37,99,235,0.42)] backdrop-blur-xl'
                 : 'text-ui-subtext hover:bg-ui-panel hover:text-ui-text'"
             >
               <span
                 class="flex h-11 w-11 items-center justify-center rounded-2xl transition-colors"
-                :class="isActive(item) ? 'bg-brand/12 text-brand' : 'bg-ui-panel text-ui-subtext group-hover:bg-white'"
+                :class="isActive(item) ? 'bg-brand/12 text-brand' : 'bg-white/14 text-ui-subtext group-hover:bg-white/24'"
               >
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon" />
@@ -27,7 +27,7 @@
             </router-link>
           </nav>
 
-          <div class="mt-2 hidden rounded-[22px] bg-ui-panel px-3 py-3 text-center text-[11px] font-medium text-ui-subtext lg:block">
+          <div class="mt-2 hidden rounded-[22px] border border-white/16 bg-white/14 px-3 py-3 text-center text-[11px] font-medium text-ui-subtext backdrop-blur-xl lg:block">
             {{ username || '游客' }}
           </div>
         </div>
@@ -40,7 +40,7 @@
             <h1 class="mt-2 text-[26px] font-semibold tracking-[-0.04em] text-ui-text">{{ pageTitle }}</h1>
           </div>
 
-          <div class="hidden items-center gap-2 rounded-full border border-white/70 bg-white/70 px-4 py-2 text-xs text-ui-subtext md:flex">
+          <div class="hidden items-center gap-2 rounded-full border border-white/38 bg-white/16 px-4 py-2 text-xs text-ui-subtext backdrop-blur-xl md:flex">
             <span class="inline-flex h-2 w-2 rounded-full" :class="username ? 'bg-ui-success' : 'bg-ui-warning'"></span>
             {{ username ? '账号在线' : '未登录' }}
           </div>
@@ -118,7 +118,7 @@ const pageTitle = computed(() => route.meta?.title || '总览')
 const pageEyebrow = computed(() => route.path === '/dashboard' ? 'Overview' : 'Workspace')
 
 const mainContentClass = computed(() => {
-  const baseClass = 'flex-1 min-h-0 rounded-[30px] border border-white/70 bg-white/58 shadow-[0_26px_60px_-34px_rgba(15,23,42,0.26)] backdrop-blur-sm'
+  const baseClass = 'flex-1 min-h-0 rounded-[30px] border border-white/42 bg-white/18 shadow-[0_30px_70px_-42px_rgba(15,23,42,0.35)] backdrop-blur-[30px]'
 
   if (route.path === '/dashboard') {
     return `${baseClass} overflow-hidden`
@@ -163,3 +163,4 @@ onUnmounted(() => {
   border-radius: 999px;
 }
 </style>
+

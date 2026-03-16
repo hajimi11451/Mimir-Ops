@@ -1,180 +1,104 @@
 <template>
-  <div class="h-full min-h-0 flex flex-col overflow-y-auto custom-scrollbar">
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+  <div class="h-full min-h-0 flex flex-col overflow-hidden">
+    <div class="flex flex-1 min-h-0 flex-col gap-4 xl:flex-row">
       <el-card
-        class="h-full bg-ui-card rounded-lg shadow-sm border border-ui-border hover:shadow-md transition"
-        :body-style="{ padding: '24px' }"
-      >
-        <div class="flex justify-between items-start gap-4">
-          <div>
-            <p class="text-xs font-medium text-ui-subtext uppercase tracking-wider">系统健康度</p>
-            <h3 class="text-3xl font-bold mt-1" :class="healthTone.text">
-              {{ healthState.score }}<span class="text-lg ml-1">%</span>
-            </h3>
-            <p class="text-xs mt-2 leading-5" :class="healthTone.softText">
-              {{ healthState.description }}
-            </p>
-          </div>
-          <div class="p-2 rounded-lg border" :class="healthTone.badge">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          </div>
-        </div>
-      </el-card>
-
-      <el-card
-        class="h-full bg-ui-card rounded-lg shadow-sm border border-ui-border hover:shadow-md transition"
-        :body-style="{ padding: '24px' }"
-      >
-        <div class="flex justify-between items-start">
-          <div>
-            <p class="text-xs font-medium text-ui-subtext uppercase tracking-wider">告警</p>
-            <h3 class="text-3xl font-bold mt-1 text-ui-warning">{{ healthState.activeAlertCount }}</h3>
-            <p class="text-xs text-ui-subtext mt-2">高/中/低：{{ healthState.highRiskCount }} / {{ healthState.mediumRiskCount }} / {{ healthState.lowRiskCount }}</p>
-          </div>
-          <div class="p-2 bg-orange-50 rounded-lg border border-orange-100">
-            <svg class="w-6 h-6 text-ui-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-          </div>
-        </div>
-      </el-card>
-
-      <el-card
-        class="h-full bg-ui-card rounded-lg shadow-sm border border-ui-border hover:shadow-md transition"
-        :body-style="{ padding: '24px' }"
-      >
-        <div class="flex justify-between items-start">
-          <div>
-            <p class="text-xs font-medium text-ui-subtext uppercase tracking-wider">日志</p>
-            <h3 class="text-3xl font-bold text-brand mt-1">{{ healthState.totalLogsCount }}</h3>
-            <p class="text-xs text-ui-subtext mt-2">无风险 {{ healthState.normalCount }} 条</p>
-          </div>
-          <div class="p-2 bg-blue-50 rounded-lg border border-blue-100">
-            <svg class="w-6 h-6 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
-          </div>
-        </div>
-      </el-card>
-
-      <el-card
-        class="h-full bg-ui-card rounded-lg shadow-sm border border-ui-border hover:shadow-md transition"
-        :body-style="{ padding: '24px' }"
-      >
-        <div class="flex justify-between items-start">
-          <div>
-            <p class="text-xs font-medium text-ui-subtext uppercase tracking-wider">服务器</p>
-            <h3 class="text-3xl font-bold text-ui-text mt-1">{{ serverList.length }}</h3>
-            <p class="text-xs text-ui-subtext mt-2 truncate">当前：{{ selectedServer || '未选择服务器' }}</p>
-          </div>
-          <div class="p-2 bg-slate-50 rounded-lg border border-slate-200">
-            <svg class="w-6 h-6 text-ui-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M5 12h14M5 7h14M5 17h14M4 4h16v16H4z"
-              />
-            </svg>
-          </div>
-        </div>
-      </el-card>
-    </div>
-
-    <div class="mt-6 flex flex-1 min-h-0 flex-col xl:flex-row gap-6">
-      <el-card
-        class="w-full xl:w-2/3 h-full min-h-0 bg-ui-card rounded-lg shadow-sm border border-ui-border"
+        class="glass-card flex-1 min-h-0 rounded-[30px]"
         :body-style="{ padding: '24px', height: '100%' }"
       >
         <div class="flex h-full min-h-0 flex-col">
-          <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">
-          <div class="flex items-center space-x-4">
-            <h3 class="text-lg font-bold text-ui-text">监控趋势</h3>
-            <el-select
-              v-if="serverList.length > 0"
-              :model-value="selectedServer"
-              size="small"
-              @change="emit('server-change', $event)"
-              placeholder="选择服务器"
-              class="w-44"
-            >
-              <el-option v-for="ip in serverList" :key="ip" :label="ip" :value="ip" />
-            </el-select>
-            <span v-else-if="loadingMonitor" class="text-xs text-gray-400">搜索中...</span>
-            <span v-else class="text-xs text-gray-400">暂无服务器</span>
+          <div class="mb-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="glass-chip px-3 py-1 text-xs font-medium" :class="healthTone.chip">
+                  健康度 {{ healthState.score }}%
+                </span>
+                <span class="glass-chip px-3 py-1 text-xs font-medium border-white/24 bg-white/12 text-ui-text">
+                  告警 {{ healthState.activeAlertCount }}
+                </span>
+                <span class="glass-chip px-3 py-1 text-xs font-medium border-white/24 bg-white/12 text-ui-text">
+                  日志 {{ healthState.totalLogsCount }}
+                </span>
+                <span class="glass-chip px-3 py-1 text-xs font-medium border-white/24 bg-white/12 text-ui-text">
+                  服务器 {{ serverList.length }}
+                </span>
+              </div>
+
+              <h3 class="mt-4 text-lg font-bold text-ui-text">监控趋势</h3>
+              <p class="mt-1 text-sm" :class="healthTone.softText">
+                {{ healthState.description }}
+              </p>
+            </div>
+
+            <div class="flex flex-wrap gap-2 lg:max-w-[260px] lg:justify-end">
+              <span class="glass-chip px-2.5 py-1 text-xs font-medium" :class="getUsageBadgeClass(currentInfo.cpuUsage)">
+                CPU: {{ toUsageValue(currentInfo.cpuUsage) }}%
+              </span>
+              <span class="glass-chip px-2.5 py-1 text-xs font-medium" :class="getUsageBadgeClass(currentInfo.memUsage)">
+                Mem: {{ toUsageValue(currentInfo.memUsage) }}%
+              </span>
+            </div>
           </div>
 
-          <div class="flex flex-wrap gap-2">
-            <span class="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium border" :class="getUsageBadgeClass(currentInfo.cpuUsage)">
-              CPU: {{ toUsageValue(currentInfo.cpuUsage) }}%
-            </span>
-            <span class="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium border" :class="getUsageBadgeClass(currentInfo.memUsage)">
-              Mem: {{ toUsageValue(currentInfo.memUsage) }}%
-            </span>
-          </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 text-sm text-gray-600 bg-gray-50 p-4 rounded-lg border border-slate-100">
+          <div class="glass-subcard mb-4 grid grid-cols-1 gap-4 p-4 text-sm text-ui-subtext md:grid-cols-2">
             <div><span class="font-bold">OS:</span> {{ currentInfo.os || 'N/A' }}</div>
             <div><span class="font-bold">运行:</span> {{ currentInfo.upTime || 'N/A' }}</div>
             <div><span class="font-bold">CPU:</span> {{ currentInfo.processor || 'N/A' }}</div>
             <div><span class="font-bold">内存:</span> {{ currentInfo.availableMemory || 'N/A' }} / {{ currentInfo.totalMemory || 'N/A' }}</div>
           </div>
 
-          <div class="flex-1 min-h-[320px] relative w-full flex items-center justify-center">
-            <canvas v-if="hasChartData" ref="monitorChartRef"></canvas>
-            <div v-else class="text-gray-400 text-sm">{{ loadingMonitor ? '加载监控数据...' : '暂无监控数据' }}</div>
+          <div class="glass-subcard flex-1 min-h-0 overflow-hidden p-3 lg:p-4">
+            <div class="relative h-full min-h-[320px] w-full">
+              <canvas v-if="hasChartData" ref="monitorChartRef" class="h-full w-full"></canvas>
+              <div v-else class="flex h-full items-center justify-center text-sm text-ui-subtext">
+                {{ loadingMonitor ? '加载监控数据...' : '暂无监控数据' }}
+              </div>
+            </div>
           </div>
         </div>
       </el-card>
 
       <el-card
-        class="w-full xl:w-1/3 h-full min-h-0 bg-ui-card rounded-lg shadow-sm border border-ui-border"
+        class="glass-card w-full min-h-0 rounded-[30px] xl:basis-[32%] xl:max-w-[32%]"
         :body-style="{ padding: '24px', height: '100%' }"
       >
         <div class="flex h-full min-h-0 flex-col">
-          <div class="flex justify-between items-center mb-6">
-            <h3 class="text-lg font-bold text-ui-text">最新告警</h3>
+          <div class="mb-4 flex items-center justify-between gap-3">
+            <div class="min-w-0">
+              <h3 class="text-lg font-bold text-ui-text">最新告警</h3>
+              <p class="mt-1 text-xs text-ui-subtext">当前服务器相关告警与诊断记录</p>
+            </div>
             <router-link to="/info-list" class="text-sm text-brand hover:underline">
               全部
             </router-link>
           </div>
 
-          <div class="flex-1 min-h-0 space-y-4 overflow-y-auto pr-1 custom-scrollbar">
-            <div v-if="loadingInfo" class="text-center text-gray-400 py-4">加载中</div>
+          <div class="glass-subcard flex-1 min-h-0 overflow-hidden p-3">
+            <div class="h-full min-h-0 space-y-3 overflow-y-auto pr-1 custom-scrollbar">
+              <div v-if="loadingInfo" class="flex h-full items-center justify-center text-ui-subtext">加载中</div>
 
-            <div v-else-if="infoList.length === 0" class="text-center text-gray-400 py-4">暂无记录</div>
+              <div v-else-if="infoList.length === 0" class="flex h-full items-center justify-center text-ui-subtext">暂无记录</div>
 
-            <div
-              v-else
-              v-for="(info, index) in infoList"
-              :key="info.id || index"
-              class="flex items-start p-3 rounded-lg border-l-4"
-              :class="getAlertClass(info.riskLevel)"
-            >
-              <div class="flex-1 min-w-0">
-                <h4 class="text-sm font-bold text-gray-800 truncate">
-                  {{ info.component }} - {{ info.riskLevel }}
-                </h4>
-                <p class="text-xs text-gray-600 mt-1 truncate">服务器: {{ info.serverIp || '未知' }}</p>
-                <p class="text-xs text-gray-400 mt-2">{{ formatDate(info.createdAt) }}</p>
+              <div
+                v-else
+                v-for="(info, index) in infoList"
+                :key="info.id || index"
+                class="glass-soft flex items-start gap-3 p-3"
+                :class="getAlertClass(info.riskLevel)"
+              >
+                <span class="mt-1 inline-flex h-2.5 w-2.5 shrink-0 rounded-full" :class="getAlertDotClass(info.riskLevel)"></span>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-start justify-between gap-3">
+                    <h4 class="truncate text-sm font-bold text-ui-text">
+                      {{ info.component }} - {{ info.riskLevel }}
+                    </h4>
+                    <span class="glass-chip shrink-0 px-2 py-0.5 text-[11px] font-medium" :class="getAlertChipClass(info.riskLevel)">
+                      {{ normalizeRiskLevel(info.riskLevel) }}
+                    </span>
+                  </div>
+                  <p class="mt-1 truncate text-xs text-ui-subtext">服务器: {{ info.serverIp || '未知' }}</p>
+                  <p class="mt-2 text-xs leading-5 text-ui-subtext">{{ info.errorSummary || '暂无摘要' }}</p>
+                  <p class="mt-2 text-xs text-ui-subtext/70">{{ formatDate(info.createdAt) }}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -187,7 +111,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import Chart from 'chart.js/auto'
-import { formatDate, getAlertClass } from '../utils/dashboardHealth'
+import { formatDate, getAlertClass, normalizeRiskLevel } from '../utils/dashboardHealth'
 
 const props = defineProps({
   healthState: {
@@ -234,27 +158,22 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['server-change'])
-
 const monitorChartRef = ref(null)
 let monitorChartInstance = null
 
 const healthTone = computed(() => {
   const toneMap = {
     success: {
-      text: 'text-ui-success',
+      chip: 'border-emerald-200/30 bg-emerald-400/10 text-ui-success',
       softText: 'text-green-600',
-      badge: 'bg-green-50 border-green-100 text-ui-success',
     },
     warning: {
-      text: 'text-ui-warning',
+      chip: 'border-amber-200/30 bg-amber-400/10 text-ui-warning',
       softText: 'text-orange-600',
-      badge: 'bg-orange-50 border-orange-100 text-ui-warning',
     },
     error: {
-      text: 'text-ui-error',
+      chip: 'border-red-200/30 bg-red-400/10 text-ui-error',
       softText: 'text-red-600',
-      badge: 'bg-red-50 border-red-100 text-ui-error',
     },
   }
 
@@ -269,11 +188,29 @@ const toUsageValue = value => {
 }
 
 const getUsageBadgeClass = value => {
-  const usage = toUsageValue(value)
+  if (Number.isFinite(toUsageValue(value))) {
+    return 'border-white/24 bg-white/12 text-ui-text'
+  }
 
-  if (usage >= 85) return 'bg-red-50 border-red-100 text-ui-error'
-  if (usage >= 70) return 'bg-orange-50 border-orange-100 text-ui-warning'
-  return 'bg-green-50 border-green-100 text-ui-success'
+  return 'border-white/24 bg-white/12 text-ui-text'
+}
+
+const getAlertChipClass = level => {
+  const normalized = normalizeRiskLevel(level)
+
+  if (normalized === '高') return 'border-red-200/30 bg-red-400/10 text-ui-error'
+  if (normalized === '中') return 'border-amber-200/30 bg-amber-400/10 text-ui-warning'
+  if (normalized === '低') return 'border-sky-200/30 bg-sky-400/10 text-brand'
+  return 'border-white/22 bg-white/10 text-ui-subtext'
+}
+
+const getAlertDotClass = level => {
+  const normalized = normalizeRiskLevel(level)
+
+  if (normalized === '高') return 'bg-ui-error'
+  if (normalized === '中') return 'bg-ui-warning'
+  if (normalized === '低') return 'bg-brand'
+  return 'bg-white/50'
 }
 
 const destroyChart = () => {
@@ -312,18 +249,18 @@ const renderMonitorChart = async () => {
           label: 'CPU使用率 (%)',
           data: cpuData,
           borderColor: '#3182ce',
-          backgroundColor: 'rgba(49, 130, 206, 0.1)',
+          backgroundColor: 'rgba(49, 130, 206, 0.12)',
           fill: true,
-          tension: 0.4,
+          tension: 0.35,
           yAxisID: 'y',
         },
         {
           label: '内存使用率 (%)',
           data: memData,
           borderColor: '#38a169',
-          backgroundColor: 'rgba(56, 161, 105, 0.1)',
+          backgroundColor: 'rgba(56, 161, 105, 0.12)',
           fill: true,
-          tension: 0.4,
+          tension: 0.35,
           yAxisID: 'y',
         },
       ],
@@ -338,8 +275,17 @@ const renderMonitorChart = async () => {
       plugins: {
         legend: {
           position: 'top',
+          labels: {
+            color: '#5f6f87',
+            usePointStyle: true,
+            boxWidth: 8,
+          },
         },
         tooltip: {
+          backgroundColor: 'rgba(15, 23, 42, 0.82)',
+          borderColor: 'rgba(255, 255, 255, 0.12)',
+          borderWidth: 1,
+          padding: 12,
           callbacks: {
             label(context) {
               return `${context.dataset.label}: ${context.parsed.y.toFixed(1)}%`
@@ -351,15 +297,18 @@ const renderMonitorChart = async () => {
         y: {
           beginAtZero: true,
           max: 100,
-          grid: { color: '#e2e8f0' },
+          grid: { color: 'rgba(148, 163, 184, 0.16)' },
+          ticks: { color: '#5f6f87' },
           title: {
             display: true,
             text: '使用率 (%)',
+            color: '#5f6f87',
           },
         },
         x: {
           grid: { display: false },
           ticks: {
+            color: '#5f6f87',
             maxTicksLimit: 10,
           },
         },
@@ -401,4 +350,3 @@ onBeforeUnmount(() => {
   border-radius: 3px;
 }
 </style>
-

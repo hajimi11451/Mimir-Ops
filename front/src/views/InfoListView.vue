@@ -1,5 +1,5 @@
 <template>
-  <div class="mx-auto max-w-7xl space-y-6">
+  <div class="workspace-cool-glass mx-auto max-w-7xl space-y-6">
     <div class="flex items-center justify-between mb-6">
       <div class="flex items-center gap-3">
         <h2 class="text-xl font-bold text-ui-text">告警记录</h2>
@@ -19,7 +19,7 @@
     </div>
 
     <el-card
-      class="bg-white rounded-[8px] shadow-sm border border-ui-border"
+      class="glass-card rounded-[30px]"
       :body-style="{ padding: '0' }"
     >
       <el-table
@@ -88,7 +88,7 @@
 
       
 
-      <div v-if="total > 0" class="flex justify-end py-4 px-4 border-t border-ui-border">
+      <div v-if="total > 0" class="glass-table-footer flex justify-end rounded-none border-x-0 border-b-0 px-4 py-4">
         <el-pagination
           v-model:current-page="currentPage"
           :page-size="pageSize"

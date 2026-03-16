@@ -12,32 +12,32 @@
         <div class="dashboard-page-shell h-full" :style="getPageMotionStyle(0)">
           <div class="flex h-full min-h-0 flex-col overflow-y-auto bg-ui-bg p-6 lg:p-8 custom-scrollbar">
             <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <div class="rounded-[24px] border border-ui-border bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm">
+              <div class="glass-card rounded-[24px] p-5">
                 <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">已接入</div>
                 <div class="mt-3 text-3xl font-bold text-ui-text">{{ dashboardStats.total }}</div>
                 <p class="mt-2 text-sm text-ui-subtext">服务器监控数量</p>
               </div>
 
-              <div class="rounded-[24px] border border-ui-border bg-gradient-to-br from-white to-green-50 p-5 shadow-sm">
+              <div class="glass-card rounded-[24px] p-5">
                 <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">健康</div>
-                <div class="mt-3 text-3xl font-bold text-ui-success">{{ dashboardStats.success }}</div>
+                <div class="mt-3 text-3xl font-bold text-ui-text">{{ dashboardStats.success }}</div>
                 <p class="mt-2 text-sm text-ui-subtext">CPU / 内存稳定</p>
               </div>
 
-              <div class="rounded-[24px] border border-ui-border bg-gradient-to-br from-white to-orange-50 p-5 shadow-sm">
+              <div class="glass-card rounded-[24px] p-5">
                 <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">关注</div>
-                <div class="mt-3 text-3xl font-bold text-ui-warning">{{ dashboardStats.warning }}</div>
+                <div class="mt-3 text-3xl font-bold text-ui-text">{{ dashboardStats.warning }}</div>
                 <p class="mt-2 text-sm text-ui-subtext">资源波动需关注</p>
               </div>
 
-              <div class="rounded-[24px] border border-ui-border bg-gradient-to-br from-white to-red-50 p-5 shadow-sm">
+              <div class="glass-card rounded-[24px] p-5">
                 <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">健康均值</div>
-                <div class="mt-3 text-3xl font-bold" :class="averageScoreTone.text">{{ dashboardStats.averageScore }}%</div>
+                <div class="mt-3 text-3xl font-bold text-brand">{{ dashboardStats.averageScore }}%</div>
                 <p class="mt-2 text-sm text-ui-subtext">更新：{{ lastUpdatedLabel }}</p>
               </div>
             </div>
 
-            <div class="mt-6 flex flex-1 min-h-0 flex-col rounded-[28px] border border-ui-border bg-gradient-to-br from-slate-50 via-white to-slate-50 p-5 shadow-sm lg:p-6">
+            <div class="glass-card mt-4 flex flex-1 min-h-0 flex-col rounded-[28px] p-4 lg:p-5">
               <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <h3 class="text-lg font-bold text-ui-text">服务器态势</h3>
@@ -51,7 +51,7 @@
                     左右滑动 / 触控板 / 多点触控 
                   </div> -->
 
-                  <div class="inline-flex items-center rounded-full border border-ui-border bg-white p-1 shadow-sm">
+                  <div class="glass-chip p-1">
                     <button
                       type="button"
                       class="flex h-9 w-9 items-center justify-center rounded-full text-ui-subtext transition-colors hover:bg-ui-bg hover:text-ui-text disabled:cursor-not-allowed disabled:opacity-40"
@@ -76,7 +76,7 @@
                 </div>
               </div>
 
-              <div class="mt-6 flex flex-1 min-h-0 flex-col">
+              <div class="mt-4 flex flex-1 min-h-0 flex-col">
                 <div
                   ref="carouselRef"
                   class="server-carousel flex-1 min-h-0"
@@ -99,7 +99,7 @@
                     :tabindex="0"
                   >
                     <template v-if="item.type === 'add'">
-                      <div class="flex h-full flex-col items-center justify-center rounded-[24px] border border-dashed border-brand/30 bg-gradient-to-br from-blue-50 to-white p-8 text-center">
+                      <div class="glass-card flex h-full flex-col items-center justify-center rounded-[24px] border-dashed p-8 text-center">
                         <div class="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-brand/10 text-brand">
                           <svg class="h-10 w-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6" />
@@ -117,7 +117,7 @@
 
                     <template v-else>
                       <div
-                        class="server-status-card flex h-full flex-col justify-between rounded-[24px] border border-white/80 bg-gradient-to-br from-white via-white to-slate-50 p-6 shadow-[0_18px_50px_-34px_rgba(26,37,48,0.45)] ring-1 ring-white/80"
+                        class="server-status-card glass-card flex h-full flex-col justify-between rounded-[24px] px-4 py-3 ring-1 ring-white/14"
                         :style="getServerCardVisualStyle(item)"
                       >
                         <div class="flex items-start justify-between gap-3">
@@ -125,18 +125,18 @@
                             <p class="truncate text-sm font-semibold text-ui-text">{{ item.serverIp }}</p>
                             <p class="mt-1 text-xs text-ui-subtext">{{ item.subtitle }}</p>
                           </div>
-                          <span class="rounded-full border px-3 py-1 text-xs font-semibold" :class="item.tone.pill">
+                          <span class="server-health-pill rounded-full border px-3 py-1 text-xs font-semibold">
                             {{ item.health.label }}
                           </span>
                         </div>
 
-                        <div class="server-health-stage my-6">
+                        <div class="server-health-stage my-2">
                           <span class="server-health-shadow" aria-hidden="true"></span>
                           <span class="server-health-aura" aria-hidden="true"></span>
                           <span class="server-health-plate" aria-hidden="true"></span>
                           <span class="server-health-reflection" aria-hidden="true"></span>
 
-                          <svg class="server-health-ring h-[190px] w-[190px] -rotate-90" viewBox="0 0 160 160" aria-hidden="true">
+                          <svg class="server-health-ring h-[148px] w-[148px] -rotate-90" viewBox="0 0 160 160" aria-hidden="true">
                             <defs>
                               <linearGradient :id="`server-card-gradient-${index}`" x1="0%" y1="0%" x2="100%" y2="0%">
                                 <stop offset="0%" :stop-color="item.tone.gradientStart" />
@@ -166,23 +166,23 @@
                           </svg>
 
                           <div class="server-health-value">
-                            <div class="server-health-score text-[36px] font-bold" :class="item.tone.text">{{ item.health.score }}%</div>
-                            <div class="server-health-caption mt-2 text-sm font-medium" :class="item.tone.softText">系统健康度</div>
+                            <div class="server-health-score text-[28px] font-bold" :class="item.tone.text">{{ item.health.score }}%</div>
+                            <div class="server-health-caption mt-1.5 text-[12px] font-medium" :class="item.tone.softText">系统健康度</div>
                           </div>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-3">
-                          <div class="server-metric-card rounded-2xl border border-ui-border bg-white px-4 py-3">
+                        <div class="server-metric-grid grid grid-cols-2 gap-2.5">
+                          <div class="server-metric-card glass-soft rounded-2xl px-3 py-2">
                             <div class="text-xs uppercase tracking-[0.18em] text-ui-subtext">CPU</div>
-                            <div class="mt-2 text-xl font-bold" :class="item.cpuTone.text">{{ item.health.cpuUsage }}%</div>
+                            <div class="server-metric-value mt-1.5 text-lg font-semibold text-ui-text">{{ item.health.cpuUsage }}%</div>
                           </div>
-                          <div class="server-metric-card rounded-2xl border border-ui-border bg-white px-4 py-3">
+                          <div class="server-metric-card glass-soft rounded-2xl px-3 py-2">
                             <div class="text-xs uppercase tracking-[0.18em] text-ui-subtext">MEM</div>
-                            <div class="mt-2 text-xl font-bold" :class="item.memTone.text">{{ item.health.memUsage }}%</div>
+                            <div class="server-metric-value mt-1.5 text-lg font-semibold text-ui-text">{{ item.health.memUsage }}%</div>
                           </div>
                         </div>
 
-                        <div class="mt-5 flex items-center justify-between text-sm">
+                        <div class="mt-2 flex items-center justify-between text-sm">
                           <span class="text-ui-subtext">进入详情</span>
                           <span class="font-semibold text-brand">查看</span>
                         </div>
@@ -191,7 +191,7 @@
                   </article>
                 </div>
 
-                <div class="pt-6 flex items-center justify-center gap-2">
+                <div class="pt-3 flex items-center justify-center gap-2">
                   <button
                     v-for="(card, index) in serverCards"
                     :key="`dot-${card.serverIp}`"
@@ -202,7 +202,7 @@
                   ></button>
                 </div>
 
-                <div v-if="!serverCards.length" class="pt-6 rounded-2xl border border-dashed border-ui-border bg-white/80 px-4 py-5 text-center text-sm text-ui-subtext">
+                <div v-if="!serverCards.length" class="glass-soft pt-4 rounded-2xl border-dashed px-4 py-5 text-center text-sm text-ui-subtext">
                   暂无服务器监控，可先添加一台。
                 </div>
               </div>
@@ -213,46 +213,42 @@
 
       <section class="dashboard-page">
         <div class="dashboard-page-shell h-full" :style="getPageMotionStyle(1)">
-          <div class="h-full p-4 lg:p-6">
-            <div class="flex h-full min-h-0 flex-col overflow-hidden rounded-[26px] border border-ui-border bg-white shadow-sm">
-              <div class="flex items-center justify-between gap-4 border-b border-ui-border bg-white/90 px-5 py-4 backdrop-blur-sm lg:px-6">
-                <div class="flex items-center gap-3">
-                  <button
-                    type="button"
-                    class="inline-flex items-center gap-2 rounded-full border border-ui-border bg-ui-bg px-4 py-2 text-sm font-medium text-ui-text transition-colors hover:border-brand hover:text-brand"
-                    @click="scrollToPage(0)"
-                  >
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                    </svg>
-                    返回首页
-                  </button>
-
-                
-                </div>
-
-                <div class="min-w-0 text-right">
-                  <div class="text-xs uppercase tracking-[0.18em] text-ui-subtext">详情</div>
-                  <div class="truncate text-sm font-medium text-ui-text">{{ selectedServer || '当前服务器' }}</div>
-                  <div class="mt-1 text-xs" :class="selectedMonitorEnabled ? 'text-ui-success' : 'text-ui-warning'">
-                    {{ selectedMonitorEnabled ? '状态：检测中' : '状态：已暂停检测' }}
-                  </div>
-                </div>
+          <div class="dashboard-detail-shell glass-card h-full min-h-0 flex flex-col overflow-hidden rounded-[34px]">
+            <div class="glass-toolbar flex items-center justify-between gap-4 rounded-none border-x-0 border-t-0 px-5 py-4 lg:px-6">
+              <div class="flex items-center gap-3">
+                <button
+                  type="button"
+                  class="glass-chip px-4 py-2 text-sm font-medium text-ui-text transition-colors hover:border-brand/35 hover:text-brand"
+                  @click="scrollToPage(0)"
+                >
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                  </svg>
+                  返回首页
+                </button>
               </div>
 
-              <div class="flex-1 min-h-0 bg-ui-bg p-4 lg:p-6">
-                <DashboardOverviewDetail
-                  class="dashboard-detail-panel h-full"
-                  :health-state="selectedHealthState"
-                  :info-list="selectedServerInfoList"
-                  :loading-info="loadingInfo"
-                  :server-list="serverList"
-                  :selected-server="selectedServer"
-                  :loading-monitor="loadingMonitor"
-                  :current-info="currentInfo"
-                  :history-data="historyData"
-                />
+              <div class="min-w-0 text-right">
+                <div class="text-xs uppercase tracking-[0.18em] text-ui-subtext">详情</div>
+                <div class="truncate text-sm font-medium text-ui-text">{{ selectedServer || '当前服务器' }}</div>
+                <div class="mt-1 text-xs" :class="selectedMonitorEnabled ? 'text-ui-success' : 'text-ui-warning'">
+                  {{ selectedMonitorEnabled ? '状态：检测中' : '状态：已暂停检测' }}
+                </div>
               </div>
+            </div>
+
+            <div class="flex-1 min-h-0 overflow-hidden p-4 lg:p-5">
+              <DashboardOverviewDetail
+                class="dashboard-detail-panel h-full min-h-0"
+                :health-state="selectedHealthState"
+                :info-list="selectedServerInfoList"
+                :loading-info="loadingInfo"
+                :server-list="serverList"
+                :selected-server="selectedServer"
+                :loading-monitor="loadingMonitor"
+                :current-info="currentInfo"
+                :history-data="historyData"
+              />
             </div>
           </div>
         </div>
@@ -265,7 +261,7 @@
       width="520px"
       destroy-on-close
     >
-      <div class="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-brand">
+      <div class="glass-subcard rounded-2xl px-4 py-3 text-sm text-brand">
         保存后开始采集 CPU / 内存。
       </div>
 
@@ -410,7 +406,6 @@ const getServerCardVisualStyle = item => ({
   '--server-ring-glow': hexToRgba(item?.tone?.gradientEnd, 0.28),
   '--server-ring-glow-soft': hexToRgba(item?.tone?.gradientStart, 0.18),
   '--server-ring-shadow-soft': hexToRgba(item?.tone?.gradientEnd, 0.18),
-  '--server-metric-highlight': hexToRgba(item?.tone?.gradientStart, 0.1),
 })
 
 const buildUsageTone = usage => {
@@ -946,7 +941,7 @@ onUnmounted(() => {
   -ms-overflow-style: none;
   touch-action: pan-x pinch-zoom;
   overscroll-behavior-x: contain;
-  padding: 6px 2px 10px;
+  padding: 4px 2px 6px;
   perspective: 1800px;
   perspective-origin: center center;
 }
@@ -958,7 +953,7 @@ onUnmounted(() => {
 .server-slide {
   flex: 0 0 auto;
   width: clamp(280px, 30vw, 340px);
-  min-height: 480px;
+  min-height: 390px;
   scroll-snap-align: center;
   scroll-snap-stop: always;
   transition: transform 260ms ease, opacity 260ms ease, box-shadow 260ms ease;
@@ -984,39 +979,44 @@ onUnmounted(() => {
   overflow: hidden;
   isolation: isolate;
   transform-style: preserve-3d;
+  border-color: rgba(255, 255, 255, 0.24);
+  background: linear-gradient(180deg, rgba(243, 248, 255, 0.24), rgba(229, 237, 248, 0.16));
+  box-shadow: 0 20px 38px -28px rgba(88, 110, 148, 0.16);
 }
 
 .server-status-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.88), transparent 34%),
-    radial-gradient(circle at 76% 84%, var(--server-ring-glow-soft, rgba(72, 187, 120, 0.18)), transparent 34%);
-  opacity: 0.88;
-  pointer-events: none;
+  display: none;
 }
 
 .server-status-card > * {
   position: relative;
-  z-index: 1;
+  z-index: 2;
+}
+
+.server-health-pill {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(242, 248, 255, 0.18);
+  color: #5f6f87;
+  box-shadow: 0 12px 22px -24px rgba(88, 110, 148, 0.16);
+  backdrop-filter: blur(14px);
 }
 
 .server-health-stage {
   position: relative;
   display: flex;
-  min-height: 236px;
+  min-height: 166px;
   align-items: center;
   justify-content: center;
+  z-index: 2;
   isolation: isolate;
   transform-style: preserve-3d;
 }
 
 .server-health-shadow {
   position: absolute;
-  bottom: 18px;
-  width: 146px;
-  height: 34px;
+  bottom: 8px;
+  width: 112px;
+  height: 20px;
   border-radius: 999px;
   background: radial-gradient(
     circle at 50% 50%,
@@ -1031,7 +1031,7 @@ onUnmounted(() => {
 
 .server-health-aura {
   position: absolute;
-  inset: 22px;
+  inset: 26px;
   border-radius: 999px;
   background: radial-gradient(circle, var(--server-ring-glow-soft, rgba(72, 187, 120, 0.18)) 0%, transparent 70%);
   filter: blur(4px);
@@ -1041,7 +1041,7 @@ onUnmounted(() => {
 
 .server-health-plate {
   position: absolute;
-  inset: 28px;
+  inset: 36px;
   border-radius: 999px;
   background: radial-gradient(
     circle at 32% 30%,
@@ -1060,10 +1060,10 @@ onUnmounted(() => {
 
 .server-health-reflection {
   position: absolute;
-  top: 34px;
-  left: 52px;
-  width: 94px;
-  height: 38px;
+  top: 40px;
+  left: 61px;
+  width: 62px;
+  height: 24px;
   border-radius: 999px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0));
   opacity: 0.85;
@@ -1074,27 +1074,27 @@ onUnmounted(() => {
   position: relative;
   z-index: 2;
   filter:
-    drop-shadow(0 16px 18px var(--server-ring-shadow-soft, rgba(72, 187, 120, 0.18)))
+    drop-shadow(0 12px 16px var(--server-ring-shadow-soft, rgba(72, 187, 120, 0.18)))
     drop-shadow(0 4px 8px rgba(255, 255, 255, 0.78));
-  transform: rotateX(18deg) translateZ(10px);
+  transform: rotateX(18deg) translateZ(8px);
 }
 
 .server-health-value {
   position: absolute;
   z-index: 3;
   display: flex;
-  min-width: 128px;
+  min-width: 96px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 18px 24px;
+  padding: 10px 12px;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.58));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.46));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.82),
     0 18px 24px -22px rgba(15, 23, 42, 0.35);
   backdrop-filter: blur(10px);
-  transform: translateZ(20px);
+  transform: translateZ(12px);
 }
 
 .server-health-score {
@@ -1109,14 +1109,25 @@ onUnmounted(() => {
 
 .server-metric-card {
   position: relative;
-  border-color: transparent;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.92)),
-    radial-gradient(circle at 18% 18%, var(--server-metric-highlight, rgba(255, 255, 255, 0.1)), transparent 44%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.88),
-    0 16px 24px -24px rgba(15, 23, 42, 0.3);
+  overflow: hidden;
+  isolation: isolate;
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(241, 247, 255, 0.16);
+  box-shadow: 0 12px 22px -22px rgba(88, 110, 148, 0.12);
   transform: translateZ(8px);
+}
+
+.server-metric-card::before {
+  display: none;
+}
+
+.server-metric-grid {
+  position: relative;
+  z-index: 1;
+}
+
+.server-metric-value {
+  text-shadow: none;
 }
 
 .server-dot {
@@ -1148,18 +1159,19 @@ onUnmounted(() => {
 
 @media (max-width: 768px) {
   .server-health-stage {
-    min-height: 216px;
+    min-height: 154px;
   }
 
   .server-health-value {
-    min-width: 118px;
-    padding: 16px 22px;
+    min-width: 90px;
+    padding: 9px 11px;
   }
 
   .server-health-reflection {
-    left: 46px;
-    width: 84px;
+    left: 55px;
+    width: 56px;
   }
 }
 </style>
+
 

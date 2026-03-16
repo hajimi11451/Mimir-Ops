@@ -20,17 +20,17 @@
         </div>
 
         <div class="relative z-10 mt-8 grid gap-4 sm:grid-cols-3">
-          <div class="rounded-[24px] border border-white/80 bg-white/80 p-5">
+          <div class="rounded-[24px] border border-white/32 bg-white/20 p-5 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.22)] backdrop-blur-[24px]">
             <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">总览</div>
             <div class="mt-3 text-xl font-semibold text-ui-text">状态清晰</div>
             <p class="mt-2 text-sm text-ui-subtext">统一查看服务器健康和最新告警。</p>
           </div>
-          <div class="rounded-[24px] border border-white/80 bg-white/80 p-5">
+          <div class="rounded-[24px] border border-white/32 bg-white/20 p-5 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.22)] backdrop-blur-[24px]">
             <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">助手</div>
             <div class="mt-3 text-xl font-semibold text-ui-text">智能协同</div>
             <p class="mt-2 text-sm text-ui-subtext">对话式生成命令并保留操作记录。</p>
           </div>
-          <div class="rounded-[24px] border border-white/80 bg-white/80 p-5">
+          <div class="rounded-[24px] border border-white/32 bg-white/20 p-5 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.22)] backdrop-blur-[24px]">
             <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">通知</div>
             <div class="mt-3 text-xl font-semibold text-ui-text">闭环提醒</div>
             <p class="mt-2 text-sm text-ui-subtext">关键告警通过邮件触达接收人。</p>
@@ -38,7 +38,7 @@
         </div>
       </section>
 
-      <section class="w-full rounded-[32px] border border-white/70 bg-white/88 p-6 shadow-[0_30px_80px_-44px_rgba(15,23,42,0.35)] backdrop-blur-sm sm:p-8 lg:w-[460px]">
+      <section class="w-full rounded-[32px] border border-white/42 bg-white/18 p-6 shadow-[0_34px_88px_-48px_rgba(15,23,42,0.38)] backdrop-blur-[30px] sm:p-8 lg:w-[460px]">
         <div class="space-y-2">
           <span class="inline-flex rounded-full bg-brand/8 px-3 py-1 text-xs font-semibold tracking-[0.18em] text-brand">注册</span>
           <h2 class="text-2xl font-semibold tracking-[-0.03em] text-ui-text">创建账号</h2>
@@ -163,3 +163,4 @@ const handleRegister = async () => {
   }
 }
 </script>
+
