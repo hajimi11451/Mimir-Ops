@@ -34,7 +34,7 @@ public class AlertMailService {
                                 String serverIp,
                                 String fingerprint,
                                 Map<String, Object> healthState) {
-        String subject = "[Mimir-Ops] 服务器红色告警 - " + (StringUtils.hasText(serverIp) ? serverIp : "未知服务器");
+        String subject = "[灵枢智维] 服务器红色告警 - " + (StringUtils.hasText(serverIp) ? serverIp : "未知服务器");
         String content = buildHealthAlertContent(username, serverIp, fingerprint, healthState);
         sendPlainText(to, subject, content);
     }
@@ -45,15 +45,15 @@ public class AlertMailService {
                                            Information recheckedAlert,
                                            String recheckNote) {
         String serverIp = originalAlert == null ? "" : originalAlert.getServerIp();
-        String subject = "[Mimir-Ops] 高风险告警确认 - " + (StringUtils.hasText(serverIp) ? serverIp : "未知服务器");
+        String subject = "[灵枢智维] 高风险告警确认 - " + (StringUtils.hasText(serverIp) ? serverIp : "未知服务器");
         String content = buildConfirmedHighRiskAlertContent(username, originalAlert, recheckedAlert, recheckNote);
         sendPlainText(to, subject, content);
     }
 
     public void sendTestMail(String to, String username) {
-        String subject = "[Mimir-Ops] 邮件通道测试";
+        String subject = "[灵枢智维] 邮件通道测试";
         StringBuilder content = new StringBuilder();
-        content.append("这是一封来自 Mimir-Ops 的测试邮件。\n\n");
+        content.append("这是一封来自灵枢智维的测试邮件。\n\n");
         if (StringUtils.hasText(username)) {
             content.append("当前用户：").append(username).append('\n');
         }
@@ -80,7 +80,7 @@ public class AlertMailService {
                                            String fingerprint,
                                            Map<String, Object> healthState) {
         StringBuilder content = new StringBuilder();
-        content.append("Minir-Ops 检测到服务器连续两次处于不健康状态。\n\n");
+        content.append("灵枢智维检测到服务器连续两次处于不健康状态。\n\n");
         content.append("告警时间：").append(LocalDateTime.now().format(TIME_FORMATTER)).append('\n');
         if (StringUtils.hasText(username)) {
             content.append("所属用户：").append(username).append('\n');
@@ -113,7 +113,7 @@ public class AlertMailService {
                                                       Information recheckedAlert,
                                                       String recheckNote) {
         StringBuilder content = new StringBuilder();
-        content.append("Mimir-Ops 检测到一条高风险告警，并完成了二次复检，结果仍然异常。\n\n");
+        content.append("灵枢智维检测到一条高风险告警，并完成了二次复检，结果仍然异常。\n\n");
         content.append("确认时间：").append(LocalDateTime.now().format(TIME_FORMATTER)).append('\n');
         if (StringUtils.hasText(username)) {
             content.append("所属用户：").append(username).append('\n');

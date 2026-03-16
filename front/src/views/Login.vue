@@ -16,7 +16,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
             </svg>
           </div>
-          <span class="text-2xl font-bold tracking-wide">Mimir-Ops</span>
+          <span class="text-2xl font-bold tracking-wide">灵枢智维</span>
         </div>
 
         <div>

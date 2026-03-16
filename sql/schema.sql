@@ -7,12 +7,12 @@ USE `ai_ops_db`;
 CREATE TABLE `userlogin` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `username` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '用户名',
-  `email` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '告警接收邮箱',
+  `email` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '告警接收邮箱',
   `password` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '密码',
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_userlogin_username` (`username`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表';
+  UNIQUE KEY `username` (`username`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表'
 
 CREATE TABLE `information` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
@@ -26,18 +26,18 @@ CREATE TABLE `information` (
   `risk_level` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '风险等级',
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '发生时间',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='巡检记录表';
+) ENGINE=InnoDB AUTO_INCREMENT=1093 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='巡检记录表'
 
 CREATE TABLE `userprocess` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
   `user_id` bigint(20) NOT NULL COMMENT '关联的用户ID',
   `server_ip` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '服务器IP',
   `component` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '组件名称 (Nginx/Tomcat等)',
-  `problem_log` text COLLATE utf8mb4_unicode_ci COMMENT '遇到的问题（日志信息）',
+  `problem_log` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '遇到的问题（日志信息）',
   `process_method` text COLLATE utf8mb4_unicode_ci COMMENT 'AI处理方式',
   `process_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '处理时间',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户处理记录表';
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户处理记录表'
 
 CREATE TABLE `componentconfig` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
@@ -49,7 +49,7 @@ CREATE TABLE `componentconfig` (
   `config_key` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '配置项 (固定为 error_log_path)',
   `config_value` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '路径值',
   `is_verified` tinyint(1) DEFAULT '0' COMMENT '是否验证通过',
-  `is_enabled` tinyint(1) DEFAULT '1' COMMENT '是否启用检测',
-  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `is_enabled` tinyint(1) NOT NULL DEFAULT '1' COMMENT '是否启用检测',
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='组件配置表';
+) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='组件配置表'
