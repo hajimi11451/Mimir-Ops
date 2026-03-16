@@ -459,6 +459,53 @@ body {
 
 .el-button.is-link {
   box-shadow: none;
+  background: transparent !important;
+  border-color: transparent !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.workspace-cool-glass .el-button.is-link,
+.glass-link-button {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.workspace-cool-glass .el-button--primary.is-link,
+.glass-link-button.el-button--primary,
+.glass-link-button.link-primary {
+  color: #2563eb !important;
+}
+
+.workspace-cool-glass .el-button--primary.is-link:hover,
+.glass-link-button.el-button--primary:hover,
+.glass-link-button.link-primary:hover {
+  color: #1d4ed8 !important;
+}
+
+.workspace-cool-glass .el-button--warning.is-link,
+.glass-link-button.el-button--warning,
+.glass-link-button.link-warning {
+  color: #d97706 !important;
+}
+
+.workspace-cool-glass .el-button--warning.is-link:hover,
+.glass-link-button.el-button--warning:hover,
+.glass-link-button.link-warning:hover {
+  color: #b45309 !important;
+}
+
+.workspace-cool-glass .el-button--danger.is-link,
+.glass-link-button.el-button--danger,
+.glass-link-button.link-danger {
+  color: #dc2626 !important;
+}
+
+.workspace-cool-glass .el-button--danger.is-link:hover,
+.glass-link-button.el-button--danger:hover,
+.glass-link-button.link-danger:hover {
+  color: #b91c1c !important;
 }
 
 .el-tag,

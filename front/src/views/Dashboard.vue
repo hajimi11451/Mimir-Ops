@@ -1113,7 +1113,10 @@ onUnmounted(() => {
   isolation: isolate;
   border-color: rgba(255, 255, 255, 0.22);
   background: rgba(241, 247, 255, 0.16);
-  box-shadow: 0 12px 22px -22px rgba(88, 110, 148, 0.12);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14),
+    0 8px 18px -18px rgba(88, 110, 148, 0.16),
+    0 0 0 1px rgba(170, 191, 224, 0.12);
   transform: translateZ(8px);
 }
 

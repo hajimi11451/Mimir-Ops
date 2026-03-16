@@ -275,7 +275,7 @@
                     <el-button
                       link
                       :type="Number(row.isEnabled) === 0 ? 'primary' : 'warning'"
-                      class="text-sm font-medium"
+                      class="glass-link-button text-sm font-medium"
                     >
                       {{ Number(row.isEnabled) === 0 ? '恢复检测' : '暂停检测' }}
                     </el-button>
@@ -292,7 +292,7 @@
                     <el-button
                       link
                       type="danger"
-                      class="text-red-600 hover:text-red-900 text-sm font-medium"
+                      class="glass-link-button text-sm font-medium"
                     >
                       删除
                     </el-button>

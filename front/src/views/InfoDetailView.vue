@@ -51,7 +51,7 @@
             :key="`${index}-${action}`"
             class="glass-subcard flex flex-col gap-3 p-4 md:flex-row md:items-start md:justify-between"
           >
-            <div class="flex-1 text-sm leading-6 text-ui-text">
+            <div class="min-w-0 flex-1 whitespace-pre-wrap break-all text-sm leading-6 text-ui-text md:pr-4">
               <span class="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand/10 text-xs font-semibold text-brand">
                 {{ index + 1 }}
               </span>
@@ -59,6 +59,7 @@
             </div>
             <el-button
               type="primary"
+              class="shrink-0 self-start"
               :loading="submittingActionIndex === index"
               @click="handleSelectAction(action, index)"
             >

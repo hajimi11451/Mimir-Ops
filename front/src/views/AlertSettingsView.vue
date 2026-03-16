@@ -65,15 +65,15 @@
                   <el-icon class="mr-1"><Check /></el-icon>
                   保存设置
                 </el-button>
-                <el-button :loading="testing" @click="handleTestMail">
+                <el-button class="mail-action-button" :loading="testing" @click="handleTestMail">
                   <el-icon class="mr-1"><Promotion /></el-icon>
                   测试邮件
                 </el-button>
-                <el-button :disabled="!form.email" @click="handleClear">
+                <el-button class="mail-action-button" :disabled="!form.email" @click="handleClear">
                   <el-icon class="mr-1"><Delete /></el-icon>
                   清空输入
                 </el-button>
-                <el-button :disabled="!savedEmail" @click="handleRestoreSaved">
+                <el-button class="mail-action-button" :disabled="!savedEmail" @click="handleRestoreSaved">
                   <el-icon class="mr-1"><RefreshLeft /></el-icon>
                   恢复
                 </el-button>
@@ -83,10 +83,10 @@
         </el-col>
 
         <el-col :xs="24" :lg="9">
-          <div class="glass-subcard rounded-[26px] p-5">
+          <div class="glass-subcard status-glass-panel rounded-[26px] p-5">
             <div class="mb-4 font-semibold text-ui-text">当前状态</div>
 
-            <el-descriptions :column="1" border>
+            <el-descriptions class="status-plain-descriptions" :column="1">
               <el-descriptions-item label="当前用户">
                 {{ username || '未登录' }}
               </el-descriptions-item>
@@ -287,4 +287,45 @@ onMounted(() => {
   loadContact()
 })
 </script>
+
+<style scoped>
+.status-glass-panel {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+    0 14px 28px -22px rgba(88, 110, 148, 0.2),
+    0 0 0 1px rgba(176, 197, 228, 0.18);
+}
+
+.status-plain-descriptions :deep(.el-descriptions__body) {
+  background: transparent;
+}
+
+.status-plain-descriptions :deep(.el-descriptions__table) {
+  background: transparent;
+}
+
+.status-plain-descriptions :deep(.el-descriptions__cell) {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 8px 0;
+}
+
+.status-plain-descriptions :deep(.el-descriptions__label) {
+  width: 88px;
+  color: #5f6f87;
+  font-weight: 500;
+}
+
+.status-plain-descriptions :deep(.el-descriptions__content) {
+  color: #0f172a;
+}
+
+.mail-action-button {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+    0 14px 26px -18px rgba(88, 110, 148, 0.22),
+    0 0 0 1px rgba(176, 197, 228, 0.16);
+}
+</style>
 

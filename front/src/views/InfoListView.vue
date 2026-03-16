@@ -53,35 +53,43 @@
           show-overflow-tooltip
         >
           <template #default="{ row }">
-            {{ row.errorSummary || '-' }}
+            <div class="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-ui-text">
+              {{ compactAlertText(row.errorSummary, 24) }}
+            </div>
           </template>
         </el-table-column>
 
         <el-table-column
           prop="analysisResult"
           label="问题详情"
-          min-width="240"
+          min-width="200"
           show-overflow-tooltip
         >
           <template #default="{ row }">
-            {{ row.analysisResult || '-' }}
+            <div class="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-ui-text">
+              {{ compactAlertText(row.analysisResult, 36) }}
+            </div>
           </template>
         </el-table-column>
 
         <el-table-column
           prop="suggestedActions"
           label="处理建议"
-          min-width="240"
+          min-width="200"
           show-overflow-tooltip
         >
           <template #default="{ row }">
-            {{ formatSuggestedActions(row.suggestedActions) }}
+            <div class="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-ui-text">
+              {{ compactAlertText(formatSuggestedActions(row.suggestedActions), 32) }}
+            </div>
           </template>
         </el-table-column>
 
         <el-table-column label="操作" min-width="140" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link @click="goDetail(row)">查看详情</el-button>
+            <el-button type="primary" link class="glass-link-button text-sm font-medium" @click="goDetail(row)">
+              查看详情
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -173,6 +181,12 @@ function formatSuggestedActions(value) {
   } catch {
   }
   return text.replace(/[\r\n]+/g, '；')
+}
+
+function compactAlertText(value, maxLength = 32) {
+  const text = String(value || '').replace(/\s+/g, ' ').trim()
+  if (!text) return '-'
+  return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text
 }
 
 async function fetchAllInfo() {

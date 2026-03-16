@@ -89,7 +89,9 @@
 
         <el-table-column label="操作" min-width="140" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link @click="openDetail(row)">查看详情</el-button>
+            <el-button type="primary" link class="glass-link-button text-sm font-medium" @click="openDetail(row)">
+              查看详情
+            </el-button>
           </template>
         </el-table-column>
       </el-table>

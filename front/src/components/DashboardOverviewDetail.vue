@@ -73,7 +73,7 @@
           </div>
 
           <div class="glass-subcard flex-1 min-h-0 overflow-hidden p-3">
-            <div class="h-full min-h-0 space-y-3 overflow-y-auto pr-1 custom-scrollbar">
+            <div class="h-full min-h-0 space-y-2 overflow-y-auto pr-1 custom-scrollbar">
               <div v-if="loadingInfo" class="flex h-full items-center justify-center text-ui-subtext">加载中</div>
 
               <div v-else-if="infoList.length === 0" class="flex h-full items-center justify-center text-ui-subtext">暂无记录</div>
@@ -82,22 +82,26 @@
                 v-else
                 v-for="(info, index) in infoList"
                 :key="info.id || index"
-                class="glass-soft flex items-start gap-3 p-3"
+                class="glass-soft flex items-start gap-2.5 px-3 py-2.5"
                 :class="getAlertClass(info.riskLevel)"
               >
-                <span class="mt-1 inline-flex h-2.5 w-2.5 shrink-0 rounded-full" :class="getAlertDotClass(info.riskLevel)"></span>
+                <span class="mt-1 inline-flex h-2 w-2 shrink-0 rounded-full" :class="getAlertDotClass(info.riskLevel)"></span>
                 <div class="min-w-0 flex-1">
-                  <div class="flex items-start justify-between gap-3">
-                    <h4 class="truncate text-sm font-bold text-ui-text">
-                      {{ info.component }} - {{ info.riskLevel }}
+                  <div class="flex items-center justify-between gap-3">
+                    <h4 class="truncate text-[13px] font-semibold text-ui-text">
+                      {{ getCompactAlertTitle(info) }}
                     </h4>
                     <span class="glass-chip shrink-0 px-2 py-0.5 text-[11px] font-medium" :class="getAlertChipClass(info.riskLevel)">
                       {{ normalizeRiskLevel(info.riskLevel) }}
                     </span>
                   </div>
-                  <p class="mt-1 truncate text-xs text-ui-subtext">服务器: {{ info.serverIp || '未知' }}</p>
-                  <p class="mt-2 text-xs leading-5 text-ui-subtext">{{ info.errorSummary || '暂无摘要' }}</p>
-                  <p class="mt-2 text-xs text-ui-subtext/70">{{ formatDate(info.createdAt) }}</p>
+                  <p class="mt-1 truncate text-xs leading-5 text-ui-subtext">
+                    {{ getCompactAlertSummary(info.errorSummary) }}
+                  </p>
+                  <div class="mt-1 flex items-center justify-between gap-2 text-[11px] text-ui-subtext/75">
+                    <span class="truncate">服务器: {{ info.serverIp || '未知' }}</span>
+                    <span class="shrink-0">{{ formatDate(info.createdAt) }}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -193,6 +197,18 @@ const getUsageBadgeClass = value => {
   }
 
   return 'border-white/24 bg-white/12 text-ui-text'
+}
+
+const getCompactAlertTitle = info => {
+  const component = String(info?.component || '未命名组件').trim()
+  const level = normalizeRiskLevel(info?.riskLevel)
+  return `${component} · ${level}`
+}
+
+const getCompactAlertSummary = value => {
+  const text = String(value || '').replace(/\s+/g, ' ').trim()
+  if (!text) return '暂无摘要'
+  return text.length > 34 ? `${text.slice(0, 34)}...` : text
 }
 
 const getAlertChipClass = level => {
