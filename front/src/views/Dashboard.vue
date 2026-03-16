@@ -13,34 +13,34 @@
           <div class="flex h-full min-h-0 flex-col overflow-y-auto bg-ui-bg p-6 lg:p-8 custom-scrollbar">
             <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <div class="rounded-[24px] border border-ui-border bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm">
-                <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">监控服务器</div>
+                <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">已接入</div>
                 <div class="mt-3 text-3xl font-bold text-ui-text">{{ dashboardStats.total }}</div>
-                <p class="mt-2 text-sm text-ui-subtext">当前已接入 {{ dashboardStats.total }} 台服务器监控</p>
+                <p class="mt-2 text-sm text-ui-subtext">服务器监控数量</p>
               </div>
 
               <div class="rounded-[24px] border border-ui-border bg-gradient-to-br from-white to-green-50 p-5 shadow-sm">
-                <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">健康服务器</div>
+                <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">健康</div>
                 <div class="mt-3 text-3xl font-bold text-ui-success">{{ dashboardStats.success }}</div>
-                <p class="mt-2 text-sm text-ui-subtext">CPU 与内存均处于稳定区间</p>
+                <p class="mt-2 text-sm text-ui-subtext">CPU / 内存稳定</p>
               </div>
 
               <div class="rounded-[24px] border border-ui-border bg-gradient-to-br from-white to-orange-50 p-5 shadow-sm">
-                <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">关注中</div>
+                <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">关注</div>
                 <div class="mt-3 text-3xl font-bold text-ui-warning">{{ dashboardStats.warning }}</div>
-                <p class="mt-2 text-sm text-ui-subtext">单项资源偏高，建议持续观察</p>
+                <p class="mt-2 text-sm text-ui-subtext">资源波动需关注</p>
               </div>
 
               <div class="rounded-[24px] border border-ui-border bg-gradient-to-br from-white to-red-50 p-5 shadow-sm">
-                <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">平均健康度</div>
+                <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">健康均值</div>
                 <div class="mt-3 text-3xl font-bold" :class="averageScoreTone.text">{{ dashboardStats.averageScore }}%</div>
-                <p class="mt-2 text-sm text-ui-subtext">最近刷新：{{ lastUpdatedLabel }}</p>
+                <p class="mt-2 text-sm text-ui-subtext">更新：{{ lastUpdatedLabel }}</p>
               </div>
             </div>
 
             <div class="mt-6 flex flex-1 min-h-0 flex-col rounded-[28px] border border-ui-border bg-gradient-to-br from-slate-50 via-white to-slate-50 p-5 shadow-sm lg:p-6">
               <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <h3 class="text-lg font-bold text-ui-text">服务器状态盘</h3>
+                  <h3 class="text-lg font-bold text-ui-text">服务器态势</h3>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-3">
@@ -105,12 +105,12 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6" />
                           </svg>
                         </div>
-                        <h4 class="mt-6 text-2xl font-bold text-ui-text">添加服务器监控</h4>
+                        <h4 class="mt-6 text-2xl font-bold text-ui-text">新增服务器</h4>
                         <p class="mt-3 max-w-[260px] text-sm leading-6 text-ui-subtext">
-                          只添加服务器级监控，不监控组件日志；只采集 CPU 与内存使用率。
+                          仅采集服务器级 CPU / 内存指标。
                         </p>
                         <div class="mt-6 inline-flex items-center rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm">
-                          立即添加
+                          添加
                         </div>
                       </div>
                     </template>
@@ -183,8 +183,8 @@
                         </div>
 
                         <div class="mt-5 flex items-center justify-between text-sm">
-                          <span class="text-ui-subtext">点击进入详情页</span>
-                          <span class="font-semibold text-brand">查看总览</span>
+                          <span class="text-ui-subtext">进入详情</span>
+                          <span class="font-semibold text-brand">查看</span>
                         </div>
                       </div>
                     </template>
@@ -203,7 +203,7 @@
                 </div>
 
                 <div v-if="!serverCards.length" class="pt-6 rounded-2xl border border-dashed border-ui-border bg-white/80 px-4 py-5 text-center text-sm text-ui-subtext">
-                  还没有服务器监控，先点击上方或右侧卡片添加一台服务器，只采集 CPU 与内存。
+                  暂无服务器监控，可先添加一台。
                 </div>
               </div>
             </div>
@@ -232,7 +232,7 @@
                 </div>
 
                 <div class="min-w-0 text-right">
-                  <div class="text-xs uppercase tracking-[0.18em] text-ui-subtext">总览详情</div>
+                  <div class="text-xs uppercase tracking-[0.18em] text-ui-subtext">详情</div>
                   <div class="truncate text-sm font-medium text-ui-text">{{ selectedServer || '当前服务器' }}</div>
                   <div class="mt-1 text-xs" :class="selectedMonitorEnabled ? 'text-ui-success' : 'text-ui-warning'">
                     {{ selectedMonitorEnabled ? '状态：检测中' : '状态：已暂停检测' }}
@@ -261,12 +261,12 @@
 
     <el-dialog
       v-model="addMonitorDialogVisible"
-      title="添加服务器监控"
+      title="新增服务器"
       width="520px"
       destroy-on-close
     >
       <div class="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-brand">
-        这里只添加服务器级监控，不创建组件日志监控任务；保存后只采集 CPU 和内存指标。
+        保存后开始采集 CPU / 内存。
       </div>
 
       <el-form class="mt-5" label-position="top">
@@ -289,7 +289,7 @@
         <div class="flex justify-end gap-3">
           <el-button @click="addMonitorDialogVisible = false">取消</el-button>
           <el-button type="primary" :loading="addMonitorLoading" @click="submitAddServerMonitor">
-            保存并开始监控
+            保存并开始
           </el-button>
         </div>
       </template>
@@ -813,7 +813,7 @@ const submitAddServerMonitor = async () => {
     await nextTick()
     scrollCardIntoViewByIp(serverIp)
   } catch (error) {
-    ElMessage.error(error?.message || '添加服务器监控失败')
+    ElMessage.error(error?.message || '新增服务器失败')
   } finally {
     addMonitorLoading.value = false
   }
@@ -1162,3 +1162,4 @@ onUnmounted(() => {
   }
 }
 </style>
+

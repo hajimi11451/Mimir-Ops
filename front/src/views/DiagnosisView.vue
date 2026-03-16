@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-8">
+  <div class="mx-auto max-w-7xl space-y-6">
     <!-- 1. 添加监控配置区 -->
     <el-card
       class="bg-white rounded-[8px] shadow-sm border border-ui-border"
@@ -19,7 +19,7 @@
             d="M12 6v6m0 0v6m0-6h6m-6 0H6"
           />
         </svg>
-        添加监控任务 (自动检测)
+        新增监控
       </h2>
 
       <!-- SSH认证失败提示 -->
@@ -36,7 +36,7 @@
           <div class="text-sm">
             {{ errorMessage }}
             <div class="mt-2 text-xs text-gray-600">
-              请检查服务器IP、SSH用户名和密码是否正确，然后重新提交。
+              请检查 IP、账号和密码后重试。
             </div>
           </div>
         </template>
@@ -54,7 +54,7 @@
               <span class="block text-sm font-medium text-ui-subtext mb-1">
                 服务器 IP
                 <span class="text-xs text-ui-subtext font-normal ml-2">
-                  (支持 IP:Port 格式，默认端口 22)
+                  (支持 IP:Port，默认 22)
                 </span>
               </span>
             </template>
@@ -69,7 +69,7 @@
           <!-- SSH 用户名 -->
           <el-form-item
             class="mb-0"
-            label="SSH 用户名 (可选)"
+            label="SSH 用户名"
           >
             <el-input
               v-model="config.username"
@@ -82,7 +82,7 @@
           <!-- SSH 密码 -->
           <el-form-item
             class="mb-0"
-            label="SSH 密码 (可选)"
+            label="SSH 密码"
           >
             <el-input
               v-model="config.password"
@@ -102,7 +102,7 @@
             <el-input
               v-model="config.component"
               @blur="handleComponentChange"
-              placeholder="请输入组件名 (如 MySQL)"
+              placeholder="如 MySQL"
               class="w-full border-ui-border rounded-lg shadow-sm focus:ring-brand focus:border-brand bg-white transition-all"
               clearable
             />
@@ -123,18 +123,18 @@
                   :class="isVerified ? 'text-ui-success' : 'text-ui-warning'"
                   class="text-xs font-bold"
                 >
-                  {{ isVerified ? '● 已验证' : '● AI猜测中' }}
+                  {{ isVerified ? '已验证' : '识别中' }}
                 </span>
                 <span v-else class="text-xs text-ui-brand">
                   <span class="inline-block w-2 h-2 rounded-full bg-brand mr-1"></span>
-                  系统将自动探测路径
+                  自动探测
                 </span>
               </label>
             </template>
             <div class="relative w-full">
               <el-input
                 v-model="config.logPath"
-                placeholder="留空则自动使用 AI 探测路径..."
+                placeholder="留空自动探测"
                 class="w-full border-ui-border rounded-lg shadow-sm focus:ring-brand focus:border-brand bg-white transition-all"
                 clearable
               />
@@ -170,7 +170,7 @@
               />
             </svg>
             <span v-if="loading">保存中...</span>
-            <span v-else>保存并开启自动监控</span>
+            <span v-else>保存</span>
           </span>
         </el-button>
       </div>
@@ -195,7 +195,7 @@
             d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
           />
         </svg>
-        运行中的监控任务
+        监控列表
       </h2>
 
       <div class="overflow-x-auto">
@@ -307,7 +307,7 @@
           v-if="monitorList.length === 0"
           class="px-6 py-12 text-center text-gray-500 text-sm"
         >
-          暂无监控配置，请在上方添加
+          暂无监控配置
         </div>
       </div>
     </el-card>
@@ -436,4 +436,5 @@ onMounted(() => {
   fetchConfigs()
 })
 </script>
+
 

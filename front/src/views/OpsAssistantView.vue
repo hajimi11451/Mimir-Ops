@@ -1,14 +1,14 @@
 <template>
-  <div class="space-y-6">
+  <div class="mx-auto max-w-7xl space-y-5">
     <el-card class="bg-white rounded-[8px] shadow-sm border border-ui-border" :body-style="{ padding: '20px' }">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 class="text-lg font-bold text-ui-text">灵枢助手</h2>
-          <p class="text-xs text-ui-subtext mt-1">AI 聊天 + 命令规划 + 可选远程执行</p>
+          <h2 class="text-lg font-bold text-ui-text">运维助手</h2>
+          <p class="text-xs text-ui-subtext mt-1">对话、规划、执行</p>
         </div>
         <div class="flex items-center gap-2">
           <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium" :class="connected ? 'bg-green-50 text-ui-success' : 'bg-gray-100 text-ui-subtext'">
-            {{ connected ? 'WebSocket 已连接' : 'WebSocket 未连接' }}
+            {{ connected ? '在线' : '离线' }}
           </span>
           <el-button size="small" @click="connectWs" :disabled="connected">连接</el-button>
           <el-button size="small" @click="disconnectWs" :disabled="!connected">断开</el-button>
@@ -22,7 +22,7 @@
           v-model="selectedSavedConnection"
           filterable
           clearable
-          placeholder="选择已保存连接（自动回填 IP/账号/密码）"
+          placeholder="选择已保存连接"
           @change="handleSavedConnectionChange"
         >
           <el-option
@@ -34,20 +34,20 @@
         </el-select>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <el-input v-model="serverIp" placeholder="serverIp: 192.168.1.10:22" />
-        <el-input v-model="username" placeholder="username: root" />
-        <el-input v-model="password" type="password" show-password placeholder="password" />
-        <el-checkbox v-model="execute">允许执行命令（execute=true）</el-checkbox>
+        <el-input v-model="serverIp" placeholder="服务器 IP" />
+        <el-input v-model="username" placeholder="账号" />
+        <el-input v-model="password" type="password" show-password placeholder="密码" />
+        <el-checkbox v-model="execute">允许执行</el-checkbox>
         <el-input-number v-model="maxRounds" :min="1" :max="50" controls-position="right" placeholder="最大轮数" />
       </div>
-      <p class="text-xs text-ui-subtext mt-3">默认先规划命令，不执行。勾选后会调用 SSH 在目标服务器执行。可设置 AI 循环轮数（最多 50）。</p>
+      <p class="text-xs text-ui-subtext mt-3">默认只规划；勾选后通过 SSH 执行。</p>
     </el-card>
 
     <el-card class="bg-white rounded-[8px] shadow-sm border border-ui-border" :body-style="{ padding: '20px' }">
       <div ref="chatBox" class="h-[460px] overflow-y-auto bg-ui-bg border border-ui-border rounded-lg p-4 space-y-3">
         <div v-for="(msg, idx) in messages" :key="idx" class="flex" :class="msg.role === 'user' ? 'justify-end' : 'justify-start'">
           <div class="max-w-[85%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap" :class="msg.role === 'user' ? 'bg-brand text-white' : 'bg-white border border-ui-border text-ui-text'">
-            <div class="font-semibold text-xs mb-1 opacity-80">{{ msg.role === 'user' ? '你' : '灵枢助手' }}</div>
+            <div class="font-semibold text-xs mb-1 opacity-80">{{ msg.role === 'user' ? '你' : '运维助手' }}</div>
             <template v-if="msg.type === 'confirm'">
               <div class="space-y-2">
                 <div>命令：{{ msg.command }}</div>
@@ -110,7 +110,7 @@
           :rows="3"
           resize="none"
           :disabled="isAgentRunning"
-          placeholder="例如：帮我安装 nginx 并设置开机自启"
+          placeholder="例如：检查 nginx 状态并修复"
           @keydown.enter.exact.prevent="sendMessage()"
         />
         <el-button
@@ -311,7 +311,7 @@ const maybeRunPendingTask = async () => {
   }
 
   if (!canExecute && execute.value) {
-    await appendMessage('assistant', '已带入你选中的处理方式，但未找到匹配的服务器连接，请先补全或选择连接后再发送。')
+    await appendMessage('assistant', '已带入选中的处理方式，但未找到匹配的服务器连接，请先补全或选择连接后再发送。')
     await clearPendingTask()
     return
   }
@@ -330,7 +330,7 @@ const connectWs = () => {
   socket.onopen = async () => {
     ws.value = socket
     connected.value = true
-    await appendMessage('assistant', '连接已建立，可以开始聊天。')
+    await appendMessage('assistant', '连接已建立，可以开始对话。')
     await maybeRunPendingTask()
   }
 
@@ -338,7 +338,7 @@ const connectWs = () => {
     try {
       const data = JSON.parse(event.data)
       if (data.type === 'welcome') {
-        await appendMessage('assistant', data.message || '欢迎使用灵枢助手。')
+        await appendMessage('assistant', data.message || '欢迎使用运维助手。')
         return
       }
       if (data.type === 'ops_progress') {
@@ -385,7 +385,7 @@ const connectWs = () => {
         return
       }
       await appendMessage('assistant', typeof event.data === 'string' ? event.data : JSON.stringify(data))
-    } catch (e) {
+    } catch (error) {
       await appendMessage('assistant', String(event.data || '收到未知响应'))
     }
   }
@@ -415,7 +415,7 @@ const sendMessage = async presetText => {
   if (!text) return
 
   if (!connected.value || !ws.value) {
-    await appendMessage('assistant', 'WebSocket 未连接，正在自动连接...')
+    await appendMessage('assistant', '当前未连接，正在自动连接...')
     connectWs()
     return
   }
@@ -442,11 +442,11 @@ const sendMessage = async presetText => {
 
 const executeByConfirmation = async query => {
   if (!connected.value || !ws.value) {
-    await appendMessage('assistant', 'WebSocket 未连接，无法执行命令。')
+    await appendMessage('assistant', '当前未连接，无法执行命令。')
     return
   }
   if (!serverIp.value || !username.value || !password.value) {
-    await appendMessage('assistant', '请先填写 serverIp/username/password 后再执行。')
+    await appendMessage('assistant', '请先填写服务器连接信息后再执行。')
     return
   }
   if (!query) {
@@ -484,11 +484,11 @@ const confirmRiskExecute = async msg => {
   msg.handled = true
 
   if (!connected.value || !ws.value) {
-    await appendMessage('assistant', 'WebSocket 未连接，无法执行高风险命令。')
+    await appendMessage('assistant', '当前未连接，无法执行高风险命令。')
     return
   }
   if (!serverIp.value || !username.value || !password.value) {
-    await appendMessage('assistant', '请先填写 serverIp/username/password 后再执行。')
+    await appendMessage('assistant', '请先填写服务器连接信息后再执行。')
     return
   }
 
@@ -514,7 +514,7 @@ const confirmContinue = async msg => {
   msg.handled = true
 
   if (!connected.value || !ws.value) {
-    await appendMessage('assistant', 'WebSocket 未连接，无法继续执行。')
+    await appendMessage('assistant', '当前未连接，无法继续执行。')
     return
   }
 
@@ -546,11 +546,11 @@ const generateChart = async msg => {
   msg.handled = true
 
   if (!connected.value || !ws.value) {
-    await appendMessage('assistant', 'WebSocket 未连接，无法生成图表。')
+    await appendMessage('assistant', '当前未连接，无法生成图表。')
     return
   }
   if (!serverIp.value) {
-    await appendMessage('assistant', '请先填写 serverIp。')
+    await appendMessage('assistant', '请先填写服务器 IP。')
     return
   }
 

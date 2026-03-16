@@ -1,4 +1,4 @@
-﻿import { createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import Login from '../views/Login.vue'
 import Register from '../views/Register.vue'
 import MainLayout from '../layouts/MainLayout.vue'
@@ -44,7 +44,7 @@ const router = createRouter({
           name: 'diagnosis',
           component: DiagnosisView,
           meta: {
-            title: '智能诊断配置',
+            title: '诊断',
           },
         },
         {
@@ -52,7 +52,7 @@ const router = createRouter({
           name: 'ops-assistant',
           component: OpsAssistantView,
           meta: {
-            title: '灵枢助手',
+            title: '助手',
           },
         },
         {
@@ -60,7 +60,7 @@ const router = createRouter({
           name: 'auto-execution',
           component: AutoExecutionView,
           meta: {
-            title: '智能处置记录',
+            title: '处置',
           },
         },
         {
@@ -68,7 +68,7 @@ const router = createRouter({
           name: 'info-list',
           component: InfoListView,
           meta: {
-            title: '全部信息与告警',
+            title: '告警',
           },
         },
         {
@@ -84,7 +84,7 @@ const router = createRouter({
           name: 'alert-settings',
           component: AlertSettingsView,
           meta: {
-            title: '邮箱通知设置',
+            title: '通知',
           },
         },
       ],

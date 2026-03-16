@@ -4,9 +4,9 @@
       <template #header>
         <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 class="text-xl font-bold text-ui-text">邮箱通知设置</h2>
+            <h2 class="text-xl font-bold text-ui-text">通知邮箱</h2>
             <p class="mt-1 text-sm text-ui-subtext">
-              配置高风险告警邮件接收人，并快速验证通知链路是否可用。
+              配置告警接收邮箱并验证链路。
             </p>
           </div>
 
@@ -20,7 +20,7 @@
       </template>
 
       <el-alert
-        title="同一问题连续两次高风险确认后才发送邮件，并带 30 分钟冷却时间。"
+        title="同一问题连续两次高风险才会发信，冷却 30 分钟。"
         type="info"
         :closable="false"
         show-icon
@@ -35,7 +35,7 @@
             label-position="top"
             @submit.prevent
           >
-            <el-form-item label="当前登录用户">
+            <el-form-item label="当前用户">
               <el-input :model-value="username || '未登录'" disabled>
                 <template #prefix>
                   <el-icon><User /></el-icon>
@@ -55,7 +55,7 @@
                 </template>
               </el-input>
               <div class="mt-2 text-xs text-ui-subtext">
-                输入新邮箱后可直接保存；留空后点击“保存设置”会清空当前已保存的收件邮箱。
+                留空保存可清空当前邮箱。
               </div>
             </el-form-item>
 
@@ -67,7 +67,7 @@
                 </el-button>
                 <el-button :loading="testing" @click="handleTestMail">
                   <el-icon class="mr-1"><Promotion /></el-icon>
-                  发送测试邮件
+                  测试邮件
                 </el-button>
                 <el-button :disabled="!form.email" @click="handleClear">
                   <el-icon class="mr-1"><Delete /></el-icon>
@@ -75,7 +75,7 @@
                 </el-button>
                 <el-button :disabled="!savedEmail" @click="handleRestoreSaved">
                   <el-icon class="mr-1"><RefreshLeft /></el-icon>
-                  恢复已保存
+                  恢复
                 </el-button>
               </div>
             </el-form-item>
@@ -85,7 +85,7 @@
         <el-col :xs="24" :lg="9">
           <el-card shadow="never" class="border border-ui-border bg-ui-bg">
             <template #header>
-              <span class="font-semibold text-ui-text">当前配置</span>
+              <span class="font-semibold text-ui-text">当前状态</span>
             </template>
 
             <el-descriptions :column="1" border>
@@ -99,7 +99,7 @@
                 <span class="break-all">{{ effectiveEmail || '未指定' }}</span>
               </el-descriptions-item>
               <el-descriptions-item label="最近测试状态">
-                {{ lastTestMessage || '尚未发送测试邮件' }}
+                {{ lastTestMessage || '尚未测试邮件' }}
               </el-descriptions-item>
             </el-descriptions>
 
@@ -108,7 +108,7 @@
               :type="savedEmail ? 'success' : 'warning'"
               :closable="false"
               show-icon
-              :title="savedEmail ? '已配置收件邮箱，系统可在触发条件满足时发出通知。' : '尚未配置收件邮箱，当前不会发送自动通知。'"
+              :title="savedEmail ? '已配置邮箱，可发送通知。' : '未配置邮箱，当前不会自动通知。'"
             />
           </el-card>
         </el-col>
@@ -211,7 +211,7 @@ async function loadContact() {
 
 async function handleSave() {
   if (!username.value) {
-    ElMessage.error('未识别当前登录用户')
+    ElMessage.error('未识别当前用户')
     return
   }
 
@@ -239,7 +239,7 @@ async function handleSave() {
 
 async function handleTestMail() {
   if (!username.value) {
-    ElMessage.error('未识别当前登录用户')
+    ElMessage.error('未识别当前用户')
     return
   }
 
@@ -268,7 +268,7 @@ async function handleTestMail() {
       lastTestMessage.value = `请求等待超时，邮件可能已发送到 ${targetEmail}`
       ElMessage.warning('请求等待超时，邮件可能已经发出，请检查收件箱')
     } else {
-      ElMessage.error(error?.message || '发送测试邮件失败')
+      ElMessage.error(error?.message || '测试邮件失败')
     }
   } finally {
     testing.value = false
@@ -289,3 +289,4 @@ onMounted(() => {
   loadContact()
 })
 </script>
+

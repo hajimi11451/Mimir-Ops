@@ -1,16 +1,16 @@
 <template>
-  <div class="space-y-6">
+  <div class="mx-auto max-w-6xl space-y-6">
     <div class="flex items-center justify-between gap-3">
       <div>
         <h2 class="text-xl font-bold text-ui-text">告警详情</h2>
-        <p class="text-sm text-ui-subtext mt-1">查看完整诊断信息，并将选中的处理方式交给灵枢助手执行。</p>
+        <p class="text-sm text-ui-subtext mt-1">查看诊断信息，并将处理方案交给助手执行。</p>
       </div>
       <div class="flex items-center gap-2">
         <el-button type="danger" plain :loading="deleting" @click="handleDeleteCurrent">
-          删除此条告警
+          删除
         </el-button>
-        <el-button @click="goBack">返回列表</el-button>
-        <el-button type="primary" plain @click="goAssistant">打开灵枢助手</el-button>
+        <el-button @click="goBack">返回</el-button>
+        <el-button type="primary" plain @click="goAssistant">助手</el-button>
       </div>
     </div>
 
@@ -35,14 +35,14 @@
 
       <el-card class="bg-white rounded-[8px] shadow-sm border border-ui-border" :body-style="{ padding: '20px' }">
         <template #header>
-          <div class="font-semibold text-ui-text">遇到的问题</div>
+          <div class="font-semibold text-ui-text">问题详情</div>
         </template>
         <pre class="detail-pre">{{ info.analysisResult || '-' }}</pre>
       </el-card>
 
       <el-card class="bg-white rounded-[8px] shadow-sm border border-ui-border" :body-style="{ padding: '20px' }">
         <template #header>
-          <div class="font-semibold text-ui-text">建议处理方式</div>
+          <div class="font-semibold text-ui-text">处理建议</div>
         </template>
 
         <div v-if="actionList.length > 0" class="space-y-3">
@@ -62,11 +62,11 @@
               :loading="submittingActionIndex === index"
               @click="handleSelectAction(action, index)"
             >
-              记录并交给灵枢助手执行
+              交给助手执行
             </el-button>
           </div>
         </div>
-        <el-empty v-else description="无建议处理方式" />
+        <el-empty v-else description="无处理建议" />
       </el-card>
 
       <el-card class="bg-white rounded-[8px] shadow-sm border border-ui-border" :body-style="{ padding: '20px' }">
@@ -333,3 +333,4 @@ onMounted(() => {
   overflow: auto;
 }
 </style>
+

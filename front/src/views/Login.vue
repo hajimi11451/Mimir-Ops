@@ -1,68 +1,51 @@
 <template>
-  <div class="h-screen flex font-sans antialiased overflow-hidden">
-    <!-- 左侧品牌区域 (45%) -->
-    <div class="hidden md:flex md:w-5/12 bg-brand-dark relative flex-col justify-center px-12 lg:px-20 text-white overflow-hidden">
-      <!-- 背景装饰 -->
-      <div class="absolute inset-0 opacity-10 pointer-events-none">
-        <svg class="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-          <path d="M0 100 L100 0 L100 100 Z" fill="#4299e1" />
-        </svg>
-      </div>
+  <div class="min-h-screen bg-ui-bg text-ui-text">
+    <AppShellHeader show-auth-links />
 
-      <div class="relative z-10 space-y-8">
-        <div class="flex items-center space-x-3">
-          <div class="w-10 h-10 bg-brand rounded flex items-center justify-center">
-            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-            </svg>
+    <main class="mx-auto flex w-full max-w-[1460px] flex-col gap-6 px-4 py-6 sm:px-6 lg:flex-row lg:items-stretch lg:px-8">
+      <section class="relative overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(135deg,rgba(15,23,42,0.96),rgba(29,78,216,0.92))] p-8 text-white shadow-[0_30px_80px_-42px_rgba(15,23,42,0.8)] lg:flex lg:flex-1 lg:flex-col lg:justify-between">
+        <div class="pointer-events-none absolute -left-16 top-16 h-40 w-40 rounded-full bg-white/10 blur-3xl"></div>
+        <div class="pointer-events-none absolute right-0 top-0 h-48 w-48 rounded-full bg-sky-300/20 blur-3xl"></div>
+
+        <div class="relative z-10 max-w-xl space-y-6">
+          <span class="inline-flex rounded-full border border-white/20 bg-white/8 px-4 py-1 text-xs font-medium uppercase tracking-[0.28em] text-slate-200">
+            智能运维控制台
+          </span>
+          <div>
+            <h1 class="text-3xl font-semibold tracking-[-0.04em] sm:text-5xl">用更少的操作，看清服务器和告警。</h1>
+            <p class="mt-4 max-w-lg text-sm leading-7 text-slate-300 sm:text-base">
+              统一查看监控、诊断、处置与通知，把常用运维动作收进一个控制台。
+            </p>
           </div>
-          <span class="text-2xl font-bold tracking-wide">灵枢智维</span>
         </div>
 
-        <div>
-          <h1 class="text-3xl font-bold mb-2">智能驱动，运维无忧</h1>
-          <p class="text-gray-400 text-lg">企业级智能运维解决方案，为您的业务保驾护航。</p>
+        <div class="relative z-10 mt-8 grid gap-4 sm:grid-cols-3">
+          <div class="rounded-[24px] border border-white/12 bg-white/8 p-5 backdrop-blur-sm">
+            <div class="text-xs uppercase tracking-[0.22em] text-slate-300">监控</div>
+            <div class="mt-3 text-2xl font-semibold">1 屏</div>
+            <p class="mt-2 text-sm text-slate-300">CPU、内存、告警同屏查看。</p>
+          </div>
+          <div class="rounded-[24px] border border-white/12 bg-white/8 p-5 backdrop-blur-sm">
+            <div class="text-xs uppercase tracking-[0.22em] text-slate-300">诊断</div>
+            <div class="mt-3 text-2xl font-semibold">AI</div>
+            <p class="mt-2 text-sm text-slate-300">自动分析日志并生成处理建议。</p>
+          </div>
+          <div class="rounded-[24px] border border-white/12 bg-white/8 p-5 backdrop-blur-sm">
+            <div class="text-xs uppercase tracking-[0.22em] text-slate-300">处置</div>
+            <div class="mt-3 text-2xl font-semibold">闭环</div>
+            <p class="mt-2 text-sm text-slate-300">从建议到执行，保留完整记录。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="w-full rounded-[32px] border border-white/70 bg-white/88 p-6 shadow-[0_30px_80px_-44px_rgba(15,23,42,0.35)] backdrop-blur-sm sm:p-8 lg:w-[440px]">
+        <div class="space-y-2">
+          <span class="inline-flex rounded-full bg-brand/8 px-3 py-1 text-xs font-semibold tracking-[0.18em] text-brand">登录</span>
+          <h2 class="text-2xl font-semibold tracking-[-0.03em] text-ui-text">进入控制台</h2>
+          <p class="text-sm text-ui-subtext">使用你的账号继续。</p>
         </div>
 
-        <ul class="space-y-4 text-gray-300">
-          <li class="flex items-center space-x-3">
-            <svg class="w-5 h-5 text-ui-success flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-            <span>全链路智能监控与数据分析</span>
-          </li>
-          <li class="flex items-center space-x-3">
-            <svg class="w-5 h-5 text-ui-success flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-            <span>毫秒级异常预警机制</span>
-          </li>
-          <li class="flex items-center space-x-3">
-            <svg class="w-5 h-5 text-ui-success flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-            <span>自动化根因分析 (RCA)</span>
-          </li>
-        </ul>
-      </div>
-
-      
-    </div>
-
-    <!-- 右侧登录表单 (55%) -->
-    <div class="w-full md:w-7/12 bg-white flex flex-col justify-center items-center px-8 md:px-16">
-      <div class="w-full max-w-md space-y-8">
-        <div class="text-center md:text-left">
-          <h2 class="text-2xl font-bold text-ui-text">欢迎回来</h2>
-          <p class="mt-2 text-ui-subtext">请登录您的管理账号以继续</p>
-        </div>
-
-        <el-form
-          :model="form"
-          class="space-y-6"
-          label-position="top"
-        >
-          <!-- 错误提示 -->
+        <el-form :model="form" class="mt-8 space-y-5" label-position="top">
           <el-alert
             v-if="errorMessage"
             :title="errorMessage"
@@ -72,76 +55,64 @@
             :closable="false"
           />
 
-          <el-form-item label="账号/邮箱" prop="username" class="space-y-1">
+          <el-form-item label="账号" prop="username" class="space-y-1">
             <el-input
               v-model="form.username"
-              id="email"
               type="text"
               autocomplete="username"
-              placeholder="请输入用户名或邮箱"
+              placeholder="请输入用户名"
               clearable
-              class="appearance-none block w-full h-12 placeholder-gray-400 input-focus sm:text-sm"
+              class="appearance-none block w-full h-12 input-focus"
             />
           </el-form-item>
 
           <el-form-item label="密码" prop="password" class="space-y-1">
             <el-input
               v-model="form.password"
-              id="password"
               type="password"
               autocomplete="current-password"
               placeholder="请输入密码"
               show-password
-              class="appearance-none block w-full h-12 placeholder-gray-400 input-focus sm:text-sm"
+              class="appearance-none block w-full h-12 input-focus"
+              @keyup.enter="handleLogin"
             />
           </el-form-item>
 
-          <!-- <div class="flex items-center justify-between">
-            <el-checkbox v-model="remember" class="text-sm text-ui-text">
-              记住我
-            </el-checkbox>
-          </div> -->
+          <el-button
+            type="primary"
+            class="w-full !h-auto rounded-2xl border-0 px-4 py-3 text-sm font-semibold text-white shadow-[0_22px_38px_-24px_rgba(37,99,235,0.85)] transition-all duration-150 hover:translate-y-[-1px]"
+            :loading="loading"
+            :disabled="loading"
+            @click="handleLogin"
+          >
+            {{ loading ? '登录中...' : '登录' }}
+          </el-button>
 
-          <div>
-            <el-button
-              type="primary"
-              class="w-full !h-auto py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-gradient-to-r from-brand to-brand-hover hover:to-[#2c5282] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand btn-hover transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-              :loading="loading"
-              :disabled="loading"
-              @click="handleLogin"
-            >
-              <span v-if="loading">登录中...</span>
-              <span v-else>登 录</span>
-            </el-button>
-          </div>
-
-          <div class="mt-6 text-center">
-            <p class="text-sm text-ui-subtext">
-              还没有账号？
-              <router-link to="/register" class="font-medium text-brand hover:text-brand-hover">
-                立即注册
-              </router-link>
-            </p>
+          <div class="pt-2 text-center text-sm text-ui-subtext">
+            还没有账号？
+            <router-link to="/register" class="font-medium text-brand hover:text-brand-hover">
+              去注册
+            </router-link>
           </div>
         </el-form>
-      </div>
-    </div>
+      </section>
+    </main>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { login } from '../api/user'
+import AppShellHeader from '../components/AppShellHeader.vue'
 
 const router = useRouter()
 const loading = ref(false)
 const errorMessage = ref('')
-const remember = ref(false)
 
 const form = reactive({
-  username: '', 
-  password: ''
+  username: '',
+  password: '',
 })
 
 const handleLogin = async () => {
@@ -152,27 +123,19 @@ const handleLogin = async () => {
 
   loading.value = true
   errorMessage.value = ''
-  
+
   try {
-    console.log('Attempting login with:', form.username)
-    const res = await login({
+    await login({
       username: form.username,
-      password: form.password
+      password: form.password,
     })
 
-    console.log('Login success:', res)
-    // request.js 已经处理了 code !== 200 的情况并 reject 了
-    localStorage.setItem('user', JSON.stringify({ username: form.username, remember: remember.value }))
+    localStorage.setItem('user', JSON.stringify({ username: form.username }))
     router.push('/dashboard')
   } catch (error) {
-    console.error('Login error:', error)
     errorMessage.value = error.message || '登录失败，请检查用户名或密码'
   } finally {
     loading.value = false
   }
 }
 </script>
-
-<style scoped>
-/* 可以在这里补充一些特定的样式，但大部分已由 Tailwind 处理 */
-</style>

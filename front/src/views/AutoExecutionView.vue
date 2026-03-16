@@ -1,14 +1,14 @@
 <template>
-  <div>
+  <div class="mx-auto max-w-7xl space-y-6">
     <div class="flex items-center justify-between mb-6">
       <div class="flex items-center gap-3">
-        <h2 class="text-xl font-bold text-ui-text">智能处置记录</h2>
+        <h2 class="text-xl font-bold text-ui-text">处置记录</h2>
         <span class="text-sm text-ui-subtext">共 {{ total }} 条记录</span>
       </div>
       <div class="flex items-center gap-2">
-        <el-button @click="resetFilters" :disabled="loading">清空筛选</el-button>
+        <el-button @click="resetFilters" :disabled="loading">重置</el-button>
         <el-button type="primary" :loading="loading" @click="fetchAllProcess">
-          刷新记录
+          刷新
         </el-button>
       </div>
     </div>
@@ -21,17 +21,17 @@
         <el-input
           v-model="filters.serverIp"
           clearable
-          placeholder="按服务器 IP 筛选"
+          placeholder="服务器 IP"
         />
         <el-input
           v-model="filters.component"
           clearable
-          placeholder="按组件名称筛选"
+          placeholder="组件"
         />
         <el-input
           v-model="filters.keyword"
           clearable
-          placeholder="搜索问题日志或处置内容"
+          placeholder="搜索关键词"
         />
       </div>
     </el-card>
@@ -67,7 +67,7 @@
 
         <el-table-column
           prop="problemLog"
-          label="问题日志"
+          label="问题"
           min-width="260"
           show-overflow-tooltip
         >
@@ -78,7 +78,7 @@
 
         <el-table-column
           prop="processMethod"
-          label="处置内容"
+          label="处置"
           min-width="300"
           show-overflow-tooltip
         >
@@ -128,14 +128,14 @@
         </div>
 
         <div>
-          <div class="text-sm font-semibold text-ui-text mb-2">问题日志</div>
+          <div class="text-sm font-semibold text-ui-text mb-2">问题</div>
           <div class="rounded-lg border border-ui-border bg-ui-bg px-4 py-3 whitespace-pre-wrap text-sm leading-6 text-ui-text">
             {{ selectedProcess.problemLog || '-' }}
           </div>
         </div>
 
         <div>
-          <div class="text-sm font-semibold text-ui-text mb-2">处置内容</div>
+          <div class="text-sm font-semibold text-ui-text mb-2">处置</div>
           <div class="rounded-lg border border-ui-border bg-ui-bg px-4 py-3 whitespace-pre-wrap text-sm leading-6 text-ui-text">
             {{ selectedProcess.processMethod || '-' }}
           </div>
@@ -224,7 +224,7 @@ async function fetchAllProcess() {
   } catch (error) {
     console.error('Failed to fetch all process', error)
     processList.value = []
-    ElMessage.error(error?.message || '获取智能处置记录失败')
+    ElMessage.error(error?.message || '获取处置记录失败')
   } finally {
     loading.value = false
   }

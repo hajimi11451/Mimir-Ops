@@ -34,9 +34,9 @@
       >
         <div class="flex justify-between items-start">
           <div>
-            <p class="text-xs font-medium text-ui-subtext uppercase tracking-wider">活跃告警</p>
+            <p class="text-xs font-medium text-ui-subtext uppercase tracking-wider">告警</p>
             <h3 class="text-3xl font-bold mt-1 text-ui-warning">{{ healthState.activeAlertCount }}</h3>
-            <p class="text-xs text-ui-subtext mt-2">高 / 中 / 低：{{ healthState.highRiskCount }} / {{ healthState.mediumRiskCount }} / {{ healthState.lowRiskCount }}</p>
+            <p class="text-xs text-ui-subtext mt-2">高/中/低：{{ healthState.highRiskCount }} / {{ healthState.mediumRiskCount }} / {{ healthState.lowRiskCount }}</p>
           </div>
           <div class="p-2 bg-orange-50 rounded-lg border border-orange-100">
             <svg class="w-6 h-6 text-ui-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -57,9 +57,9 @@
       >
         <div class="flex justify-between items-start">
           <div>
-            <p class="text-xs font-medium text-ui-subtext uppercase tracking-wider">已分析日志</p>
+            <p class="text-xs font-medium text-ui-subtext uppercase tracking-wider">日志</p>
             <h3 class="text-3xl font-bold text-brand mt-1">{{ healthState.totalLogsCount }}</h3>
-            <p class="text-xs text-ui-subtext mt-2">无风险记录 {{ healthState.normalCount }} 条</p>
+            <p class="text-xs text-ui-subtext mt-2">无风险 {{ healthState.normalCount }} 条</p>
           </div>
           <div class="p-2 bg-blue-50 rounded-lg border border-blue-100">
             <svg class="w-6 h-6 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -80,7 +80,7 @@
       >
         <div class="flex justify-between items-start">
           <div>
-            <p class="text-xs font-medium text-ui-subtext uppercase tracking-wider">监控服务器</p>
+            <p class="text-xs font-medium text-ui-subtext uppercase tracking-wider">服务器</p>
             <h3 class="text-3xl font-bold text-ui-text mt-1">{{ serverList.length }}</h3>
             <p class="text-xs text-ui-subtext mt-2 truncate">当前：{{ selectedServer || '未选择服务器' }}</p>
           </div>
@@ -106,7 +106,7 @@
         <div class="flex h-full min-h-0 flex-col">
           <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-6">
           <div class="flex items-center space-x-4">
-            <h3 class="text-lg font-bold text-ui-text">服务器监控控制台</h3>
+            <h3 class="text-lg font-bold text-ui-text">监控趋势</h3>
             <el-select
               v-if="serverList.length > 0"
               :model-value="selectedServer"
@@ -117,8 +117,8 @@
             >
               <el-option v-for="ip in serverList" :key="ip" :label="ip" :value="ip" />
             </el-select>
-            <span v-else-if="loadingMonitor" class="text-xs text-gray-400">正在搜索服务器...</span>
-            <span v-else class="text-xs text-gray-400">未找到服务器</span>
+            <span v-else-if="loadingMonitor" class="text-xs text-gray-400">搜索中...</span>
+            <span v-else class="text-xs text-gray-400">暂无服务器</span>
           </div>
 
           <div class="flex flex-wrap gap-2">
@@ -133,14 +133,14 @@
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 text-sm text-gray-600 bg-gray-50 p-4 rounded-lg border border-slate-100">
             <div><span class="font-bold">OS:</span> {{ currentInfo.os || 'N/A' }}</div>
-            <div><span class="font-bold">运行时间:</span> {{ currentInfo.upTime || 'N/A' }}</div>
-            <div><span class="font-bold">处理器:</span> {{ currentInfo.processor || 'N/A' }}</div>
+            <div><span class="font-bold">运行:</span> {{ currentInfo.upTime || 'N/A' }}</div>
+            <div><span class="font-bold">CPU:</span> {{ currentInfo.processor || 'N/A' }}</div>
             <div><span class="font-bold">内存:</span> {{ currentInfo.availableMemory || 'N/A' }} / {{ currentInfo.totalMemory || 'N/A' }}</div>
           </div>
 
           <div class="flex-1 min-h-[320px] relative w-full flex items-center justify-center">
             <canvas v-if="hasChartData" ref="monitorChartRef"></canvas>
-            <div v-else class="text-gray-400 text-sm">{{ loadingMonitor ? '正在获取监控数据...' : '暂无监控数据' }}</div>
+            <div v-else class="text-gray-400 text-sm">{{ loadingMonitor ? '加载监控数据...' : '暂无监控数据' }}</div>
           </div>
         </div>
       </el-card>
@@ -151,16 +151,16 @@
       >
         <div class="flex h-full min-h-0 flex-col">
           <div class="flex justify-between items-center mb-6">
-            <h3 class="text-lg font-bold text-ui-text">最新信息与告警</h3>
+            <h3 class="text-lg font-bold text-ui-text">最新告警</h3>
             <router-link to="/info-list" class="text-sm text-brand hover:underline">
-              查看全部
+              全部
             </router-link>
           </div>
 
           <div class="flex-1 min-h-0 space-y-4 overflow-y-auto pr-1 custom-scrollbar">
-            <div v-if="loadingInfo" class="text-center text-gray-400 py-4">加载中...</div>
+            <div v-if="loadingInfo" class="text-center text-gray-400 py-4">加载中</div>
 
-            <div v-else-if="infoList.length === 0" class="text-center text-gray-400 py-4">暂无数据</div>
+            <div v-else-if="infoList.length === 0" class="text-center text-gray-400 py-4">暂无记录</div>
 
             <div
               v-else
@@ -401,3 +401,4 @@ onBeforeUnmount(() => {
   border-radius: 3px;
 }
 </style>
+

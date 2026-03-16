@@ -1,19 +1,19 @@
 <template>
-  <div>
+  <div class="mx-auto max-w-7xl space-y-6">
     <div class="flex items-center justify-between mb-6">
       <div class="flex items-center gap-3">
-        <h2 class="text-xl font-bold text-ui-text">全部信息与告警</h2>
+        <h2 class="text-xl font-bold text-ui-text">告警记录</h2>
         <span class="text-sm text-ui-subtext">共 {{ total }} 条记录</span>
       </div>
       <div class="flex items-center gap-2">
-        <el-button @click="goDashboard">退出并返回总览</el-button>
+        <el-button @click="goDashboard">回到总览</el-button>
         <el-button
           type="danger"
           :loading="clearing"
           :disabled="loading || total === 0 || clearing"
           @click="handleClearAll"
         >
-          删除我的历史告警
+          清空记录
         </el-button>
       </div>
     </div>
@@ -59,7 +59,7 @@
 
         <el-table-column
           prop="analysisResult"
-          label="遇到的问题"
+          label="问题详情"
           min-width="240"
           show-overflow-tooltip
         >
@@ -70,7 +70,7 @@
 
         <el-table-column
           prop="suggestedActions"
-          label="建议处理方式"
+          label="处理建议"
           min-width="240"
           show-overflow-tooltip
         >
@@ -238,3 +238,4 @@ onMounted(() => {
   fetchAllInfo()
 })
 </script>
+
