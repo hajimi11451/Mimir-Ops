@@ -39,6 +39,8 @@ public class MonitorService {
     private static final String MONITOR_FAILURE_ANALYSIS = "采集不到 CPU 和内存数据，请检查 SSH 连接、服务器网络状态以及目标主机是否可达。";
     private static final String SYSTEM_MONITOR_CONFIG_KEY = "system_monitor";
     private static final Pattern NUMERIC_PATTERN = Pattern.compile("-?\\d+(?:\\.\\d+)?");
+    private static final int SSH_CONNECT_TIMEOUT_MS = 5000;
+    private static final int SSH_SOCKET_TIMEOUT_MS = 10000;
 
     @Autowired
     private ComponentConfigMapper componentConfigMapper;
@@ -110,45 +112,8 @@ public class MonitorService {
         }
 
         try {
-            // SSH 连接并执行命令
-            // 获取 CPU 使用率 (使用 vmstat 获取空闲率，然后用 100 减去)
-            // vmstat 1 2 取第二行数据
-            String cpuCmd = "vmstat 1 2 | tail -1 | awk '{print 100 - $15}'";
-            String memCmd = "awk '/MemTotal/ {total=$2} /MemAvailable/ {avail=$2} END {if (total>0 && avail>=0) print (total-avail)/total*100}' /proc/meminfo";
-            String uptimeCmd = "uptime -p";
-            String osCmd = "cat /etc/os-release | grep PRETTY_NAME | cut -d= -f2 | tr -d '\"'";
-            String totalMemCmd = "free -h | grep Mem | awk '{print $2}'";
-
-            double cpuUsage = parseMetricValue(sshExec(ip, user, password, cpuCmd), "CPU");
-            double memUsage = parseMetricValue(sshExec(ip, user, password, memCmd), "内存");
-            String upTime = sshExec(ip, user, password, uptimeCmd).trim();
-            String os = sshExec(ip, user, password, osCmd).trim();
-            String totalMem = sshExec(ip, user, password, totalMemCmd).trim();
-
-            // 更新历史数据
-            String currentTime = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
-            MetricDTO metric = new MetricDTO(
-                    currentTime,
-                    Math.round(cpuUsage * 10.0) / 10.0,
-                    Math.round(memUsage * 10.0) / 10.0
-            );
-
-            historyMap.computeIfAbsent(ip, k -> new CopyOnWriteArrayList<>()).add(metric);
-            List<MetricDTO> history = historyMap.get(ip);
-            if (history.size() > 60) {
-                history.remove(0);
-            }
-
-            // 更新实时信息
-            Map<String, Object> info = new HashMap<>();
-            info.put("os", os.isEmpty() ? "Linux" : os);
-            info.put("upTime", upTime);
-            info.put("cpuUsage", metric.getCpuUsage());
-            info.put("memUsage", metric.getMemUsage());
-            info.put("totalMemory", totalMem);
-            info.put("processor", "Remote Server"); // 简化，暂不获取详细CPU型号
-            
-            currentInfoMap.put(ip, info);
+            MetricSnapshot snapshot = collectMetricSnapshot(ip, user, password);
+            MetricDTO metric = cacheMetricSnapshot(ip, snapshot);
 
             System.out.println("已采集服务器 " + ip + " 数据: " + metric);
 
@@ -158,22 +123,71 @@ public class MonitorService {
         }
     }
 
-    private String sshExec(String host, String user, String password, String command) throws Exception {
+    private MetricSnapshot collectMetricSnapshot(String host, String user, String password) throws Exception {
+        String cpuCmd = "vmstat 1 2 | tail -1 | awk '{print 100 - $15}'";
+        String memCmd = "awk '/MemTotal/ {total=$2} /MemAvailable/ {avail=$2} END {if (total>0 && avail>=0) print (total-avail)/total*100}' /proc/meminfo";
+        String uptimeCmd = "uptime -p";
+        String osCmd = "cat /etc/os-release | grep PRETTY_NAME | cut -d= -f2 | tr -d '\"'";
+        String totalMemCmd = "free -h | grep Mem | awk '{print $2}'";
+
+        Session session = openSession(host, user, password);
+        try {
+            double cpuUsage = parseMetricValue(sshExec(session, cpuCmd), "CPU");
+            double memUsage = parseMetricValue(sshExec(session, memCmd), "内存");
+            String upTime = sshExec(session, uptimeCmd).trim();
+            String os = sshExec(session, osCmd).trim();
+            String totalMem = sshExec(session, totalMemCmd).trim();
+            return new MetricSnapshot(cpuUsage, memUsage, upTime, os, totalMem);
+        } finally {
+            if (session != null && session.isConnected()) {
+                session.disconnect();
+            }
+        }
+    }
+
+    private MetricDTO cacheMetricSnapshot(String serverIp, MetricSnapshot snapshot) {
+        String currentTime = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
+        MetricDTO metric = new MetricDTO(
+                currentTime,
+                Math.round(snapshot.cpuUsage() * 10.0) / 10.0,
+                Math.round(snapshot.memUsage() * 10.0) / 10.0
+        );
+
+        historyMap.computeIfAbsent(serverIp, k -> new CopyOnWriteArrayList<>()).add(metric);
+        List<MetricDTO> history = historyMap.get(serverIp);
+        if (history.size() > 60) {
+            history.remove(0);
+        }
+
+        Map<String, Object> info = new HashMap<>();
+        info.put("os", snapshot.os().isEmpty() ? "Linux" : snapshot.os());
+        info.put("upTime", snapshot.upTime());
+        info.put("cpuUsage", metric.getCpuUsage());
+        info.put("memUsage", metric.getMemUsage());
+        info.put("totalMemory", snapshot.totalMem());
+        info.put("processor", "Remote Server");
+        currentInfoMap.put(serverIp, info);
+        return metric;
+    }
+
+    private Session openSession(String host, String user, String password) throws Exception {
         JSch jsch = new JSch();
-        Session session = null;
+        HostAndPort hostAndPort = parseHostAndPort(host);
+        Session session = jsch.getSession(user, hostAndPort.host(), hostAndPort.port());
+        session.setPassword(password);
+        session.setConfig("StrictHostKeyChecking", "no");
+        session.connect(SSH_CONNECT_TIMEOUT_MS);
+        session.setTimeout(SSH_SOCKET_TIMEOUT_MS);
+        return session;
+    }
+
+    private String sshExec(Session session, String command) throws Exception {
         ChannelExec channel = null;
         try {
-            session = jsch.getSession(user, host, 22);
-            session.setPassword(password);
-            session.setConfig("StrictHostKeyChecking", "no");
-            session.setTimeout(10000); // 10秒超时
-            session.connect();
-
             channel = (ChannelExec) session.openChannel("exec");
             channel.setCommand(command);
-            
             InputStream in = channel.getInputStream();
-            channel.connect();
+            channel.connect(SSH_CONNECT_TIMEOUT_MS);
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(in));
             StringBuilder output = new StringBuilder();
@@ -183,9 +197,29 @@ public class MonitorService {
             }
             return output.toString();
         } finally {
-            if (channel != null) channel.disconnect();
-            if (session != null) session.disconnect();
+            if (channel != null) {
+                channel.disconnect();
+            }
         }
+    }
+
+    private HostAndPort parseHostAndPort(String host) {
+        String normalizedHost = host == null ? "" : host.trim();
+        int port = 22;
+
+        if (normalizedHost.contains(":")) {
+            String[] parts = normalizedHost.split(":", 2);
+            if (parts.length == 2) {
+                normalizedHost = parts[0];
+                try {
+                    port = Integer.parseInt(parts[1]);
+                } catch (NumberFormatException ignored) {
+                    port = 22;
+                }
+            }
+        }
+
+        return new HostAndPort(normalizedHost, port);
     }
 
     private double parseMetricValue(String str, String metricName) {
@@ -370,43 +404,12 @@ public class MonitorService {
         }
 
         try {
-            String cpuCmd = "vmstat 1 2 | tail -1 | awk '{print 100 - $15}'";
-            String memCmd = "awk '/MemTotal/ {total=$2} /MemAvailable/ {avail=$2} END {if (total>0 && avail>=0) print (total-avail)/total*100}' /proc/meminfo";
-            String uptimeCmd = "uptime -p";
-            String osCmd = "cat /etc/os-release | grep PRETTY_NAME | cut -d= -f2 | tr -d '\"'";
-            String totalMemCmd = "free -h | grep Mem | awk '{print $2}'";
-
-            double cpuUsage = parseMetricValue(sshExec(serverIp, username, password, cpuCmd), "CPU");
-            double memUsage = parseMetricValue(sshExec(serverIp, username, password, memCmd), "内存");
-            String upTime = sshExec(serverIp, username, password, uptimeCmd).trim();
-            String os = sshExec(serverIp, username, password, osCmd).trim();
-            String totalMem = sshExec(serverIp, username, password, totalMemCmd).trim();
-
-            String currentTime = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
-            MetricDTO metric = new MetricDTO(
-                    currentTime,
-                    Math.round(cpuUsage * 10.0) / 10.0,
-                    Math.round(memUsage * 10.0) / 10.0
-            );
-
-            historyMap.computeIfAbsent(serverIp, k -> new CopyOnWriteArrayList<>()).add(metric);
-            List<MetricDTO> history = historyMap.get(serverIp);
-            if (history.size() > 60) {
-                history.remove(0);
-            }
-
-            Map<String, Object> info = new HashMap<>();
-            info.put("os", os.isEmpty() ? "Linux" : os);
-            info.put("upTime", upTime);
-            info.put("cpuUsage", metric.getCpuUsage());
-            info.put("memUsage", metric.getMemUsage());
-            info.put("totalMemory", totalMem);
-            info.put("processor", "Remote Server");
-            currentInfoMap.put(serverIp, info);
+            MetricSnapshot snapshot = collectMetricSnapshot(serverIp, username, password);
+            MetricDTO metric = cacheMetricSnapshot(serverIp, snapshot);
 
             sample.put("success", true);
             sample.put("metric", metric);
-            sample.put("current", info);
+            sample.put("current", currentInfoMap.get(serverIp));
             return sample;
         } catch (Exception e) {
             sample.put("success", false);
@@ -476,4 +479,8 @@ public class MonitorService {
         summary.put("maxMem", Math.round(maxMem * 10.0) / 10.0);
         return summary;
     }
+
+    private record MetricSnapshot(double cpuUsage, double memUsage, String upTime, String os, String totalMem) {}
+
+    private record HostAndPort(String host, int port) {}
 }

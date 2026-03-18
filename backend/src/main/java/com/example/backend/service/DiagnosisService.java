@@ -17,9 +17,12 @@ import org.springframework.util.StringUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 @Slf4j
@@ -30,14 +33,16 @@ public class DiagnosisService {
     private static final long DEFAULT_USER_ID = 1L;
 
     /** 组件名称 -> 常见 Linux 日志路径，AI 失败或限流时作为回退 */
-    private static final Map<String, String> COMMON_LOG_PATHS = Map.of(
-            "nginx", "/var/log/nginx/error.log",
-            "mysql", "/var/log/mysql/error.log",
-            "tomcat", "/var/log/tomcat/catalina.out",
-            "redis", "/var/log/redis/redis-server.log",
-            "java", "/var/log/syslog",
-            "docker", "/var/log/docker.log"
+    private static final Map<String, List<String>> COMMON_LOG_PATHS = Map.of(
+            "nginx", List.of("/var/log/nginx/error.log", "/var/log/syslog"),
+            "mysql", List.of("/var/log/mysql/error.log", "/var/log/mysqld.log", "/var/log/syslog"),
+            "tomcat", List.of("/var/log/tomcat/catalina.out", "/opt/tomcat/logs/catalina.out"),
+            "redis", List.of("/var/log/redis/redis-server.log", "/var/log/syslog"),
+            "java", List.of("/var/log/syslog"),
+            "docker", List.of("/var/log/docker.log", "/var/log/syslog")
     );
+
+    private static final String DEFAULT_OS_HINT = "Ubuntu Linux";
 
     /** 校验路径是否为合法 Linux 路径（以 / 开头且不含明显异常字符） */
     private static final Pattern VALID_PATH = Pattern.compile("^/[/a-zA-Z0-9_.-]+$");
@@ -91,15 +96,22 @@ public class DiagnosisService {
     /**
      * 获取日志路径（Controller 入口）
      */
-    public String getLogPath(String serverIp, String component, String username, String password) {
-        return discoverLogPath(serverIp, component, "Linux", username, password);
+    public String getLogPath(String serverIp, String component, String username, String password, Boolean useSudo) {
+        boolean sudoEnabled = isUseSudoEnabled(useSudo);
+        if (sudoEnabled && (!StringUtils.hasText(username) || !StringUtils.hasText(password))) {
+            throw new RuntimeException("启用 sudo 读取日志时必须填写 SSH 用户名和密码");
+        }
+        return discoverLogPath(serverIp, component, DEFAULT_OS_HINT, username, password, sudoEnabled);
     }
 
     /**
      * 智能路径发现：先查库 -> 再试 AI -> AI 失败则用常见路径回退
      */
-    public String discoverLogPath(String serverIp, String component, String osType, String username, String password) {
+    public String discoverLogPath(String serverIp, String component, String osType, String username, String password, boolean useSudo) {
         log.info("开始发现日志路径: serverIp={}, component={}", serverIp, component);
+        if (useSudo && (!StringUtils.hasText(username) || !StringUtils.hasText(password))) {
+            throw new RuntimeException("启用 sudo 读取日志时必须填写 SSH 用户名和密码");
+        }
         String configKey = "error_log_path";
 
         // 1. 查库：优先使用已验证的路径
@@ -130,35 +142,15 @@ public class DiagnosisService {
             log.warn("AI 生成路径失败，将使用常见路径回退: {}", e.getMessage());
         }
 
-        // 3. AI 无效时使用常见路径回退
-        if (!StringUtils.hasText(guessedPath)) {
-            String key = (component == null ? "" : component).toLowerCase().replaceAll("\\s+", "");
-            guessedPath = COMMON_LOG_PATHS.getOrDefault(key, "/var/log/syslog");
-            log.info("使用常见路径回退: {}", guessedPath);
-        }
+        List<String> candidates = buildLogPathCandidates(component, osType, guessedPath);
+        log.info("日志路径候选列表: {}", candidates);
 
-        // 4. SSH 验证路径是否可读
-        String verifyResult;
-        try {
-            if (StringUtils.hasText(username) && StringUtils.hasText(password)) {
-                verifyResult = sshUtils.exec(serverIp, username, password, "tail -n 1 " + guessedPath);
-            } else {
-                verifyResult = sshUtils.exec(serverIp, "tail -n 1 " + guessedPath);
-            }
-        } catch (Exception e) {
-            log.error("SSH 验证失败: {}", e.getMessage());
-            throw new RuntimeException("SSH 验证失败: " + e.getMessage());
-        }
-
-        if (verifyResult != null && (verifyResult.contains("No such file") || verifyResult.contains("cannot open") || verifyResult.contains("SSH Error"))) {
-            log.error("路径验证失败: {} -> {}", guessedPath, verifyResult);
-            throw new RuntimeException("日志路径无效: " + guessedPath);
-        }
+        String resolvedPath = resolveReadableLogPath(serverIp, username, password, candidates, useSudo);
 
         // 5. 验证成功，持久化到数据库
         log.info("路径验证成功，更新数据库记录");
         // addConfig 会按 userId 持久化，这里只返回路径，避免写入错误用户数据
-        return guessedPath;
+        return resolvedPath;
     }
 
     /**
@@ -170,16 +162,14 @@ public class DiagnosisService {
      * @param password 密码
      * @return 诊断结果映射
      */
-    public Map<String, Object> executeDiagnosis(String serverIp, String component, String logPath, String username, String password) {
-        log.info("开始执行诊断: ip={}, component={}, path={}", serverIp, component, logPath);
+    public Map<String, Object> executeDiagnosis(String serverIp, String component, String logPath, String username, String password, boolean useSudo) {
+        log.info("开始执行诊断: ip={}, component={}, path={}, useSudo={}", serverIp, component, logPath, useSudo);
+        if (useSudo && (!StringUtils.hasText(username) || !StringUtils.hasText(password))) {
+            throw new RuntimeException("启用 sudo 读取日志时必须填写 SSH 用户名和密码");
+        }
         
         // 1. 调用 SSH 获取原始日志
-        String rawLog;
-        if (StringUtils.hasText(username) && StringUtils.hasText(password)) {
-            rawLog = sshUtils.exec(serverIp, username, password, "tail -n 50 " + logPath);
-        } else {
-            rawLog = sshUtils.exec(serverIp, "tail -n 50 " + logPath);
-        }
+        String rawLog = runLogCommand(serverIp, username, password, buildTailCommand(logPath, 50, useSudo, password));
 
         String normalizedRawLog = InfoNormalizationUtils.normalizeText(rawLog, "");
         if (isSshOrLogFetchFailure(normalizedRawLog)) {
@@ -229,6 +219,10 @@ public class DiagnosisService {
                 || value.contains("No such file")
                 || value.contains("cannot open")
                 || value.contains("Permission denied")
+                || value.contains("is not in the sudoers file")
+                || value.contains("a password is required")
+                || value.contains("incorrect password attempt")
+                || value.startsWith("sudo:")
                 || value.contains("Read timed out")
                 || value.contains("Connection timed out")
                 || value.contains("Connection refused")
@@ -241,6 +235,103 @@ public class DiagnosisService {
             return parts[parts.length - 1];
         }
         return command;
+    }
+
+    private List<String> buildLogPathCandidates(String component, String osType, String aiPath) {
+        String key = normalizeComponentKey(component);
+        boolean ubuntuLike = isUbuntuLike(osType);
+        Set<String> candidates = new LinkedHashSet<>();
+
+        if (StringUtils.hasText(aiPath) && VALID_PATH.matcher(aiPath.trim()).matches()) {
+            candidates.add(aiPath.trim());
+        }
+
+        if (isSshAuthComponent(key)) {
+            if (ubuntuLike) {
+                candidates.add("/var/log/auth.log");
+                candidates.add("/var/log/syslog");
+            } else {
+                candidates.add("/var/log/secure");
+                candidates.add("/var/log/messages");
+                candidates.add("/var/log/syslog");
+            }
+        }
+
+        List<String> commonPaths = COMMON_LOG_PATHS.get(key);
+        if (commonPaths != null) {
+            candidates.addAll(commonPaths);
+        }
+
+        if (ubuntuLike) {
+            candidates.add("/var/log/syslog");
+        } else {
+            candidates.add("/var/log/messages");
+            candidates.add("/var/log/syslog");
+        }
+
+        return new ArrayList<>(candidates);
+    }
+
+    private String resolveReadableLogPath(String serverIp, String username, String password, List<String> candidates, boolean useSudo) {
+        RuntimeException permissionFailure = null;
+        RuntimeException lastFailure = null;
+
+        for (String candidate : candidates) {
+            String verifyResult;
+            try {
+                verifyResult = runLogCommand(serverIp, username, password, buildTailCommand(candidate, 1, useSudo, password));
+            } catch (Exception e) {
+                log.warn("候选日志路径验证异常: {} -> {}", candidate, e.getMessage());
+                lastFailure = new RuntimeException("日志路径验证失败: " + e.getMessage());
+                continue;
+            }
+
+            String validationMessage = getLogPathValidationMessage(candidate, verifyResult);
+            if (!StringUtils.hasText(validationMessage)) {
+                log.info("日志路径验证成功: {}", candidate);
+                return candidate;
+            }
+
+            log.warn("候选日志路径不可用: {} -> {}", candidate, verifyResult);
+            RuntimeException failure = new RuntimeException(validationMessage);
+            if (validationMessage.contains("无权限")) {
+                if (permissionFailure == null) {
+                    permissionFailure = failure;
+                }
+            } else {
+                lastFailure = failure;
+            }
+        }
+
+        if (permissionFailure != null) {
+            throw permissionFailure;
+        }
+        if (lastFailure != null) {
+            throw lastFailure;
+        }
+        throw new RuntimeException("未找到可读取的日志路径");
+    }
+
+    private String normalizeComponentKey(String component) {
+        return component == null ? "" : component.toLowerCase().replaceAll("\\s+", "");
+    }
+
+    private boolean isUbuntuLike(String osType) {
+        String normalized = osType == null ? "" : osType.toLowerCase();
+        return normalized.contains("ubuntu") || normalized.contains("debian");
+    }
+
+    private boolean isSshAuthComponent(String componentKey) {
+        return componentKey.contains("ssh")
+                || componentKey.contains("sshd")
+                || componentKey.contains("auth")
+                || componentKey.contains("login")
+                || componentKey.contains("sudo")
+                || componentKey.contains("secure")
+                || componentKey.contains("认证")
+                || componentKey.contains("登录")
+                || componentKey.contains("授权")
+                || componentKey.contains("安全");
     }
 
     // --- 监控配置管理 ---
@@ -266,6 +357,11 @@ public class DiagnosisService {
         String password = config.getPassword();
         String configValue = config.getConfigValue();
         String component = config.getComponent();
+        boolean useSudo = isUseSudoEnabled(config.getUseSudo());
+
+        if (useSudo && (!StringUtils.hasText(username) || !StringUtils.hasText(password))) {
+            throw new RuntimeException("启用 sudo 读取日志时必须填写 SSH 用户名和密码");
+        }
 
         log.info("保存监控配置：开始执行 SSH 连接验证与日志路径验证 - {}@{}", serverIp, component);
 
@@ -286,28 +382,23 @@ public class DiagnosisService {
         if (StringUtils.hasText(configValue)) {
             String verifyResult;
             try {
-                if (StringUtils.hasText(username) && StringUtils.hasText(password)) {
-                    verifyResult = sshUtils.exec(serverIp, username, password, "tail -n 1 " + configValue);
-                } else {
-                    verifyResult = sshUtils.exec(serverIp, "tail -n 1 " + configValue);
-                }
+                verifyResult = runLogCommand(serverIp, username, password, buildTailCommand(configValue, 1, useSudo, password));
             } catch (Exception e) {
                 log.error("日志路径验证时SSH执行失败: {}", e.getMessage());
                 throw new RuntimeException("日志路径验证失败: " + e.getMessage());
             }
-            if (verifyResult != null && (verifyResult.contains("No such file") || verifyResult.contains("cannot open") || verifyResult.contains("SSH Error"))) {
-                log.error("日志路径验证失败: {} -> {}", configValue, verifyResult);
-                throw new RuntimeException("日志路径无效或不可读: " + configValue);
-            }
+            validateLogPathReadable(configValue, verifyResult);
             log.info("日志路径验证成功: {}", configValue);
             config.setIsVerified(1);
         } else {
             log.info("未填写日志路径，开始自动发现并验证日志路径");
-            String discoveredPath = getLogPath(serverIp, component, username, password);
+            String discoveredPath = getLogPath(serverIp, component, username, password, useSudo);
             config.setConfigValue(discoveredPath);
             config.setIsVerified(1);
             log.info("自动发现并验证的日志路径: {}", discoveredPath);
         }
+
+        config.setUseSudo(useSudo);
 
         // 3. 验证通过，保存/更新配置
         ComponentConfig existing = componentConfigMapper.selectOne(
@@ -320,6 +411,7 @@ public class DiagnosisService {
             existing.setConfigValue(config.getConfigValue());
             if (StringUtils.hasText(config.getUsername())) existing.setUsername(config.getUsername());
             if (StringUtils.hasText(config.getPassword())) existing.setPassword(config.getPassword());
+            existing.setUseSudo(useSudo);
             if (!StringUtils.hasText(config.getConfigValue())) {
                 existing.setIsVerified(0);
             } else {
@@ -493,6 +585,7 @@ public class DiagnosisService {
         config.setComponent(SYSTEM_MONITOR_COMPONENT);
         config.setConfigKey(SYSTEM_MONITOR_CONFIG_KEY);
         config.setConfigValue(SYSTEM_MONITOR_CONFIG_VALUE);
+        config.setUseSudo(false);
 
         log.info("保存服务器监控配置：开始执行 SSH 连接验证 - {}@{}", username, serverIp);
 
@@ -513,6 +606,7 @@ public class DiagnosisService {
         if (existing != null) {
             existing.setUsername(username);
             existing.setPassword(password);
+            existing.setUseSudo(false);
             existing.setComponent(SYSTEM_MONITOR_COMPONENT);
             existing.setConfigValue(SYSTEM_MONITOR_CONFIG_VALUE);
             existing.setIsVerified(1);
@@ -544,6 +638,61 @@ public class DiagnosisService {
                 || analysis.contains("未能获取有效回答")
                 || analysis.contains("AI 服务暂时不可用")
                 || analysis.contains("AI 服务连接中断或超时");
+    }
+
+    private void validateLogPathReadable(String logPath, String verifyResult) {
+        String validationMessage = getLogPathValidationMessage(logPath, verifyResult);
+        if (!StringUtils.hasText(validationMessage)) {
+            return;
+        }
+
+        log.error("日志路径验证失败: {} -> {}", logPath, verifyResult == null ? "" : verifyResult.trim());
+        throw new RuntimeException(validationMessage);
+    }
+
+    private boolean isLogPathValidationFailure(String verifyResult) {
+        return verifyResult.contains("No such file")
+                || verifyResult.contains("cannot open")
+                || verifyResult.contains("Permission denied")
+                || verifyResult.contains("is not in the sudoers file")
+                || verifyResult.contains("a password is required")
+                || verifyResult.contains("incorrect password attempt")
+                || verifyResult.startsWith("sudo:")
+                || verifyResult.contains("SSH Error");
+    }
+
+    private String buildLogPathValidationMessage(String logPath, String verifyResult) {
+        if (verifyResult.contains("is not in the sudoers file")) {
+            return "日志提权失败：当前 SSH 用户没有 sudo 权限";
+        }
+        if (verifyResult.contains("a password is required") || verifyResult.contains("incorrect password attempt")) {
+            return "日志提权失败：sudo 密码校验失败，请确认 sudo 密码是否与 SSH 密码一致";
+        }
+        if (verifyResult.startsWith("sudo:")) {
+            return "日志提权失败: " + verifyResult;
+        }
+        if (verifyResult.contains("Permission denied")) {
+            return "日志路径不可读：当前 SSH 用户无权限读取 " + logPath;
+        }
+        if (verifyResult.contains("No such file")) {
+            return "日志路径不存在: " + logPath;
+        }
+        if (verifyResult.contains("SSH Error")) {
+            return "日志路径验证失败: " + verifyResult;
+        }
+        return "日志路径无效或不可读: " + logPath;
+    }
+
+    private String getLogPathValidationMessage(String logPath, String verifyResult) {
+        if (!StringUtils.hasText(verifyResult)) {
+            return null;
+        }
+
+        String normalized = verifyResult.trim();
+        if (!isLogPathValidationFailure(normalized)) {
+            return null;
+        }
+        return buildLogPathValidationMessage(logPath, normalized);
     }
 
     private String sanitizeAiJson(String analysis) {
@@ -619,7 +768,7 @@ public class DiagnosisService {
 
         String logPath = config.getConfigValue();
         if (!StringUtils.hasText(logPath)) {
-            logPath = getLogPath(config.getServerIp(), config.getComponent(), config.getUsername(), config.getPassword());
+            logPath = getLogPath(config.getServerIp(), config.getComponent(), config.getUsername(), config.getPassword(), config.getUseSudo());
         }
 
         Map<String, Object> result = executeDiagnosis(
@@ -627,7 +776,8 @@ public class DiagnosisService {
                 config.getComponent(),
                 logPath,
                 config.getUsername(),
-                config.getPassword()
+                config.getPassword(),
+                isUseSudoEnabled(config.getUseSudo())
         );
 
         String analysis = (String) result.get("analysis");
@@ -645,7 +795,7 @@ public class DiagnosisService {
             info.setErrorSummary(InfoNormalizationUtils.normalizeText((String) result.get("summary"), SSH_FETCH_FAILURE_SUMMARY));
             info.setAnalysisResult(InfoNormalizationUtils.normalizeText((String) result.get("rawLog"), SSH_FETCH_FAILURE_SUMMARY));
             info.setSuggestedActions(InfoNormalizationUtils.normalizeSuggestedActions(
-                    "检查目标服务器 SSH 连通性、账号密码、端口和日志路径权限；确认日志文件存在且可读。",
+                    "检查目标服务器 SSH 连通性、账号密码、端口、日志路径权限以及 sudo 权限配置；确认日志文件存在且可读。",
                     normalizedRiskLevel
             ));
             info.setRiskLevel(normalizedRiskLevel);
@@ -686,6 +836,7 @@ public class DiagnosisService {
             existing.setConfigValue(value);
             if (StringUtils.hasText(username)) existing.setUsername(username);
             if (StringUtils.hasText(password)) existing.setPassword(password);
+            existing.setUseSudo(false);
             existing.setIsVerified(1);
             existing.setIsEnabled(ENABLED);
             componentConfigMapper.updateById(existing);
@@ -698,6 +849,7 @@ public class DiagnosisService {
             newConfig.setConfigValue(value);
             newConfig.setUsername(username);
             newConfig.setPassword(password);
+            newConfig.setUseSudo(false);
             newConfig.setIsVerified(1);
             newConfig.setIsEnabled(ENABLED);
             componentConfigMapper.insert(newConfig);
@@ -706,5 +858,29 @@ public class DiagnosisService {
 
     private int resolveEnabledValue(Integer isEnabled) {
         return isEnabled != null && isEnabled == DISABLED ? DISABLED : ENABLED;
+    }
+
+    private boolean isUseSudoEnabled(Boolean useSudo) {
+        return Boolean.TRUE.equals(useSudo);
+    }
+
+    private String runLogCommand(String serverIp, String username, String password, String command) {
+        if (StringUtils.hasText(username) && StringUtils.hasText(password)) {
+            return sshUtils.exec(serverIp, username, password, command);
+        }
+        return sshUtils.exec(serverIp, command);
+    }
+
+    private String buildTailCommand(String logPath, int lines, boolean useSudo, String password) {
+        String command = "tail -n " + lines + " " + logPath;
+        return useSudo ? injectSudoPassword(command, password) : command;
+    }
+
+    private String injectSudoPassword(String command, String password) {
+        if (!StringUtils.hasText(command)) {
+            return command;
+        }
+        String escapedPwd = password == null ? "" : password.replace("\"", "\\\"");
+        return "echo \"" + escapedPwd + "\" | sudo -S -p '' " + command;
     }
 }

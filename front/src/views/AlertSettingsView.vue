@@ -1,119 +1,112 @@
 <template>
-  <div class="workspace-cool-glass mx-auto max-w-5xl space-y-6">
-    <el-card v-loading="loadingContact" shadow="never" class="glass-card rounded-[30px]">
-      <template #header>
-        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 class="text-xl font-bold text-ui-text">通知邮箱</h2>
-            <p class="mt-1 text-sm text-ui-subtext">
-              配置告警接收邮箱并验证链路。
-            </p>
-          </div>
+  <div v-loading="loadingContact" class="workspace-cool-glass notification-page h-full min-h-0 w-full overflow-y-auto custom-scrollbar p-4 sm:p-5 lg:p-6">
+    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div>
+        <h2 class="text-xl font-bold text-ui-text">通知邮箱</h2>
+        <p class="mt-1 text-sm text-ui-subtext">
+          配置告警接收邮箱并验证链路。
+        </p>
+      </div>
 
-          <div class="flex flex-wrap gap-2">
-            <el-tag :type="contactStatusType" effect="light">
-              {{ contactStatusText }}
-            </el-tag>
-            <el-tag type="danger" effect="plain">红色告警邮件</el-tag>
-          </div>
-        </div>
-      </template>
+      <div class="flex flex-wrap gap-2">
+        <el-tag :type="contactStatusType" effect="light">
+          {{ contactStatusText }}
+        </el-tag>
+        <el-tag type="danger" effect="plain">红色告警邮件</el-tag>
+      </div>
+    </div>
 
-      <el-alert
-        title="同一问题连续两次高风险才会发信，冷却 30 分钟。"
-        type="info"
-        :closable="false"
-        show-icon
-      />
+    <el-alert
+      class="mt-6"
+      title="同一问题连续两次高风险才会发信，冷却 30 分钟。"
+      type="info"
+      :closable="false"
+      show-icon
+    />
 
-      <el-row :gutter="20" class="mt-6">
-        <el-col :xs="24" :lg="15">
-          <el-form
-            ref="formRef"
-            :model="form"
-            :rules="rules"
-            label-position="top"
-            @submit.prevent
-          >
-            <el-form-item label="当前用户">
-              <el-input :model-value="username || '未登录'" disabled>
-                <template #prefix>
-                  <el-icon><User /></el-icon>
-                </template>
-              </el-input>
-            </el-form-item>
+    <div class="notification-body-grid mt-6 min-h-0 flex-1">
+      <section class="notification-form-panel glass-subcard h-full min-h-0 rounded-[30px] p-6">
+        <el-form
+          ref="formRef"
+          :model="form"
+          :rules="rules"
+          label-position="top"
+          @submit.prevent
+        >
+          <el-form-item label="当前用户">
+            <el-input :model-value="username || '未登录'" disabled>
+              <template #prefix>
+                <el-icon><User /></el-icon>
+              </template>
+            </el-input>
+          </el-form-item>
 
-            <el-form-item label="通知邮箱" prop="email">
-              <el-input
-                v-model="form.email"
-                clearable
-                placeholder="例如：ops-team@qq.com"
-                @keyup.enter="handleSave"
-              >
-                <template #prefix>
-                  <el-icon><Message /></el-icon>
-                </template>
-              </el-input>
-              <div class="mt-2 text-xs text-ui-subtext">
-                留空保存可清空当前邮箱。
-              </div>
-            </el-form-item>
+          <el-form-item label="通知邮箱" prop="email">
+            <el-input
+              v-model="form.email"
+              clearable
+              placeholder="例如：ops-team@qq.com"
+              @keyup.enter="handleSave"
+            >
+              <template #prefix>
+                <el-icon><Message /></el-icon>
+              </template>
+            </el-input>
+            <div class="mt-2 text-xs text-ui-subtext">
+              留空保存可清空当前邮箱。
+            </div>
+          </el-form-item>
 
-            <el-form-item>
-              <div class="flex flex-wrap gap-3">
-                <el-button type="primary" :loading="saving" @click="handleSave">
-                  <el-icon class="mr-1"><Check /></el-icon>
-                  保存设置
-                </el-button>
-                <el-button class="mail-action-button" :loading="testing" @click="handleTestMail">
-                  <el-icon class="mr-1"><Promotion /></el-icon>
-                  测试邮件
-                </el-button>
-                <el-button class="mail-action-button" :disabled="!form.email" @click="handleClear">
-                  <el-icon class="mr-1"><Delete /></el-icon>
-                  清空输入
-                </el-button>
-                <el-button class="mail-action-button" :disabled="!savedEmail" @click="handleRestoreSaved">
-                  <el-icon class="mr-1"><RefreshLeft /></el-icon>
-                  恢复
-                </el-button>
-              </div>
-            </el-form-item>
-          </el-form>
-        </el-col>
+          <el-form-item>
+            <div class="flex flex-wrap gap-3">
+              <el-button type="primary" :loading="saving" @click="handleSave">
+                <el-icon class="mr-1"><Check /></el-icon>
+                保存设置
+              </el-button>
+              <el-button class="mail-action-button" :loading="testing" @click="handleTestMail">
+                <el-icon class="mr-1"><Promotion /></el-icon>
+                测试邮件
+              </el-button>
+              <el-button class="mail-action-button" :disabled="!form.email" @click="handleClear">
+                <el-icon class="mr-1"><Delete /></el-icon>
+                清空输入
+              </el-button>
+              <el-button class="mail-action-button" :disabled="!savedEmail" @click="handleRestoreSaved">
+                <el-icon class="mr-1"><RefreshLeft /></el-icon>
+                恢复
+              </el-button>
+            </div>
+          </el-form-item>
+        </el-form>
+      </section>
 
-        <el-col :xs="24" :lg="9">
-          <div class="glass-subcard status-glass-panel rounded-[26px] p-5">
-            <div class="mb-4 font-semibold text-ui-text">当前状态</div>
+      <section class="status-panel glass-subcard h-full min-h-0 rounded-[30px] p-5">
+        <div class="mb-4 font-semibold text-ui-text">当前状态</div>
 
-            <el-descriptions class="status-plain-descriptions" :column="1">
-              <el-descriptions-item label="当前用户">
-                {{ username || '未登录' }}
-              </el-descriptions-item>
-              <el-descriptions-item label="已保存邮箱">
-                <span class="break-all">{{ savedEmail || '暂未保存' }}</span>
-              </el-descriptions-item>
-              <el-descriptions-item label="本次发送对象">
-                <span class="break-all">{{ effectiveEmail || '未指定' }}</span>
-              </el-descriptions-item>
-              <el-descriptions-item label="最近测试状态">
-                {{ lastTestMessage || '尚未测试邮件' }}
-              </el-descriptions-item>
-            </el-descriptions>
+        <el-descriptions class="status-plain-descriptions" :column="1">
+          <el-descriptions-item label="当前用户">
+            {{ username || '未登录' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="已保存邮箱">
+            <span class="break-all">{{ savedEmail || '暂未保存' }}</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="本次发送对象">
+            <span class="break-all">{{ effectiveEmail || '未指定' }}</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="最近测试状态">
+            {{ lastTestMessage || '尚未测试邮件' }}
+          </el-descriptions-item>
+        </el-descriptions>
 
-            <el-alert
-              class="mt-4"
-              :type="savedEmail ? 'success' : 'warning'"
-              :closable="false"
-              show-icon
-              :title="savedEmail ? '已配置邮箱，可发送通知。' : '未配置邮箱，当前不会自动通知。'"
-            />
-          </div>
-        </el-col>
-      </el-row>
-    </el-card>
-
-   
+        <el-alert
+          class="mt-4"
+          :type="savedEmail ? 'success' : 'warning'"
+          :closable="false"
+          show-icon
+          :title="savedEmail ? '已配置邮箱，可发送通知。' : '未配置邮箱，当前不会自动通知。'"
+        />
+      </section>
+    </div>
   </div>
 </template>
 
@@ -289,7 +282,33 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.status-glass-panel {
+.notification-page {
+  display: flex;
+  flex-direction: column;
+}
+
+.notification-body-grid {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  gap: 20px;
+  align-items: stretch;
+  grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.95fr);
+}
+
+.notification-form-panel {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.status-panel {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  min-width: 0;
+  background: linear-gradient(180deg, rgba(248, 252, 255, 0.3), rgba(236, 243, 252, 0.2));
+  border: 1px solid rgba(255, 255, 255, 0.26);
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.2),
     0 14px 28px -22px rgba(88, 110, 148, 0.2),
@@ -321,11 +340,34 @@ onMounted(() => {
   color: #0f172a;
 }
 
+.status-plain-descriptions {
+  flex: 1;
+}
+
 .mail-action-button {
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.18),
     0 14px 26px -18px rgba(88, 110, 148, 0.22),
     0 0 0 1px rgba(176, 197, 228, 0.16);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #c7d6ea;
+  border-radius: 999px;
+}
+
+@media (max-width: 1023px) {
+  .notification-body-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 </style>
 

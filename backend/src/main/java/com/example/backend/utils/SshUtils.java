@@ -18,6 +18,9 @@ import java.util.Properties;
 @Component
 public class SshUtils {
 
+    private static final int SSH_CONNECT_TIMEOUT_MS = 5000;
+    private static final int SSH_SOCKET_TIMEOUT_MS = 10000;
+
     public record SshResult(int exitCode, String output) {}
 
     /**
@@ -42,9 +45,8 @@ public class SshUtils {
             Properties config = new Properties();
             config.put("StrictHostKeyChecking", "no");
             session.setConfig(config);
-            session.setTimeout(5000);
-
-            session.connect();
+            session.connect(SSH_CONNECT_TIMEOUT_MS);
+            session.setTimeout(SSH_SOCKET_TIMEOUT_MS);
             log.info("SSH 连接测试成功: {}@{}:{}", user, hostAndPort.host(), hostAndPort.port());
             return true;
         } catch (Exception e) {
@@ -76,8 +78,8 @@ public class SshUtils {
             Properties config = new Properties();
             config.put("StrictHostKeyChecking", "no");
             session.setConfig(config);
-            session.setTimeout(5000);
-            session.connect();
+            session.connect(SSH_CONNECT_TIMEOUT_MS);
+            session.setTimeout(SSH_SOCKET_TIMEOUT_MS);
 
             channel = (ChannelExec) session.openChannel("exec");
             channel.setCommand(command);
@@ -88,10 +90,14 @@ public class SshUtils {
             ByteArrayOutputStream outBuffer = new ByteArrayOutputStream();
             ByteArrayOutputStream errBuffer = new ByteArrayOutputStream();
 
-            channel.connect();
+            channel.connect(SSH_CONNECT_TIMEOUT_MS);
 
             byte[] temp = new byte[1024];
             while (true) {
+                if (Thread.currentThread().isInterrupted()) {
+                    throw new InterruptedException("SSH 命令执行被中断");
+                }
+
                 while (stdout.available() > 0) {
                     int len = stdout.read(temp, 0, temp.length);
                     if (len > 0) {
@@ -99,10 +105,12 @@ public class SshUtils {
                     }
                 }
 
-                while (stderr.available() > 0) {
-                    int len = stderr.read(temp, 0, temp.length);
-                    if (len > 0) {
-                        errBuffer.write(temp, 0, len);
+                if (stderr != null) {
+                    while (stderr.available() > 0) {
+                        int len = stderr.read(temp, 0, temp.length);
+                        if (len > 0) {
+                            errBuffer.write(temp, 0, len);
+                        }
                     }
                 }
 
@@ -114,10 +122,12 @@ public class SshUtils {
                             outBuffer.write(temp, 0, len);
                         }
                     }
-                    while (stderr.available() > 0) {
-                        int len = stderr.read(temp, 0, temp.length);
-                        if (len > 0) {
-                            errBuffer.write(temp, 0, len);
+                    if (stderr != null) {
+                        while (stderr.available() > 0) {
+                            int len = stderr.read(temp, 0, temp.length);
+                            if (len > 0) {
+                                errBuffer.write(temp, 0, len);
+                            }
                         }
                     }
                     break;
@@ -134,6 +144,10 @@ public class SshUtils {
             log.info("命令执行完成，exitCode={}, length={}", exitStatus, merged.length());
             return new SshResult(exitStatus, merged);
 
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.info("SSH 执行被中断: {}", e.getMessage());
+            return new SshResult(-1, "SSH Error: 命令执行被中断。");
         } catch (Exception e) {
             log.error("SSH 执行异常: {}", e.getMessage(), e);
             return new SshResult(-1, "SSH Error: " + e.getMessage());

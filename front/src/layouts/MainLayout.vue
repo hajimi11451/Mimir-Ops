@@ -124,6 +124,10 @@ const mainContentClass = computed(() => {
     return `${baseClass} overflow-hidden`
   }
 
+  if (route.path === '/alert-settings') {
+    return `${baseClass} overflow-hidden`
+  }
+
   return `${baseClass} overflow-y-auto p-4 sm:p-5 lg:p-6 custom-scrollbar`
 })
 

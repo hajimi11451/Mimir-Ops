@@ -1,5 +1,7 @@
 import request from '../utils/request'
 
+const SSH_REQUEST_TIMEOUT = 30000
+
 function getCurrentUsername() {
   try {
     const raw = localStorage.getItem('user')
@@ -11,11 +13,12 @@ function getCurrentUsername() {
   }
 }
 
-export function getLogPath(serverIp, component, username, password) {
+export function getLogPath(serverIp, component, username, password, useSudo = false) {
   return request({
     url: '/diagnosis/logPath',
     method: 'get',
-    params: { serverIp, component, username, password }
+    timeout: SSH_REQUEST_TIMEOUT,
+    params: { serverIp, component, username, password, useSudo }
   })
 }
 
@@ -39,6 +42,7 @@ export function connectServer(serverInfo) {
   return request({
     url: '/diagnosis/server/connect',
     method: 'post',
+    timeout: SSH_REQUEST_TIMEOUT,
     data: serverInfo
   })
 }
@@ -47,6 +51,7 @@ export function addConfig(data) {
   return request({
     url: '/diagnosis/config/add',
     method: 'post',
+    timeout: SSH_REQUEST_TIMEOUT,
     data: {
       ...(data || {}),
       appUsername: (data && data.appUsername) || getCurrentUsername()
@@ -58,6 +63,7 @@ export function addServerMonitor(data) {
   return request({
     url: '/diagnosis/server-monitor/add',
     method: 'post',
+    timeout: SSH_REQUEST_TIMEOUT,
     data: {
       ...(data || {}),
       appUsername: (data && data.appUsername) || getCurrentUsername()

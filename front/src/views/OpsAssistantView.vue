@@ -1,6 +1,6 @@
 <template>
   <div class="workspace-cool-glass mx-auto max-w-7xl space-y-5">
-    <el-card class="glass-card rounded-[30px]" :body-style="{ padding: '20px' }">
+    <el-card class="assistant-shell-card glass-card rounded-[34px]" :body-style="{ padding: '20px' }">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 class="text-lg font-bold text-ui-text">运维助手</h2>
@@ -16,7 +16,7 @@
       </div>
     </el-card>
 
-    <el-card class="glass-card rounded-[30px]" :body-style="{ padding: '20px' }">
+    <el-card class="assistant-shell-card glass-card rounded-[34px]" :body-style="{ padding: '20px' }">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <el-select
           v-model="selectedSavedConnection"
@@ -43,23 +43,26 @@
       <p class="text-xs text-ui-subtext mt-3">默认只规划；勾选后通过 SSH 执行。</p>
     </el-card>
 
-    <el-card class="glass-card rounded-[30px]" :body-style="{ padding: '20px' }">
-      <div ref="chatBox" class="glass-subcard h-[460px] overflow-y-auto p-4 space-y-3">
+    <el-card class="assistant-shell-card glass-card rounded-[34px]" :body-style="{ padding: '20px' }">
+      <div ref="chatBox" class="assistant-chat-panel glass-subcard custom-scrollbar h-[460px] min-h-0 overflow-y-auto overflow-x-hidden rounded-[30px] p-4 space-y-3">
         <div v-for="(msg, idx) in messages" :key="idx" class="flex" :class="msg.role === 'user' ? 'justify-end' : 'justify-start'">
           <div
-            class="max-w-[85%] rounded-[18px] px-3 py-2 text-sm whitespace-pre-wrap"
+            class="assistant-message-bubble max-w-[85%] rounded-[24px] px-4 py-3 text-sm whitespace-pre-wrap"
             :class="msg.role === 'user'
-              ? 'bg-[linear-gradient(135deg,rgba(37,99,235,0.94),rgba(96,165,250,0.9))] text-white shadow-[0_18px_40px_-28px_rgba(37,99,235,0.7)]'
-              : 'glass-soft border border-white/18 text-ui-text shadow-[0_18px_32px_-28px_rgba(15,23,42,0.22)]'"
+              ? 'assistant-user-bubble text-white'
+              : 'assistant-reply-bubble glass-soft text-ui-text'"
           >
             <div class="font-semibold text-xs mb-1 opacity-80">{{ msg.role === 'user' ? '你' : '运维助手' }}</div>
             <template v-if="msg.type === 'confirm'">
               <div class="space-y-2">
                 <div>命令：{{ msg.command }}</div>
                 <div>风险：{{ msg.riskLevel }}</div>
-                <div class="flex gap-2 pt-1">
+                <div v-if="!msg.handled" class="flex gap-2 pt-1">
                   <el-button size="small" type="primary" :disabled="msg.handled" @click="confirmExecute(msg)">确定执行</el-button>
                   <el-button size="small" :disabled="msg.handled" @click="cancelExecute(msg)">取消</el-button>
+                </div>
+                <div v-else :class="interactiveStatusClass(msg.statusType)">
+                  {{ msg.statusText || '已处理' }}
                 </div>
               </div>
             </template>
@@ -67,9 +70,12 @@
               <div class="space-y-2">
                 <div class="text-ui-warning font-semibold">任务达到最大轮数，已暂停</div>
                 <div>是否继续执行？</div>
-                <div class="flex gap-2 pt-1">
+                <div v-if="!msg.handled" class="flex gap-2 pt-1">
                   <el-button size="small" type="primary" :disabled="msg.handled" @click="confirmContinue(msg)">继续执行</el-button>
                   <el-button size="small" :disabled="msg.handled" @click="cancelContinue(msg)">停止</el-button>
+                </div>
+                <div v-else :class="interactiveStatusClass(msg.statusType)">
+                  {{ msg.statusText || '已处理' }}
                 </div>
               </div>
             </template>
@@ -78,9 +84,12 @@
                 <div class="text-ui-warning font-semibold">检测到高风险命令，请确认是否执行</div>
                 <div>命令：{{ msg.command }}</div>
                 <div>风险等级：{{ msg.riskLevel }}</div>
-                <div class="flex gap-2 pt-1">
+                <div v-if="!msg.handled" class="flex gap-2 pt-1">
                   <el-button size="small" type="danger" :disabled="msg.handled" @click="confirmRiskExecute(msg)">仍要执行</el-button>
                   <el-button size="small" :disabled="msg.handled" @click="cancelRiskExecute(msg)">取消</el-button>
+                </div>
+                <div v-else :class="interactiveStatusClass(msg.statusType)">
+                  {{ msg.statusText || '已处理' }}
                 </div>
               </div>
             </template>
@@ -91,9 +100,12 @@
                 <div>原因：{{ msg.reason }}</div>
                 <div>建议范围：{{ msg.timeRange }}</div>
                 <div>图表类型：{{ chartTemplateLabel(msg.chartTemplate) }}</div>
-                <div class="flex gap-2 pt-1">
+                <div v-if="!msg.handled" class="flex gap-2 pt-1">
                   <el-button size="small" type="primary" :disabled="msg.handled" @click="generateChart(msg)">生成图表</el-button>
                   <el-button size="small" :disabled="msg.handled" @click="cancelChart(msg)">取消</el-button>
+                </div>
+                <div v-else :class="interactiveStatusClass(msg.statusType)">
+                  {{ msg.statusText || '已处理' }}
                 </div>
               </div>
             </template>
@@ -250,6 +262,22 @@ const appendRiskConfirmMessage = async (command, riskLevel, reason) => {
   }
 }
 
+const markInteractiveHandled = (msg, statusText, statusType = 'info') => {
+  msg.handled = true
+  msg.statusText = statusText
+  msg.statusType = statusType
+}
+
+const interactiveStatusClass = type => {
+  if (type === 'success') {
+    return 'rounded-xl border border-emerald-200/40 bg-emerald-400/10 px-3 py-2 text-xs font-medium text-ui-success'
+  }
+  if (type === 'danger') {
+    return 'rounded-xl border border-red-200/40 bg-red-400/10 px-3 py-2 text-xs font-medium text-red-600'
+  }
+  return 'rounded-xl border border-sky-200/40 bg-sky-400/10 px-3 py-2 text-xs font-medium text-sky-700'
+}
+
 const getWsUrl = () => {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   return `${protocol}//${window.location.host}/ws/server/connect`
@@ -347,7 +375,7 @@ const connectWs = () => {
         return
       }
       if (data.type === 'ops_progress') {
-        if (['agent_finish', 'agent_timeout', 'agent_stopped', 'finished'].includes(String(data.stage || ''))) {
+        if (['agent_finish', 'agent_timeout', 'agent_stopped', 'agent_stop', 'finished'].includes(String(data.stage || ''))) {
           isAgentRunning.value = false
         }
         const progressText = formatProgressForUser(data)
@@ -375,7 +403,7 @@ const connectWs = () => {
         }
         return
       }
-      if (data.type === 'ops_force_stop_result') {
+      if (data.type === 'ops_force_stop_result' || data.type === 'ops_stop_ack') {
         isAgentRunning.value = false
         await appendMessage('assistant', data.message || '已发送强制停止请求。')
         return
@@ -448,15 +476,15 @@ const sendMessage = async presetText => {
 const executeByConfirmation = async query => {
   if (!connected.value || !ws.value) {
     await appendMessage('assistant', '当前未连接，无法执行命令。')
-    return
+    return false
   }
   if (!serverIp.value || !username.value || !password.value) {
     await appendMessage('assistant', '请先填写服务器连接信息后再执行。')
-    return
+    return false
   }
   if (!query) {
     await appendMessage('assistant', '缺少原始指令，无法执行。')
-    return
+    return false
   }
 
   await appendMessage('assistant', '收到，正在执行中...')
@@ -470,23 +498,25 @@ const executeByConfirmation = async query => {
     maxRounds: Math.min(50, Math.max(1, Number(maxRounds.value) || 15)),
   }))
   isAgentRunning.value = true
+  return true
 }
 
 const confirmExecute = async msg => {
   if (msg.handled) return
-  msg.handled = true
-  await executeByConfirmation(msg.query)
+  const started = await executeByConfirmation(msg.query)
+  if (started) {
+    markInteractiveHandled(msg, '已确认，正在执行。', 'success')
+  }
 }
 
 const cancelExecute = async msg => {
   if (msg.handled) return
-  msg.handled = true
+  markInteractiveHandled(msg, '已取消执行。', 'info')
   await appendMessage('assistant', '已取消执行。')
 }
 
 const confirmRiskExecute = async msg => {
   if (msg.handled) return
-  msg.handled = true
 
   if (!connected.value || !ws.value) {
     await appendMessage('assistant', '当前未连接，无法执行高风险命令。')
@@ -499,6 +529,7 @@ const confirmRiskExecute = async msg => {
 
   await appendMessage('assistant', '收到高风险执行确认，正在执行中...')
   isAgentRunning.value = true
+  markInteractiveHandled(msg, '已确认高风险执行，正在处理。', 'danger')
   ws.value.send(JSON.stringify({
     type: 'risk_execute',
     command: msg.command,
@@ -510,13 +541,12 @@ const confirmRiskExecute = async msg => {
 
 const cancelRiskExecute = async msg => {
   if (msg.handled) return
-  msg.handled = true
+  markInteractiveHandled(msg, '已取消高风险命令执行。', 'info')
   await appendMessage('assistant', '已取消高风险命令执行。')
 }
 
 const confirmContinue = async msg => {
   if (msg.handled) return
-  msg.handled = true
 
   if (!connected.value || !ws.value) {
     await appendMessage('assistant', '当前未连接，无法继续执行。')
@@ -525,6 +555,7 @@ const confirmContinue = async msg => {
 
   await appendMessage('user', '继续')
   await appendMessage('assistant', '收到，正在继续执行中...')
+  markInteractiveHandled(msg, '已确认继续执行。', 'success')
 
   const payload = {
     type: 'ops_chat',
@@ -542,13 +573,12 @@ const confirmContinue = async msg => {
 
 const cancelContinue = async msg => {
   if (msg.handled) return
-  msg.handled = true
+  markInteractiveHandled(msg, '已停止任务。', 'info')
   await appendMessage('assistant', '已停止任务。')
 }
 
 const generateChart = async msg => {
   if (msg.handled) return
-  msg.handled = true
 
   if (!connected.value || !ws.value) {
     await appendMessage('assistant', '当前未连接，无法生成图表。')
@@ -560,6 +590,7 @@ const generateChart = async msg => {
   }
 
   await appendMessage('assistant', '正在生成图表数据...')
+  markInteractiveHandled(msg, '图表生成请求已提交。', 'success')
   ws.value.send(JSON.stringify({
     type: 'chart_data_request',
     serverIp: serverIp.value,
@@ -573,7 +604,7 @@ const generateChart = async msg => {
 
 const cancelChart = async msg => {
   if (msg.handled) return
-  msg.handled = true
+  markInteractiveHandled(msg, '已取消图表生成。', 'info')
   await appendMessage('assistant', '已取消图表生成。')
 }
 
@@ -698,7 +729,7 @@ const formatProgressForUser = data => {
   if (stage === 'risk_exec_done') {
     return '高风险命令执行完成。'
   }
-  if (stage === 'agent_stopped') {
+  if (stage === 'agent_stopped' || stage === 'agent_stop') {
     return '任务已强制停止。'
   }
 
@@ -721,6 +752,48 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.assistant-shell-card {
+  border-radius: 34px !important;
+}
+
+.assistant-shell-card :deep(.el-card__body) {
+  border-radius: inherit;
+}
+
+.assistant-chat-panel {
+  border-radius: 30px !important;
+  background: linear-gradient(180deg, rgba(249, 252, 255, 0.34), rgba(236, 243, 252, 0.22));
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 16px 30px -24px rgba(88, 110, 148, 0.12),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.assistant-message-bubble {
+  border-radius: 24px !important;
+}
+
+.assistant-user-bubble {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.98), rgba(96, 165, 250, 0.94));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 18px 36px -24px rgba(37, 99, 235, 0.5);
+}
+
+.assistant-reply-bubble {
+  border-color: rgba(255, 255, 255, 0.24) !important;
+  background: linear-gradient(180deg, rgba(250, 253, 255, 0.42), rgba(238, 245, 253, 0.3));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 16px 28px -24px rgba(88, 110, 148, 0.16),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
 :deep(.markdown-body ul) {
   list-style-type: disc;
   padding-left: 1.5em;
@@ -755,5 +828,18 @@ onUnmounted(() => {
   font-weight: bold;
   margin-bottom: 0.5em;
   margin-top: 1em;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.72);
+  border-radius: 999px;
 }
 </style>

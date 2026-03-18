@@ -36,18 +36,33 @@ public class DiagnosisController {
     public ResponseEntity<?> getLogPath(@RequestParam String serverIp, 
                                       @RequestParam String component,
                                       @RequestParam(required = false) String username,
-                                      @RequestParam(required = false) String password) {
-        String path = diagnosisService.getLogPath(serverIp, component, username, password);
-        
-        Map<String, Object> data = new HashMap<>();
-        data.put("path", path);
-        data.put("isVerified", true);
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("code", 200);
-        response.put("data", data);
-        
-        return ResponseEntity.ok(response);
+                                      @RequestParam(required = false) String password,
+                                      @RequestParam(required = false, defaultValue = "false") boolean useSudo) {
+        try {
+            String path = diagnosisService.getLogPath(serverIp, component, username, password, useSudo);
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("path", path);
+            data.put("isVerified", true);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 200);
+            response.put("data", data);
+
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 400);
+            response.put("msg", e.getMessage());
+            response.put("data", null);
+            return ResponseEntity.badRequest().body(response);
+        } catch (Exception e) {
+            log.error("自动发现日志路径时发生未知错误", e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 500);
+            response.put("msg", "服务器内部错误: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
     }
 
     /**
@@ -239,20 +254,35 @@ public class DiagnosisController {
      * 2. 执行诊断
      */
     @PostMapping("/execute")
-    public ResponseEntity<?> executeDiagnosis(@RequestBody Map<String, String> request) {
-        String serverIp = request.get("serverIp");
-        String component = request.get("component");
-        String logPath = request.get("logPath");
-        String username = request.get("username");
-        String password = request.get("password");
+    public ResponseEntity<?> executeDiagnosis(@RequestBody Map<String, Object> request) {
+        try {
+            String serverIp = request.get("serverIp") == null ? null : String.valueOf(request.get("serverIp"));
+            String component = request.get("component") == null ? null : String.valueOf(request.get("component"));
+            String logPath = request.get("logPath") == null ? null : String.valueOf(request.get("logPath"));
+            String username = request.get("username") == null ? null : String.valueOf(request.get("username"));
+            String password = request.get("password") == null ? null : String.valueOf(request.get("password"));
+            boolean useSudo = Boolean.parseBoolean(String.valueOf(request.getOrDefault("useSudo", false)));
 
-        Map<String, Object> diagnosisResult = diagnosisService.executeDiagnosis(serverIp, component, logPath, username, password);
+            Map<String, Object> diagnosisResult = diagnosisService.executeDiagnosis(serverIp, component, logPath, username, password, useSudo);
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("code", 200);
-        response.put("data", diagnosisResult);
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 200);
+            response.put("data", diagnosisResult);
 
-        return ResponseEntity.ok(response);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 400);
+            response.put("msg", e.getMessage());
+            response.put("data", null);
+            return ResponseEntity.badRequest().body(response);
+        } catch (Exception e) {
+            log.error("执行诊断时发生未知错误", e);
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 500);
+            response.put("msg", "服务器内部错误: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
     }
 
     /**

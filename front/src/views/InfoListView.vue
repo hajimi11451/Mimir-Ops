@@ -19,80 +19,82 @@
     </div>
 
     <el-card
-      class="glass-card rounded-[30px]"
+      class="alert-shell-card glass-card rounded-[34px]"
       :body-style="{ padding: '0' }"
     >
-      <el-table
-        :data="paginatedList"
-        style="width: 100%"
-        border
-        stripe
-        v-loading="loading"
-      >
-        <el-table-column prop="createdAt" label="时间" min-width="180">
-          <template #default="{ row }">
-            {{ formatDate(row.createdAt) }}
-          </template>
-        </el-table-column>
-
-        <el-table-column prop="serverIp" label="服务器 IP" min-width="140" />
-        <el-table-column prop="component" label="组件" min-width="120" />
-
-        <el-table-column prop="riskLevel" label="风险等级" min-width="120">
-          <template #default="{ row }">
-            <el-tag :type="getTagType(row.riskLevel)" effect="light" size="small">
-              {{ formatRiskLevel(row.riskLevel) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-
-        <el-table-column
-          prop="errorSummary"
-          label="问题摘要"
-          min-width="160"
-          show-overflow-tooltip
+      <div class="alert-table-wrap overflow-hidden rounded-[30px]">
+        <el-table
+          :data="paginatedList"
+          style="width: 100%"
+          border
+          stripe
+          v-loading="loading"
         >
-          <template #default="{ row }">
-            <div class="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-ui-text">
-              {{ compactAlertText(row.errorSummary, 24) }}
-            </div>
-          </template>
-        </el-table-column>
+          <el-table-column prop="createdAt" label="时间" min-width="180">
+            <template #default="{ row }">
+              {{ formatDate(row.createdAt) }}
+            </template>
+          </el-table-column>
 
-        <el-table-column
-          prop="analysisResult"
-          label="问题详情"
-          min-width="200"
-          show-overflow-tooltip
-        >
-          <template #default="{ row }">
-            <div class="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-ui-text">
-              {{ compactAlertText(row.analysisResult, 36) }}
-            </div>
-          </template>
-        </el-table-column>
+          <el-table-column prop="serverIp" label="服务器 IP" min-width="140" />
+          <el-table-column prop="component" label="组件" min-width="120" />
 
-        <el-table-column
-          prop="suggestedActions"
-          label="处理建议"
-          min-width="200"
-          show-overflow-tooltip
-        >
-          <template #default="{ row }">
-            <div class="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-ui-text">
-              {{ compactAlertText(formatSuggestedActions(row.suggestedActions), 32) }}
-            </div>
-          </template>
-        </el-table-column>
+          <el-table-column prop="riskLevel" label="风险等级" min-width="120">
+            <template #default="{ row }">
+              <el-tag :type="getTagType(row.riskLevel)" effect="light" size="small">
+                {{ formatRiskLevel(row.riskLevel) }}
+              </el-tag>
+            </template>
+          </el-table-column>
 
-        <el-table-column label="操作" min-width="140" fixed="right">
-          <template #default="{ row }">
-            <el-button type="primary" link class="glass-link-button text-sm font-medium" @click="goDetail(row)">
-              查看详情
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+          <el-table-column
+            prop="errorSummary"
+            label="问题摘要"
+            min-width="160"
+            show-overflow-tooltip
+          >
+            <template #default="{ row }">
+              <div class="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-ui-text">
+                {{ compactAlertText(row.errorSummary, 24) }}
+              </div>
+            </template>
+          </el-table-column>
+
+          <el-table-column
+            prop="analysisResult"
+            label="问题详情"
+            min-width="200"
+            show-overflow-tooltip
+          >
+            <template #default="{ row }">
+              <div class="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-ui-text">
+                {{ compactAlertText(row.analysisResult, 36) }}
+              </div>
+            </template>
+          </el-table-column>
+
+          <el-table-column
+            prop="suggestedActions"
+            label="处理建议"
+            min-width="200"
+            show-overflow-tooltip
+          >
+            <template #default="{ row }">
+              <div class="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-ui-text">
+                {{ compactAlertText(formatSuggestedActions(row.suggestedActions), 32) }}
+              </div>
+            </template>
+          </el-table-column>
+
+          <el-table-column label="操作" min-width="140" fixed="right">
+            <template #default="{ row }">
+              <el-button type="primary" link class="glass-link-button text-sm font-medium" @click="goDetail(row)">
+                查看详情
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
 
       
 
@@ -252,4 +254,27 @@ onMounted(() => {
   fetchAllInfo()
 })
 </script>
+
+<style scoped>
+.alert-shell-card {
+  border-radius: 34px !important;
+}
+
+.alert-shell-card :deep(.el-card__body) {
+  border-radius: inherit;
+}
+
+.alert-table-wrap {
+  border-radius: 30px;
+}
+
+.alert-table-wrap :deep(.el-table) {
+  border-radius: 30px;
+}
+
+.alert-table-wrap :deep(.el-table__inner-wrapper) {
+  border-radius: inherit;
+  overflow: hidden;
+}
+</style>
 

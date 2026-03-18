@@ -47,15 +47,21 @@ public class AiUtils {
     @Value("${qianfan.v2.read-timeout-seconds:40}")
     private int readTimeoutSeconds;
 
+    @Value("${qianfan.v2.agent-read-timeout-seconds:30}")
+    private int agentReadTimeoutSeconds;
+
     private static final String RAG_FILE_PATH = "d:\\WorkSpace\\JavaWorkSpace\\aiOps\\backend\\src\\main\\resources\\info.md";
 
     private RestTemplate restTemplate;
+    private RestTemplate agentRestTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @PostConstruct
     public void initRestTemplate() {
-        this.restTemplate = buildRestTemplate();
-        log.info("AI HTTP client initialized, readTimeoutSeconds={}", readTimeoutSeconds);
+        this.restTemplate = buildRestTemplate(readTimeoutSeconds);
+        this.agentRestTemplate = buildRestTemplate(Math.min(readTimeoutSeconds, agentReadTimeoutSeconds));
+        log.info("AI HTTP client initialized, readTimeoutSeconds={}, agentReadTimeoutSeconds={}",
+                readTimeoutSeconds, Math.min(readTimeoutSeconds, agentReadTimeoutSeconds));
     }
 
     public String analyzeLog(String logContent) {
@@ -159,9 +165,13 @@ public class AiUtils {
     }
 
     public String generateLogCommand(String component, String osType) {
-        String systemPrompt = "你是 Linux 运维专家。根据组件名和操作系统，生成一条获取最近50行错误日志的命令。"
-                + "只返回命令字符串，不要 Markdown，不要解释。";
-        String userPrompt = String.format("OS: %s, Component: %s", osType, component);
+        String resolvedOsType = StringUtils.hasText(osType) ? osType.trim() : "Ubuntu Linux";
+        String systemPrompt = "你是 Linux 运维专家。根据组件名和操作系统，返回最可能的错误日志文件绝对路径。"
+                + "只返回一个以 / 开头的路径，不要返回 tail/cat 命令，不要 Markdown，不要解释。"
+                + "如果是 Ubuntu 或 Debian 系统，SSH/sshd/登录认证/sudo 相关日志优先考虑 /var/log/auth.log；"
+                + "如果是 CentOS/RHEL/Alibaba Cloud Linux，SSH/sshd/登录认证/sudo 相关日志优先考虑 /var/log/secure；"
+                + "Ubuntu 常规系统日志优先考虑 /var/log/syslog。";
+        String userPrompt = String.format("操作系统: %s%n组件: %s", resolvedOsType, component);
         String cmd = callQianfanApi(systemPrompt, userPrompt, auditModelName);
         return cmd.replace("```bash", "").replace("```", "").trim();
     }
@@ -429,10 +439,19 @@ public class AiUtils {
         Exception lastException = null;
 
         while (attempt <= maxRetries) {
+            if (Thread.currentThread().isInterrupted()) {
+                Thread.currentThread().interrupt();
+                result.put("assistantContent", "任务已被强制停止。");
+                return result;
+            }
             try {
                 return doCallQianfanApiWithTools(messages, tools, start);
             } catch (Exception e) {
                 lastException = e;
+                if (Thread.currentThread().isInterrupted()) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
                 attempt++;
                 log.warn("AI tools request failed (attempt {}/{}), elapsedMs={}, error={}", 
                         attempt, maxRetries + 1, System.currentTimeMillis() - start, e.getMessage());
@@ -473,7 +492,7 @@ public class AiUtils {
         headers.set("Authorization", "Bearer " + token);
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-        ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
+        ResponseEntity<String> response = agentRestTemplate.postForEntity(url, entity, String.class);
         
         Map<String, Object> result = new HashMap<>();
         // 默认返回值
@@ -554,10 +573,10 @@ public class AiUtils {
         }
     }
 
-    private RestTemplate buildRestTemplate() {
+    private RestTemplate buildRestTemplate(int timeoutSeconds) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(10000);
-        factory.setReadTimeout(Math.max(readTimeoutSeconds, 30) * 1000);
+        factory.setReadTimeout(Math.max(timeoutSeconds, 5) * 1000);
         return new RestTemplate(factory);
     }
 }

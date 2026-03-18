@@ -45,6 +45,7 @@ CREATE TABLE `componentconfig` (
   `server_ip` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '服务器IP',
   `username` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '服务器登录用户名',
   `password` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '服务器登录密码',
+  `use_sudo` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否使用sudo读取日志',
   `component` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '组件名称',
   `config_key` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '配置项 (固定为 error_log_path)',
   `config_value` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '路径值',

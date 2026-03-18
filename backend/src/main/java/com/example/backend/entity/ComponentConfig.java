@@ -29,6 +29,11 @@ public class ComponentConfig {
     private String password;
 
     /**
+     * 是否使用 sudo 读取日志
+     */
+    private Boolean useSudo;
+
+    /**
      * 前端登录用户名（用于解析业务 userId），不落库
      */
     @TableField(exist = false)

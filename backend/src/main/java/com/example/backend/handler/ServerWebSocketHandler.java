@@ -23,6 +23,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 @Component
@@ -30,8 +34,10 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
 
     private static final ConcurrentHashMap<String, WebSocketSession> SESSIONS = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, List<Map<String, Object>>> AGENT_HISTORY = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, FutureTask<Void>> RUNNING_TASKS = new ConcurrentHashMap<>();
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ExecutorService agentExecutor = Executors.newCachedThreadPool();
 
     @Autowired
     private AiUtils aiUtils;
@@ -98,26 +104,23 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
     }
 
     private void handleOpsChat(WebSocketSession session, JsonNode node) {
-        long start = System.currentTimeMillis();
         String query = node.path("query").asText("");
         boolean execute = node.path("execute").asBoolean(false);
-        int maxRounds = node.path("maxRounds").asInt(15);
-        if (maxRounds < 1) maxRounds = 1;
-        if (maxRounds > 50) maxRounds = 50;
+        int requestedMaxRounds = node.path("maxRounds").asInt(15);
+        final int maxRounds = Math.min(50, Math.max(1, requestedMaxRounds));
 
         String serverIp = node.path("serverIp").asText("");
         String username = node.path("username").asText("");
         String password = node.path("password").asText("");
 
-        log.info("ops_chat start, sessionId={}, execute={}, serverIp={}, queryLength={}, maxRounds={}",
-                session.getId(), execute, serverIp, query == null ? 0 : query.length(), maxRounds);
-        sendProgress(session, "start", "收到请求，开始进入 Agent 自主执行...", 0);
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("type", "ops_chat_result");
-        result.put("query", query);
-
         if (!execute) {
+            long start = System.currentTimeMillis();
+            log.info("ops_chat start, sessionId={}, execute=false, serverIp={}, queryLength={}, maxRounds={}",
+                    session.getId(), serverIp, query == null ? 0 : query.length(), maxRounds);
+            sendProgress(session, "start", "收到请求，开始进入 Agent 自主执行...", 0);
+            Map<String, Object> result = new HashMap<>();
+            result.put("type", "ops_chat_result");
+            result.put("query", query);
             result.put("executed", false);
             result.put("reply", "当前请求未开启执行模式（execute=false），未启动 Agent。");
             result.put("execResult", "未执行。若要启动自主 Agent，请携带 execute=true。");
@@ -127,6 +130,24 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
+        submitSessionTask(session, "ops_chat", () -> processOpsChat(session, query, maxRounds, serverIp, username, password));
+    }
+
+    private void processOpsChat(WebSocketSession session,
+                                String query,
+                                int maxRounds,
+                                String serverIp,
+                                String username,
+                                String password) {
+        long start = System.currentTimeMillis();
+        log.info("ops_chat start, sessionId={}, execute=true, serverIp={}, queryLength={}, maxRounds={}",
+                session.getId(), serverIp, query == null ? 0 : query.length(), maxRounds);
+        sendProgress(session, "start", "收到请求，开始进入 Agent 自主执行...", 0);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("type", "ops_chat_result");
+        result.put("query", query);
+
         // 如果用户发送“继续”，且有历史记录，则恢复执行
         if ("继续".equals(query) || "continue".equalsIgnoreCase(query)) {
             List<Map<String, Object>> history = AGENT_HISTORY.get(session.getId());
@@ -134,8 +155,17 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
                 log.info("Resuming agent loop from history, sessionId={}", session.getId());
                 try {
                     OpsAgentService.AgentRunResult agentResult = opsAgentService.runAgentLoopWithAdvice(
-                        "[继续执行]", serverIp, username, password, maxRounds, null, session, history
+                            "[继续执行]", serverIp, username, password, maxRounds, null, session, history
                     );
+                    if (agentResult.isStopped()) {
+                        result.put("executed", false);
+                        result.put("stopped", true);
+                        result.put("reply", agentResult.getFinalSummary());
+                        result.put("execResult", "任务已被强制停止。");
+                        result.put("chartSuggest", false);
+                        sendJson(session, result);
+                        return;
+                    }
                     result.put("executed", true);
                     result.put("reply", agentResult.getFinalSummary());
                     result.put("execResult", "Agent 循环已完成。");
@@ -158,6 +188,15 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
                     result.put("chartSuggest", false);
                     sendProgress(session, "agent_timeout", e.getMessage(), System.currentTimeMillis() - start);
                 } catch (Exception e) {
+                    if (Thread.currentThread().isInterrupted()) {
+                        result.put("executed", false);
+                        result.put("stopped", true);
+                        result.put("reply", "任务已被强制停止。");
+                        result.put("execResult", "任务已中断。");
+                        result.put("chartSuggest", false);
+                        sendJson(session, result);
+                        return;
+                    }
                     log.error("Resumed agent loop failed", e);
                     result.put("executed", false);
                     result.put("reply", "恢复执行失败: " + e.getMessage());
@@ -181,17 +220,23 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
         }
 
         try {
-            // 清除旧历史
             AGENT_HISTORY.remove(session.getId());
             OpsAgentService.AgentRunResult agentResult = opsAgentService.runAgentLoopWithAdvice(query, serverIp, username, password, maxRounds, null, session);
+            if (agentResult.isStopped()) {
+                result.put("executed", false);
+                result.put("stopped", true);
+                result.put("reply", agentResult.getFinalSummary());
+                result.put("execResult", "任务已被强制停止。");
+                result.put("chartSuggest", false);
+                sendJson(session, result);
+                return;
+            }
             result.put("executed", true);
             result.put("reply", agentResult.getFinalSummary());
             result.put("execResult", "Agent 循环已完成，请参考上方实时进度日志。");
             mergeChartAdvice(result, agentResult);
         } catch (OpsAgentService.HighRiskCommandException e) {
-            // 保存历史上下文
             AGENT_HISTORY.put(session.getId(), e.getHistory());
-
             result.put("executed", false);
             result.put("needRiskConfirm", true);
             result.put("riskLevel", "high");
@@ -200,9 +245,7 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
             result.put("execResult", "检测到高风险命令，等待用户确认。");
             result.put("chartSuggest", false);
         } catch (OpsAgentService.AgentTimeoutException e) {
-             // 超时，保存上下文以便继续
             AGENT_HISTORY.put(session.getId(), e.getHistory());
-
             result.put("executed", false);
             result.put("timeout", true);
             result.put("reply", e.getMessage());
@@ -210,6 +253,15 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
             result.put("chartSuggest", false);
             sendProgress(session, "agent_timeout", e.getMessage(), System.currentTimeMillis() - start);
         } catch (Exception e) {
+            if (Thread.currentThread().isInterrupted()) {
+                result.put("executed", false);
+                result.put("stopped", true);
+                result.put("reply", "任务已被强制停止。");
+                result.put("execResult", "任务已中断。");
+                result.put("chartSuggest", false);
+                sendJson(session, result);
+                return;
+            }
             log.error("ops_chat agent loop failed, sessionId={}", session.getId(), e);
             result.put("executed", false);
             result.put("reply", "Agent 执行失败");
@@ -224,24 +276,23 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
 
     private void handleOpsForceStop(WebSocketSession session, JsonNode node) {
         log.info("ops_force_stop received, sessionId={}", session.getId());
-        
-        // 1. 如果 Agent 正在运行 loop，stopAgent 会设置 flag，loop 内部检测到后会停止
+
         opsAgentService.stopAgent(session.getId());
-        
-        // 2. 如果 Agent 处于“等待用户确认高风险命令”或“超时等待继续”的状态（即 history 不为空），
-        //    说明 loop 已经退出了，此时需要手动清理状态并发送停止消息。
-        if (AGENT_HISTORY.containsKey(session.getId())) {
-            AGENT_HISTORY.remove(session.getId());
-            Map<String, Object> progress = new HashMap<>();
-            progress.put("type", "ops_progress");
-            progress.put("stage", "agent_stopped");
-            progress.put("message", "任务已被用户强制停止（在等待确认阶段）。");
-            sendJson(session, progress);
+        FutureTask<Void> runningTask = RUNNING_TASKS.get(session.getId());
+        if (runningTask != null) {
+            runningTask.cancel(true);
         }
+        AGENT_HISTORY.remove(session.getId());
+
+        Map<String, Object> progress = new HashMap<>();
+        progress.put("type", "ops_progress");
+        progress.put("stage", "agent_stopped");
+        progress.put("message", "已收到强制停止请求，当前任务将尽快终止。");
+        sendJson(session, progress);
 
         Map<String, Object> result = new HashMap<>();
-        result.put("type", "ops_stop_ack");
-        result.put("message", "已发送强制停止请求...");
+        result.put("type", "ops_force_stop_result");
+        result.put("message", "已发送强制停止请求，当前任务将尽快终止。");
         sendJson(session, result);
     }
 
@@ -249,17 +300,15 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
      * 用户点击高风险确认后的执行入口。
      */
     private void handleRiskExecute(WebSocketSession session, JsonNode node) {
-        long start = System.currentTimeMillis();
         String command = node.path("command").asText("");
         String serverIp = node.path("serverIp").asText("");
         String username = node.path("username").asText("");
         String password = node.path("password").asText("");
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("type", "ops_chat_result");
-        result.put("query", "[高风险确认执行]");
-
         if (!StringUtils.hasText(command)) {
+            Map<String, Object> result = new HashMap<>();
+            result.put("type", "ops_chat_result");
+            result.put("query", "[高风险确认执行]");
             result.put("executed", false);
             result.put("reply", "缺少命令，无法执行。");
             result.put("execResult", "risk_execute.command 为空");
@@ -268,33 +317,56 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
         }
 
         if (!StringUtils.hasText(serverIp) || !StringUtils.hasText(username) || !StringUtils.hasText(password)) {
+            Map<String, Object> result = new HashMap<>();
+            result.put("type", "ops_chat_result");
+            result.put("query", "[高风险确认执行]");
             result.put("executed", false);
             result.put("reply", "缺少 serverIp/username/password，无法执行。 ");
             result.put("execResult", "参数不足。");
             sendJson(session, result);
             return;
         }
+        submitSessionTask(session, "risk_execute", () -> processRiskExecute(session, command, serverIp, username, password));
+    }
+
+    private void processRiskExecute(WebSocketSession session,
+                                    String command,
+                                    String serverIp,
+                                    String username,
+                                    String password) {
+        long start = System.currentTimeMillis();
+        Map<String, Object> result = new HashMap<>();
+        result.put("type", "ops_chat_result");
+        result.put("query", "[高风险确认执行]");
 
         try {
             sendProgress(session, "risk_exec_start", "用户已确认，开始执行高风险命令...", System.currentTimeMillis() - start);
-            
-            // 获取并移除历史上下文
+
             List<Map<String, Object>> history = AGENT_HISTORY.remove(session.getId());
             if (history == null) {
                 history = new ArrayList<>();
             }
 
-            // 继续执行 Agent 循环，传入 history 和 approvedRiskCommand
             OpsAgentService.AgentRunResult agentResult = opsAgentService.runAgentLoopWithAdvice(
-                "[高风险确认继续执行]", 
-                serverIp, 
-                username, 
-                password, 
-                15, // 默认剩余轮数，也可以保存之前的轮数
-                command, 
-                session, 
-                history
+                    "[高风险确认继续执行]",
+                    serverIp,
+                    username,
+                    password,
+                    15,
+                    command,
+                    session,
+                    history
             );
+
+            if (agentResult.isStopped()) {
+                result.put("executed", false);
+                result.put("stopped", true);
+                result.put("reply", agentResult.getFinalSummary());
+                result.put("execResult", "任务已被强制停止。");
+                result.put("chartSuggest", false);
+                sendJson(session, result);
+                return;
+            }
 
             result.put("executed", true);
             result.put("reply", agentResult.getFinalSummary());
@@ -302,9 +374,7 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
             mergeChartAdvice(result, agentResult);
             sendProgress(session, "risk_exec_done", "高风险命令及后续流程执行完成", System.currentTimeMillis() - start);
         } catch (OpsAgentService.HighRiskCommandException e) {
-             // 再次遇到高风险命令（可能是新的）
             AGENT_HISTORY.put(session.getId(), e.getHistory());
-            
             result.put("executed", false);
             result.put("needRiskConfirm", true);
             result.put("riskLevel", "high");
@@ -312,7 +382,24 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
             result.put("reply", e.getReason());
             result.put("execResult", "再次检测到高风险命令，等待用户确认。");
             result.put("chartSuggest", false);
+        } catch (OpsAgentService.AgentTimeoutException e) {
+            AGENT_HISTORY.put(session.getId(), e.getHistory());
+            result.put("executed", false);
+            result.put("timeout", true);
+            result.put("reply", e.getMessage());
+            result.put("execResult", "达到最大轮数，任务暂停。你可以发送“继续”来恢复执行。");
+            result.put("chartSuggest", false);
+            sendProgress(session, "agent_timeout", e.getMessage(), System.currentTimeMillis() - start);
         } catch (Exception e) {
+            if (Thread.currentThread().isInterrupted()) {
+                result.put("executed", false);
+                result.put("stopped", true);
+                result.put("reply", "任务已被强制停止。");
+                result.put("execResult", "任务已中断。");
+                result.put("chartSuggest", false);
+                sendJson(session, result);
+                return;
+            }
             log.error("risk_execute failed, sessionId={}", session.getId(), e);
             result.put("executed", false);
             result.put("reply", "高风险命令执行失败");
@@ -321,6 +408,49 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
         }
 
         sendJson(session, result);
+    }
+
+    private void submitSessionTask(WebSocketSession session, String taskType, Runnable task) {
+        String sessionId = session.getId();
+
+        while (true) {
+            FutureTask<Void> existingTask = RUNNING_TASKS.get(sessionId);
+            if (existingTask != null) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("type", "ops_chat_result");
+                result.put("executed", false);
+                result.put("reply", "当前已有任务在运行或正在停止，请稍后再试。");
+                result.put("execResult", taskType + " 被拒绝：当前会话已有任务占用。");
+                result.put("chartSuggest", false);
+                sendJson(session, result);
+                return;
+            }
+
+            AtomicReference<FutureTask<Void>> taskRef = new AtomicReference<>();
+            FutureTask<Void> futureTask = new FutureTask<>(() -> {
+                try {
+                    task.run();
+                } catch (RuntimeException e) {
+                    log.error("{} failed unexpectedly, sessionId={}", taskType, sessionId, e);
+                    Map<String, Object> result = new HashMap<>();
+                    result.put("type", "ops_chat_result");
+                    result.put("executed", false);
+                    result.put("reply", "后台任务执行失败。");
+                    result.put("execResult", e.getMessage());
+                    result.put("chartSuggest", false);
+                    sendJson(session, result);
+                } finally {
+                    RUNNING_TASKS.remove(sessionId, taskRef.get());
+                }
+                return null;
+            });
+            taskRef.set(futureTask);
+
+            if (RUNNING_TASKS.putIfAbsent(sessionId, futureTask) == null) {
+                agentExecutor.submit(futureTask);
+                return;
+            }
+        }
     }
 
     /**
@@ -687,12 +817,19 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
         log.info("WebSocket closed: {}", session.getId());
         SESSIONS.remove(session.getId());
         AGENT_HISTORY.remove(session.getId());
+        opsAgentService.stopAgent(session.getId());
+        FutureTask<Void> runningTask = RUNNING_TASKS.remove(session.getId());
+        if (runningTask != null) {
+            runningTask.cancel(true);
+        }
     }
 
     private void sendText(WebSocketSession session, String msg) {
         try {
-            if (session.isOpen()) {
-                session.sendMessage(new TextMessage(msg));
+            synchronized (session) {
+                if (session.isOpen()) {
+                    session.sendMessage(new TextMessage(msg));
+                }
             }
         } catch (IOException e) {
             log.error("send text failed", e);
@@ -701,8 +838,10 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
 
     private void sendJson(WebSocketSession session, Map<String, Object> payload) {
         try {
-            if (session.isOpen()) {
-                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(payload)));
+            synchronized (session) {
+                if (session.isOpen()) {
+                    session.sendMessage(new TextMessage(objectMapper.writeValueAsString(payload)));
+                }
             }
         } catch (Exception e) {
             log.error("send json failed", e);

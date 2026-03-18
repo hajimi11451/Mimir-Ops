@@ -2,7 +2,7 @@
   <div class="workspace-cool-glass mx-auto max-w-7xl space-y-6">
     <!-- 1. 添加监控配置区 -->
     <el-card
-      class="glass-card rounded-[30px]"
+      class="diagnosis-section-card glass-card rounded-[34px]"
       :body-style="{ padding: '24px' }"
     >
       <h2 class="text-lg font-bold mb-4 text-ui-text flex items-center">
@@ -36,7 +36,7 @@
           <div class="text-sm">
             {{ errorMessage }}
             <div class="mt-2 text-xs text-ui-subtext">
-              请检查 IP、账号和密码后重试。
+              请检查 IP、账号密码、日志路径和 sudo 权限后重试。
             </div>
           </div>
         </template>
@@ -91,6 +91,24 @@
               show-password
               class="w-full border-ui-border rounded-lg shadow-sm focus:ring-brand focus:border-brand transition-all"
             />
+          </el-form-item>
+
+          <el-form-item class="mb-0" label="日志提权">
+            <div class="diagnosis-privilege-card glass-subcard flex min-h-[40px] items-center justify-between rounded-[22px] px-4 py-3">
+              <div>
+                <div class="text-sm font-medium text-ui-text">使用 sudo 读取日志</div>
+                <div class="text-xs text-ui-subtext">
+                  当前 SSH 用户需要具备 sudo 权限，默认按 SSH 密码尝试 sudo 校验
+                </div>
+              </div>
+              <el-switch
+                v-model="config.useSudo"
+                inline-prompt
+                active-text="开"
+                inactive-text="关"
+                @change="handlePrivilegeToggle"
+              />
+            </div>
           </el-form-item>
 
           <!-- 组件名称 -->
@@ -178,7 +196,7 @@
 
     <!-- 2. 监控列表 -->
     <el-card
-      class="glass-card rounded-[30px]"
+      class="diagnosis-section-card glass-card rounded-[34px]"
       :body-style="{ padding: '24px' }"
     >
       <h2 class="text-lg font-bold mb-4 text-ui-text flex items-center">
@@ -198,7 +216,7 @@
         监控列表
       </h2>
 
-      <div class="overflow-x-auto">
+      <div class="diagnosis-table-wrap overflow-x-auto">
         <el-table
           :data="monitorList"
           style="width: 100%"
@@ -242,7 +260,20 @@
               </span>
             </template>
           </el-table-column>
-          
+
+          <el-table-column
+            label="读取方式"
+            min-width="120"
+          >
+            <template #default="{ row }">
+              <span
+                class="glass-chip px-2.5 py-1 text-xs leading-5 font-semibold"
+                :class="row.useSudo ? 'border-amber-200/30 bg-amber-400/10 text-ui-warning' : 'border-sky-200/30 bg-sky-400/10 text-sky-700'"
+              >
+                {{ row.useSudo ? 'sudo' : '普通读取' }}
+              </span>
+            </template>
+          </el-table-column>
 
           <el-table-column
             label="状态"
@@ -325,6 +356,7 @@ const config = reactive({
   logPath: '',
   username: '',
   password: '',
+  useSudo: false,
 })
 
 const isVerified = ref(false)
@@ -343,12 +375,14 @@ const handleComponentChange = async () => {
   if (!config.serverIp || !config.component) return
 
   pathLoading.value = true
+  errorMessage.value = ''
   try {
     const res = await getLogPath(
       config.serverIp,
       config.component,
       config.username,
       config.password,
+      config.useSudo,
     )
     // request.js 已经把后端 { code, data } 解包成 data
     // 这里期望 res 为 { path: string, ... }
@@ -358,8 +392,17 @@ const handleComponentChange = async () => {
     }
   } catch (error) {
     console.error('Auto detect path failed', error)
+    isVerified.value = false
+    errorMessage.value = error?.message || '自动探测日志路径失败'
   } finally {
     pathLoading.value = false
+  }
+}
+
+const handlePrivilegeToggle = () => {
+  isVerified.value = false
+  if (config.serverIp && config.component) {
+    handleComponentChange()
   }
 }
 
@@ -375,6 +418,7 @@ const handleAddConfig = async () => {
       isEnabled: 1,
       username: config.username,
       password: config.password,
+      useSudo: config.useSudo,
     }
     await addConfig(payload)
 
@@ -384,6 +428,7 @@ const handleAddConfig = async () => {
     config.logPath = ''
     config.username = ''
     config.password = ''
+    config.useSudo = false
     isVerified.value = false
     errorMessage.value = ''
 
@@ -442,5 +487,73 @@ onMounted(() => {
   fetchConfigs()
 })
 </script>
+
+<style scoped>
+.diagnosis-section-card {
+  border-radius: 34px !important;
+}
+
+.diagnosis-section-card :deep(.el-card__body) {
+  border-radius: inherit;
+}
+
+.diagnosis-table-wrap {
+  overflow: hidden;
+  border-radius: 28px;
+}
+
+.diagnosis-table-wrap :deep(.el-table) {
+  border-radius: 28px;
+}
+
+.diagnosis-table-wrap :deep(.el-table__inner-wrapper) {
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+.diagnosis-section-card {
+  border-color: rgba(255, 255, 255, 0.34) !important;
+  background: linear-gradient(180deg, rgba(247, 251, 255, 0.34), rgba(234, 241, 251, 0.22)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 20px 38px -28px rgba(88, 110, 148, 0.14),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.diagnosis-section-card :deep(.el-input__wrapper),
+.diagnosis-section-card :deep(.el-select__wrapper),
+.diagnosis-section-card :deep(.el-input-number),
+.diagnosis-section-card :deep(.el-textarea__inner) {
+  background: rgba(251, 253, 255, 0.38) !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 14px 22px -24px rgba(88, 110, 148, 0.12) !important;
+}
+
+.diagnosis-privilege-card {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  background: linear-gradient(180deg, rgba(252, 254, 255, 0.48), rgba(240, 246, 254, 0.28)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 16px 26px -24px rgba(88, 110, 148, 0.12),
+    0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.diagnosis-privilege-card :deep(.el-switch) {
+  --el-switch-on-color: #2563eb;
+  --el-switch-off-color: rgba(148, 163, 184, 0.58);
+}
+
+.diagnosis-table-wrap :deep(.el-table) {
+  background: linear-gradient(180deg, rgba(249, 252, 255, 0.34), rgba(237, 244, 252, 0.22));
+  --el-table-header-bg-color: rgba(251, 253, 255, 0.3);
+  --el-table-row-hover-bg-color: rgba(247, 251, 255, 0.24);
+}
+
+.diagnosis-table-wrap :deep(.el-table th.el-table__cell) {
+  color: #4b5d78;
+}
+</style>
 
 
