@@ -1,6 +1,6 @@
 <template>
   <div class="workspace-cool-glass mx-auto max-w-7xl space-y-5">
-    <el-card class="glass-card rounded-[34px]" :body-style="{ padding: '20px' }">
+    <!-- <el-card class="glass-card rounded-[34px]" :body-style="{ padding: '20px' }">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 class="text-lg font-bold text-ui-text">灵枢运维助手</h2>
@@ -14,7 +14,7 @@
           <el-button size="small" @click="disconnectWs" :disabled="!connected">断开</el-button>
         </div>
       </div>
-    </el-card>
+    </el-card> -->
 
     <el-card class="glass-card rounded-[34px]" :body-style="{ padding: '20px' }">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -47,10 +47,13 @@
       <div ref="chatBox" class="glass-subcard custom-scrollbar h-[460px] min-h-0 overflow-y-auto overflow-x-hidden rounded-[30px] p-4 space-y-3">
         <div v-for="(msg, idx) in messages" :key="idx" class="flex" :class="msg.role === 'user' ? 'justify-end' : 'justify-start'">
           <div
-            class="max-w-[85%] rounded-[24px] px-4 py-3 text-sm whitespace-pre-wrap"
-            :class="msg.role === 'user'
-              ? 'assistant-user-bubble text-white'
-              : 'glass-soft text-ui-text'"
+            class="max-w-[85%] rounded-[24px] px-4 py-3 text-sm"
+            :class="[
+              msg.role === 'user'
+                ? 'assistant-user-bubble text-white'
+                : 'glass-soft text-ui-text',
+              isMarkdownMessage(msg) ? 'whitespace-normal' : 'whitespace-pre-wrap',
+            ]"
           >
             <div class="font-semibold text-xs mb-1 opacity-80">{{ msg.role === 'user' ? '你' : '运维助手' }}</div>
             <template v-if="msg.type === 'confirm'">
@@ -111,6 +114,21 @@
             </template>
             <template v-else-if="msg.type === 'chart_render'">
               <InlineMetricsTemplate :title="msg.title" :chart-data="msg.chartData" />
+            </template>
+            <template v-else-if="msg.type === 'rich_markdown'">
+              <div class="space-y-3">
+                <div class="result-card-head">
+                  <div class="min-w-0">
+                    <div v-if="msg.eyebrow" class="text-[11px] font-semibold tracking-[0.16em] uppercase text-ui-subtext/80">
+                      {{ msg.eyebrow }}
+                    </div>
+                    <div class="text-[15px] font-semibold text-ui-text mt-1">{{ msg.title }}</div>
+                    <div v-if="msg.subtitle" class="text-xs text-ui-subtext mt-1">{{ msg.subtitle }}</div>
+                  </div>
+                  <span :class="resultToneClass(msg.tone)">{{ resultToneLabel(msg.tone) }}</span>
+                </div>
+                <div v-if="msg.content" v-html="renderMarkdown(msg.content)" class="markdown-body markdown-result"></div>
+              </div>
             </template>
             <template v-else>
               <div v-if="msg.role === 'assistant'" v-html="renderMarkdown(msg.content)" class="markdown-body"></div>
@@ -178,6 +196,16 @@ const pendingTaskHandled = ref(false)
 const input = ref('')
 const messages = ref([])
 const chatBox = ref(null)
+const lastTaskDoneDigest = ref('')
+const lastTaskFailedDigest = ref('')
+const stepTitleMap = ref({})
+
+const scrollChatToBottom = async () => {
+  await nextTick()
+  if (chatBox.value) {
+    chatBox.value.scrollTop = chatBox.value.scrollHeight
+  }
+}
 
 const appendMessage = async (role, content) => {
   const normalizedContent = role === 'assistant' ? toUserFriendlyText(content) : content
@@ -185,10 +213,26 @@ const appendMessage = async (role, content) => {
     await humanLikeDelay()
   }
   messages.value.push({ role, content: normalizedContent, type: 'text' })
-  await nextTick()
-  if (chatBox.value) {
-    chatBox.value.scrollTop = chatBox.value.scrollHeight
-  }
+  await scrollChatToBottom()
+}
+
+const appendRichMarkdownMessage = async ({
+  title,
+  content = '',
+  subtitle = '',
+  tone = 'info',
+  eyebrow = '',
+}) => {
+  messages.value.push({
+    role: 'assistant',
+    type: 'rich_markdown',
+    title: title || '处理结果',
+    content,
+    subtitle,
+    tone,
+    eyebrow,
+  })
+  await scrollChatToBottom()
 }
 
 const appendChartActionMessage = async (reason, timeRange, chartTemplate, chartTitle) => {
@@ -201,10 +245,7 @@ const appendChartActionMessage = async (reason, timeRange, chartTemplate, chartT
     chartTitle: chartTitle || '服务器健康总览',
     handled: false,
   })
-  await nextTick()
-  if (chatBox.value) {
-    chatBox.value.scrollTop = chatBox.value.scrollHeight
-  }
+  await scrollChatToBottom()
 }
 
 const appendChartRenderMessage = async chartData => {
@@ -214,10 +255,7 @@ const appendChartRenderMessage = async chartData => {
     title: chartData?.title || `服务器监控图（${chartData?.timeRange || '1h'}）`,
     chartData,
   })
-  await nextTick()
-  if (chatBox.value) {
-    chatBox.value.scrollTop = chatBox.value.scrollHeight
-  }
+  await scrollChatToBottom()
 }
 
 const appendConfirmMessage = async (query, command, riskLevel) => {
@@ -229,10 +267,7 @@ const appendConfirmMessage = async (query, command, riskLevel) => {
     riskLevel: riskLevel || 'medium',
     handled: false,
   })
-  await nextTick()
-  if (chatBox.value) {
-    chatBox.value.scrollTop = chatBox.value.scrollHeight
-  }
+  await scrollChatToBottom()
 }
 
 const appendTimeoutMessage = async () => {
@@ -241,10 +276,7 @@ const appendTimeoutMessage = async () => {
     type: 'timeout',
     handled: false,
   })
-  await nextTick()
-  if (chatBox.value) {
-    chatBox.value.scrollTop = chatBox.value.scrollHeight
-  }
+  await scrollChatToBottom()
 }
 
 const appendRiskConfirmMessage = async (command, riskLevel, reason) => {
@@ -256,10 +288,7 @@ const appendRiskConfirmMessage = async (command, riskLevel, reason) => {
     reason: reason || '',
     handled: false,
   })
-  await nextTick()
-  if (chatBox.value) {
-    chatBox.value.scrollTop = chatBox.value.scrollHeight
-  }
+  await scrollChatToBottom()
 }
 
 const markInteractiveHandled = (msg, statusText, statusType = 'info') => {
@@ -423,6 +452,78 @@ const connectWs = () => {
         await appendMessage('assistant', data.message || '欢迎使用运维助手。')
         return
       }
+      if (data.type === 'status') {
+        return
+      }
+      if (data.type === 'plan') {
+        await appendRichMarkdownMessage({
+          eyebrow: '执行计划',
+          title: '我先整理了一份处理步骤',
+          subtitle: serverIp.value ? `目标服务器：${serverIp.value}` : '',
+          tone: 'info',
+          content: formatPlanMessage(data.plan),
+        })
+        return
+      }
+      if (data.type === 'step_start') {
+        const stepIndex = Number(data.index || 0)
+        if (stepIndex > 0 && data.description) {
+          stepTitleMap.value = {
+            ...stepTitleMap.value,
+            [stepIndex]: String(data.description),
+          }
+        }
+        const stepMessage = formatStepStartMessage(data)
+        if (stepMessage) {
+          await appendMessage('assistant', stepMessage)
+        }
+        return
+      }
+      if (data.type === 'step_done') {
+        const stepMessage = formatStepDoneMessage(data)
+        if (stepMessage) {
+          await appendMessage('assistant', stepMessage)
+        }
+        return
+      }
+      if (data.type === 'step_failed') {
+        await appendRichMarkdownMessage({
+          eyebrow: '执行异常',
+          title: '某个步骤没有顺利完成',
+          tone: 'danger',
+          content: formatStepFailedMessage(data),
+        })
+        return
+      }
+      if (data.type === 'task_done') {
+        isAgentRunning.value = false
+        lastTaskDoneDigest.value = normalizeComparableText(data.summary)
+        lastTaskFailedDigest.value = ''
+        await appendRichMarkdownMessage({
+          eyebrow: '执行完成',
+          title: '处理结果已经整理好了',
+          subtitle: serverIp.value ? `目标服务器：${serverIp.value}` : '',
+          tone: 'success',
+          content: formatTaskDoneMessage(data),
+        })
+        return
+      }
+      if (data.type === 'task_failed') {
+        isAgentRunning.value = false
+        lastTaskFailedDigest.value = normalizeComparableText(data.error)
+        lastTaskDoneDigest.value = ''
+        await appendRichMarkdownMessage({
+          eyebrow: '任务失败',
+          title: '这次处理没有顺利完成',
+          subtitle: serverIp.value ? `目标服务器：${serverIp.value}` : '',
+          tone: 'danger',
+          content: formatTaskFailedMessage(data),
+        })
+        return
+      }
+      if (data.type === 'tool_call') {
+        return
+      }
       if (data.type === 'ops_progress') {
         if (['agent_finish', 'agent_timeout', 'agent_stopped', 'agent_stop', 'finished'].includes(String(data.stage || ''))) {
           isAgentRunning.value = false
@@ -436,7 +537,9 @@ const connectWs = () => {
       if (data.type === 'ops_chat_result') {
         isAgentRunning.value = false
         const summary = formatOpsResult(data)
-        await appendMessage('assistant', summary)
+        if (shouldAppendOpsResultSummary(data, summary)) {
+          await appendMessage('assistant', summary)
+        }
 
         if (data.needRiskConfirm && data.riskCommand) {
           await appendRiskConfirmMessage(data.riskCommand, data.riskLevel, data.reply)
@@ -503,6 +606,9 @@ const sendMessage = async presetText => {
   }
 
   isAgentRunning.value = true
+  lastTaskDoneDigest.value = ''
+  lastTaskFailedDigest.value = ''
+  stepTitleMap.value = {}
 
   const payload = {
     type: 'ops_chat',
@@ -542,6 +648,9 @@ const executeByConfirmation = async query => {
   }
 
   await appendMessage('assistant', '收到，正在执行中...')
+  lastTaskDoneDigest.value = ''
+  lastTaskFailedDigest.value = ''
+  stepTitleMap.value = {}
   ws.value.send(JSON.stringify({
     type: 'ops_chat',
     query,
@@ -583,6 +692,9 @@ const confirmRiskExecute = async msg => {
 
   await appendMessage('assistant', '收到高风险执行确认，正在执行中...')
   isAgentRunning.value = true
+  lastTaskDoneDigest.value = ''
+  lastTaskFailedDigest.value = ''
+  stepTitleMap.value = {}
   markInteractiveHandled(msg, '已确认高风险执行，正在处理。', 'danger')
   ws.value.send(JSON.stringify({
     type: 'risk_execute',
@@ -610,6 +722,8 @@ const confirmContinue = async msg => {
   await appendMessage('user', '继续')
   await appendMessage('assistant', '收到，正在继续执行中...')
   markInteractiveHandled(msg, '已确认继续执行。', 'success')
+  lastTaskDoneDigest.value = ''
+  lastTaskFailedDigest.value = ''
 
   const payload = {
     type: 'ops_chat',
@@ -716,6 +830,10 @@ const renderMarkdown = content => {
   return md.render(content)
 }
 
+const isMarkdownMessage = msg => {
+  return msg?.type === 'rich_markdown' || (msg?.role === 'assistant' && msg?.type === 'text')
+}
+
 const formatOpsResult = data => {
   const lines = []
   const replySummary = toUserFriendlyText(data.reply)
@@ -727,7 +845,10 @@ const formatOpsResult = data => {
   }
 
   if (data.executed) {
-    lines.push(`执行结果：\n\`\`\`\n${data.execResult || '无返回'}\n\`\`\``)
+    const execResult = toUserFriendlyText(data.execResult)
+    if (execResult && !isGenericExecResult(execResult)) {
+      lines.push(`> ${execResult}`)
+    }
   } else {
     if (data.needRiskConfirm) {
       lines.push('涉及高风险操作，需要你确认后我再继续。')
@@ -739,6 +860,99 @@ const formatOpsResult = data => {
     }
     lines.push(`风险等级：${data.riskLevel || 'medium'}`)
   }
+  return lines.join('\n\n')
+}
+
+const formatPlanMessage = plan => {
+  if (!Array.isArray(plan) || plan.length === 0) {
+    return '我会先检查现状，再根据结果决定是否需要执行变更。'
+  }
+
+  const lines = ['我会按下面的顺序推进：', '']
+  plan.forEach((item, index) => {
+    const description = String(item?.description || `步骤 ${index + 1}`).trim()
+    const tags = []
+    if (item?.isRisky) {
+      tags.push('高风险')
+    }
+    if (item?.hasRollback) {
+      tags.push('可回滚')
+    }
+    const tagSuffix = tags.length ? `  _(${tags.join(' / ')})_` : ''
+    lines.push(`${index + 1}. ${description}${tagSuffix}`)
+  })
+  return lines.join('\n')
+}
+
+const formatTaskDoneMessage = data => {
+  const summary = String(data?.summary || '').trim()
+  if (!summary) {
+    return '本次处理已经完成，当前没有更多补充信息。'
+  }
+  return summary
+}
+
+const formatTaskFailedMessage = data => {
+  const error = toUserFriendlyText(data?.error || '')
+  const lines = ['这次执行在处理中断了。']
+  if (error) {
+    lines.push(`**原因**：${error}`)
+  }
+  lines.push('你可以调整指令后重新执行，或者让我继续针对失败点做进一步排查。')
+  return lines.join('\n\n')
+}
+
+const formatStepStartMessage = data => {
+  const description = String(data?.description || '').trim()
+  const index = Number(data?.index || 0)
+  const total = Number(data?.total || 0)
+
+  if (description && index > 0 && total > 0) {
+    return `正在处理第 ${index}/${total} 步：**${description}**`
+  }
+  if (description) {
+    return `正在处理：**${description}**`
+  }
+  return ''
+}
+
+const formatStepDoneMessage = data => {
+  const index = Number(data?.index || 0)
+  const description = stepTitleMap.value[index]
+  const result = toUserFriendlyText(data?.result || '')
+
+  if (description && result) {
+    return `已完成：**${description}**\n\n> ${truncateText(result, 140)}`
+  }
+  if (description) {
+    return `已完成：**${description}**`
+  }
+  if (result) {
+    return `已完成一个步骤。\n\n> ${truncateText(result, 140)}`
+  }
+  return '已完成一个步骤。'
+}
+
+const formatStepFailedMessage = data => {
+  const lines = []
+  const description = String(data?.description || '').trim()
+  const error = toUserFriendlyText(data?.error || '')
+  const action = actionLabel(data?.action)
+  const reason = toUserFriendlyText(data?.reason || '')
+
+  if (description) {
+    lines.push(`**出问题的步骤**：${description}`)
+  }
+  if (error) {
+    lines.push(`**错误信息**：${error}`)
+  }
+  if (action) {
+    lines.push(`**系统处理**：${action}`)
+  }
+  if (reason) {
+    lines.push(`**原因说明**：${reason}`)
+  }
+
   return lines.join('\n\n')
 }
 
@@ -761,6 +975,9 @@ const toUserFriendlyText = text => {
     .replace(/（\s*\d+\s*ms\s*）/gi, '')
     .replace(/\(\s*\d+\s*ms\s*\)/gi, '')
     .replace(/\[进度\]\s*/g, '')
+    .replace(/^收到，正在执行中\.\.\.$/g, '收到，我开始处理了。')
+    .replace(/^收到，正在处理中\.\.\.$/g, '收到，我先帮你分析一下。')
+    .replace(/^Agent 循环已完成[。.]?/g, '处理已经完成。')
     .trim()
 }
 
@@ -768,14 +985,38 @@ const formatProgressForUser = data => {
   const stage = String(data?.stage || '')
   const message = toUserFriendlyText(data?.message || '')
 
+  if (['plan_ready', 'step_start', 'step_done', 'task_done', 'task_failed', 'tool_call', 'agent_think', 'finished'].includes(stage)) {
+    return ''
+  }
+  if (stage === 'start') {
+    return '已经收到你的请求，开始处理。'
+  }
+  if (stage === 'planning') {
+    return '我先分析目标，整理执行计划。'
+  }
   if (stage === 'cmd_exec_start') {
-    return message || '正在执行命令...'
+    if (!message) {
+      return '正在执行命令...'
+    }
+    return `正在执行命令：\`${truncateText(message.replace(/^执行命令[:：]\s*/g, ''), 120)}\``
   }
   if (stage === 'cmd_exec_done') {
     return ''
   }
   if (stage === 'cmd_exec_fail') {
-    return `命令 “${data.command || '未知'}” 执行失败。`
+    return `命令执行失败：\`${truncateText(data.command || '未知命令', 120)}\``
+  }
+  if (stage === 'metrics_fetch_start') {
+    return '正在读取服务器监控数据...'
+  }
+  if (stage === 'metrics_fetch_done') {
+    return ''
+  }
+  if (stage === 'log_read_start') {
+    return '正在检查相关日志...'
+  }
+  if (stage === 'log_read_done') {
+    return ''
   }
   if (stage === 'risk_exec_start') {
     return '正在执行你确认的高风险命令...'
@@ -783,11 +1024,93 @@ const formatProgressForUser = data => {
   if (stage === 'risk_exec_done') {
     return '高风险命令执行完成。'
   }
+  if (stage === 'step_retry') {
+    return '刚才的步骤没有成功，我正在自动重试。'
+  }
+  if (stage === 'step_skip') {
+    return '有一个步骤已跳过，我会继续处理后续内容。'
+  }
+  if (stage === 'agent_timeout') {
+    return '这次处理超出了当前轮数限制，已经先暂停。'
+  }
   if (stage === 'agent_stopped' || stage === 'agent_stop') {
     return '任务已强制停止。'
   }
 
   return ''
+}
+
+const isGenericExecResult = text => {
+  const normalized = String(text || '').trim()
+  return [
+    'Agent 循环已完成。',
+    'Agent 循环已完成，请参考上方实时进度日志。',
+    '高风险命令执行并后续流程已完成。',
+    '任务已被强制停止。',
+    '达到最大轮数，任务暂停。你可以发送“继续”来恢复执行。',
+  ].includes(normalized)
+}
+
+const normalizeComparableText = text => {
+  return String(text || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+const shouldAppendOpsResultSummary = (data, summary) => {
+  const currentDigest = normalizeComparableText(data?.reply || summary)
+  if (!currentDigest) {
+    return false
+  }
+
+  if (data?.executed && lastTaskDoneDigest.value && currentDigest === lastTaskDoneDigest.value) {
+    return false
+  }
+  if (!data?.executed && lastTaskFailedDigest.value && currentDigest === lastTaskFailedDigest.value) {
+    return false
+  }
+  return true
+}
+
+const truncateText = (text, maxLength = 120) => {
+  const value = String(text || '').trim()
+  if (!value || value.length <= maxLength) {
+    return value
+  }
+  return `${value.slice(0, maxLength)}...`
+}
+
+const actionLabel = action => {
+  switch (String(action || '').toLowerCase()) {
+    case 'retry':
+      return '系统决定重试当前步骤'
+    case 'skip':
+      return '系统决定跳过当前步骤'
+    case 'abort':
+      return '系统决定终止本次任务'
+    default:
+      return ''
+  }
+}
+
+const resultToneClass = tone => {
+  if (tone === 'success') {
+    return 'result-tone result-tone-success'
+  }
+  if (tone === 'danger') {
+    return 'result-tone result-tone-danger'
+  }
+  return 'result-tone result-tone-info'
+}
+
+const resultToneLabel = tone => {
+  if (tone === 'success') {
+    return '已完成'
+  }
+  if (tone === 'danger') {
+    return '需处理'
+  }
+  return '进行中'
 }
 
 const humanLikeDelay = () => {
@@ -810,6 +1133,42 @@ onUnmounted(() => {
 .assistant-user-bubble {
   background: linear-gradient(135deg, rgba(37, 99, 235, 0.96), rgba(96, 165, 250, 0.94));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 8px 16px -6px rgba(37, 99, 235, 0.4);
+}
+
+.result-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.result-tone {
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.result-tone-success {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.result-tone-danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.result-tone-info {
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+  border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
 :deep(.markdown-body ul) {
@@ -846,6 +1205,22 @@ onUnmounted(() => {
   font-weight: bold;
   margin-bottom: 0.5em;
   margin-top: 1em;
+}
+:deep(.markdown-body blockquote) {
+  margin: 0 0 0.85em;
+  padding: 0.8em 1em;
+  border-left: 3px solid rgba(59, 130, 246, 0.35);
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 0.85rem;
+}
+:deep(.markdown-body li + li) {
+  margin-top: 0.3em;
+}
+:deep(.markdown-result > :first-child) {
+  margin-top: 0;
+}
+:deep(.markdown-result strong) {
+  color: #0f172a;
 }
 
 .custom-scrollbar::-webkit-scrollbar {

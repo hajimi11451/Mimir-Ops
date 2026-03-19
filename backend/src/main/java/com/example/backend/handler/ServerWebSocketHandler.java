@@ -1,10 +1,10 @@
 package com.example.backend.handler;
 
 import com.example.backend.dto.MetricDTO;
+import com.example.backend.model.TaskState;
 import com.example.backend.service.MonitorService;
 import com.example.backend.service.OpsAgentService;
 import com.example.backend.utils.AiUtils;
-import com.example.backend.utils.SshUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class ServerWebSocketHandler extends TextWebSocketHandler {
 
     private static final ConcurrentHashMap<String, WebSocketSession> SESSIONS = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<String, List<Map<String, Object>>> AGENT_HISTORY = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, TaskState> AGENT_HISTORY = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, FutureTask<Void>> RUNNING_TASKS = new ConcurrentHashMap<>();
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -150,8 +150,8 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
 
         // 如果用户发送“继续”，且有历史记录，则恢复执行
         if ("继续".equals(query) || "continue".equalsIgnoreCase(query)) {
-            List<Map<String, Object>> history = AGENT_HISTORY.get(session.getId());
-            if (history != null && !history.isEmpty()) {
+            TaskState history = AGENT_HISTORY.get(session.getId());
+            if (history != null) {
                 log.info("Resuming agent loop from history, sessionId={}", session.getId());
                 try {
                     OpsAgentService.AgentRunResult agentResult = opsAgentService.runAgentLoopWithAdvice(
@@ -172,7 +172,7 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
                     mergeChartAdvice(result, agentResult);
                     AGENT_HISTORY.remove(session.getId());
                 } catch (OpsAgentService.HighRiskCommandException e) {
-                    AGENT_HISTORY.put(session.getId(), e.getHistory());
+                    AGENT_HISTORY.put(session.getId(), e.getTaskState());
                     result.put("executed", false);
                     result.put("needRiskConfirm", true);
                     result.put("riskLevel", "high");
@@ -181,7 +181,7 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
                     result.put("execResult", "检测到高风险命令，等待用户确认。");
                     result.put("chartSuggest", false);
                 } catch (OpsAgentService.AgentTimeoutException e) {
-                    AGENT_HISTORY.put(session.getId(), e.getHistory());
+                    AGENT_HISTORY.put(session.getId(), e.getTaskState());
                     result.put("executed", false);
                     result.put("timeout", true);
                     result.put("reply", e.getMessage());
@@ -238,7 +238,7 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
             mergeChartAdvice(result, agentResult);
             AGENT_HISTORY.remove(session.getId());
         } catch (OpsAgentService.HighRiskCommandException e) {
-            AGENT_HISTORY.put(session.getId(), e.getHistory());
+            AGENT_HISTORY.put(session.getId(), e.getTaskState());
             result.put("executed", false);
             result.put("needRiskConfirm", true);
             result.put("riskLevel", "high");
@@ -247,7 +247,7 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
             result.put("execResult", "检测到高风险命令，等待用户确认。");
             result.put("chartSuggest", false);
         } catch (OpsAgentService.AgentTimeoutException e) {
-            AGENT_HISTORY.put(session.getId(), e.getHistory());
+            AGENT_HISTORY.put(session.getId(), e.getTaskState());
             result.put("executed", false);
             result.put("timeout", true);
             result.put("reply", e.getMessage());
@@ -344,10 +344,7 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
         try {
             sendProgress(session, "risk_exec_start", "用户已确认，开始执行高风险命令...", System.currentTimeMillis() - start);
 
-            List<Map<String, Object>> history = AGENT_HISTORY.remove(session.getId());
-            if (history == null) {
-                history = new ArrayList<>();
-            }
+            TaskState history = AGENT_HISTORY.remove(session.getId());
 
             OpsAgentService.AgentRunResult agentResult = opsAgentService.runAgentLoopWithAdvice(
                     "[高风险确认继续执行]",
@@ -376,7 +373,7 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
             mergeChartAdvice(result, agentResult);
             sendProgress(session, "risk_exec_done", "高风险命令及后续流程执行完成", System.currentTimeMillis() - start);
         } catch (OpsAgentService.HighRiskCommandException e) {
-            AGENT_HISTORY.put(session.getId(), e.getHistory());
+            AGENT_HISTORY.put(session.getId(), e.getTaskState());
             result.put("executed", false);
             result.put("needRiskConfirm", true);
             result.put("riskLevel", "high");
@@ -385,7 +382,7 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
             result.put("execResult", "再次检测到高风险命令，等待用户确认。");
             result.put("chartSuggest", false);
         } catch (OpsAgentService.AgentTimeoutException e) {
-            AGENT_HISTORY.put(session.getId(), e.getHistory());
+            AGENT_HISTORY.put(session.getId(), e.getTaskState());
             result.put("executed", false);
             result.put("timeout", true);
             result.put("reply", e.getMessage());
