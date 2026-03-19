@@ -8,7 +8,7 @@
 
   --color-sidebar: rgba(255, 255, 255, 0.18);
 
-  --color-ui-bg: #eaf1fb;
+  --color-ui-bg: transparent; /* 改为透明，让底层的光效透出来 */
   --color-ui-panel: rgba(255, 255, 255, 0.24);
   --color-ui-card: rgba(255, 255, 255, 0.28);
   --color-ui-border: rgba(255, 255, 255, 0.38);
@@ -23,14 +23,27 @@
 
 :root {
   color-scheme: light;
-  --glass-surface: linear-gradient(180deg, rgba(246, 250, 255, 0.56), rgba(229, 238, 250, 0.4));
-  --glass-surface-soft: linear-gradient(180deg, rgba(245, 249, 255, 0.46), rgba(229, 238, 250, 0.32));
-  --glass-surface-strong: linear-gradient(180deg, rgba(248, 251, 255, 0.64), rgba(232, 240, 251, 0.46));
-  --glass-border: rgba(255, 255, 255, 0.56);
-  --glass-border-soft: rgba(255, 255, 255, 0.34);
-  --glass-shadow: 0 24px 54px -36px rgba(76, 96, 130, 0.24);
-  --glass-shadow-soft: 0 18px 36px -28px rgba(76, 96, 130, 0.16);
-  --glass-blur: 24px;
+  
+  /* 核心毛玻璃参数：极度清透、去除发灰感 */
+  --glass-surface: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 100%);
+  --glass-surface-soft: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 100%);
+  --glass-surface-strong: linear-gradient(135deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.2) 100%);
+  
+  /* 极细微的边框，勾勒轮廓 */
+  --glass-border: rgba(255, 255, 255, 0.2);
+  --glass-border-soft: rgba(255, 255, 255, 0.1);
+  
+  /* 干净的底部深色投影 */
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  --glass-shadow-soft: 0 4px 16px 0 rgba(31, 38, 135, 0.05);
+  
+  /* 内部高光，模拟玻璃厚度反光 */
+  --glass-inset-highlight: inset 1px 1px 1px rgba(255, 255, 255, 0.5), inset -1px -1px 1px rgba(255, 255, 255, 0.1);
+  
+  /* 最佳模糊度 */
+  --glass-blur: 16px;
+  
+  /* Element Plus 变量保留 */
   --el-color-primary: #2563eb;
   --el-color-primary-light-3: #60a5fa;
   --el-border-radius-base: 16px;
@@ -57,9 +70,11 @@ body,
 }
 
 body {
+  position: relative;
   min-height: 100%;
   color: var(--color-ui-text);
-  background: linear-gradient(180deg, #f6f9ff 0%, #eef4fd 46%, #e6edf8 100%);
+  /* 去掉原来复杂的渐变背景，全靠 MainLayout 里的光晕提供质感 */
+  background: transparent;
   font-family: var(--font-sans);
 }
 
@@ -80,6 +95,9 @@ body {
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
+/* ==============================================
+   核心玻璃材质定义
+============================================== */
 .glass-card,
 .el-card,
 .el-dialog,
@@ -104,53 +122,38 @@ body {
 }
 
 .glass-card,
-.glass-panel,
-.glass-soft {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow-soft);
-}
-
-.glass-card::before,
-.glass-panel::before,
-.glass-soft::before,
-.el-card::before,
-.el-dialog::before,
-.el-message-box::before {
-  display: none;
-}
-
-.glass-card,
 .el-card,
 .el-dialog,
 .el-message-box,
 .el-popover.el-popper {
-  background: var(--glass-surface);
-  border-color: var(--glass-border) !important;
-  box-shadow: var(--glass-shadow);
+  position: relative;
+  isolation: isolate;
+  background: var(--glass-surface) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--glass-shadow), var(--glass-inset-highlight) !important;
+  border-radius: 24px;
 }
 
 .glass-panel {
-  background: var(--glass-surface-strong);
+  position: relative;
+  isolation: isolate;
+  background: var(--glass-surface-strong) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--glass-shadow), var(--glass-inset-highlight) !important;
+  border-radius: 24px;
 }
 
-.glass-soft {
-  background: var(--glass-surface-soft);
-  border-color: var(--glass-border-soft);
-}
-
+.glass-soft,
 .glass-toolbar,
 .glass-subcard,
 .glass-code-block,
 .glass-table-footer {
   position: relative;
-  overflow: hidden;
-  border: 1px solid var(--glass-border-soft);
-  background: var(--glass-surface-soft);
-  box-shadow: var(--glass-shadow-soft);
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  backdrop-filter: blur(var(--glass-blur));
+  isolation: isolate;
+  background: var(--glass-surface-soft) !important;
+  border: 1px solid var(--glass-border-soft) !important;
+  box-shadow: var(--glass-shadow-soft), var(--glass-inset-highlight) !important;
+  border-radius: 20px;
 }
 
 .glass-toolbar,
@@ -158,16 +161,36 @@ body {
   border-radius: 24px;
 }
 
-.glass-subcard,
-.glass-code-block {
-  border-radius: 20px;
+/* 强制隐藏原作者写的那些导致画面变灰、变脏的阴影和高光伪元素 */
+.glass-card::before, .glass-card::after,
+.glass-panel::before, .glass-panel::after,
+.glass-soft::before, .glass-soft::after,
+.glass-toolbar::before, .glass-toolbar::after,
+.glass-subcard::before, .glass-subcard::after,
+.glass-code-block::before, .glass-code-block::after,
+.glass-table-footer::before, .glass-table-footer::after,
+.el-card::before, .el-card::after,
+.el-dialog::before, .el-dialog::after,
+.el-message-box::before, .el-message-box::after,
+.el-popover.el-popper::before, .el-popover.el-popper::after,
+.dashboard-detail-shell::before, .dashboard-detail-shell::after,
+.workspace-cool-glass::before, .workspace-cool-glass::after,
+.app-shell-lighting::before, .app-shell-lighting::after,
+.shell-surface::after, .app-shell-lighting > header::after {
+  display: none !important;
 }
 
-.glass-toolbar::before,
-.glass-subcard::before,
-.glass-code-block::before,
-.glass-table-footer::before {
-  display: none;
+/* 保证卡片内部元素的层级 */
+.glass-card > *,
+.glass-panel > *,
+.glass-soft > *,
+.glass-toolbar > *,
+.glass-subcard > *,
+.glass-code-block > *,
+.glass-table-footer > *,
+.el-popover.el-popper > * {
+  position: relative;
+  z-index: 1;
 }
 
 .glass-chip {
@@ -175,9 +198,9 @@ body {
   align-items: center;
   gap: 0.375rem;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  background: rgba(239, 246, 255, 0.24);
-  box-shadow: 0 12px 24px -22px rgba(76, 96, 130, 0.14);
+  border: 1px solid var(--glass-border-soft);
+  background: var(--glass-surface-soft);
+  box-shadow: var(--glass-shadow-soft);
   -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
 }
@@ -187,9 +210,9 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  background: rgba(239, 246, 255, 0.26);
-  box-shadow: 0 16px 30px -26px rgba(76, 96, 130, 0.14);
+  border: 1px solid var(--glass-border-soft);
+  background: var(--glass-surface-soft);
+  box-shadow: var(--glass-shadow-soft);
   -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
 }
@@ -203,28 +226,11 @@ body {
   margin: 0;
 }
 
+/* 覆盖之前硬编码在 workspace 里的混浊色调 */
 .dashboard-detail-shell,
 .workspace-cool-glass {
   position: relative;
   isolation: isolate;
-  --glass-surface: linear-gradient(180deg, rgba(244, 249, 255, 0.28), rgba(231, 239, 249, 0.18));
-  --glass-surface-soft: linear-gradient(180deg, rgba(244, 249, 255, 0.22), rgba(231, 239, 249, 0.14));
-  --glass-surface-strong: linear-gradient(180deg, rgba(247, 251, 255, 0.34), rgba(234, 241, 251, 0.22));
-  --glass-border: rgba(255, 255, 255, 0.28);
-  --glass-border-soft: rgba(255, 255, 255, 0.22);
-  --glass-shadow: 0 22px 46px -34px rgba(88, 110, 148, 0.16);
-  --glass-shadow-soft: 0 14px 28px -24px rgba(88, 110, 148, 0.12);
-  background: linear-gradient(180deg, rgba(239, 246, 255, 0.26), rgba(231, 239, 250, 0.18));
-}
-
-.dashboard-detail-shell::before,
-.workspace-cool-glass::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  border-radius: inherit;
-  z-index: 0;
 }
 
 .dashboard-detail-shell > *,
@@ -233,124 +239,8 @@ body {
   z-index: 1;
 }
 
-.dashboard-detail-shell::before,
-.workspace-cool-glass::before,
-.dashboard-detail-shell .glass-card::before,
-.dashboard-detail-shell .glass-toolbar::before,
-.dashboard-detail-shell .glass-subcard::before,
-.dashboard-detail-shell .glass-soft::before,
-.workspace-cool-glass .glass-card::before,
-.workspace-cool-glass .glass-toolbar::before,
-.workspace-cool-glass .glass-subcard::before,
-.workspace-cool-glass .glass-soft::before,
-.workspace-cool-glass .glass-code-block::before,
-.workspace-cool-glass .glass-table-footer::before,
-.workspace-cool-glass .el-card::before,
-.workspace-cool-glass .el-dialog::before,
-.workspace-cool-glass .el-message-box::before {
-  display: none;
-}
-
-.dashboard-detail-shell .glass-card,
-.dashboard-detail-shell .glass-toolbar,
-.dashboard-detail-shell .glass-subcard,
-.dashboard-detail-shell .glass-soft,
-.workspace-cool-glass .glass-card,
-.workspace-cool-glass .glass-toolbar,
-.workspace-cool-glass .glass-subcard,
-.workspace-cool-glass .glass-soft,
-.workspace-cool-glass .glass-code-block,
-.workspace-cool-glass .glass-table-footer,
-.workspace-cool-glass .el-card,
-.workspace-cool-glass .el-dialog,
-.workspace-cool-glass .el-message-box,
-.workspace-cool-glass .el-popover.el-popper {
-  -webkit-backdrop-filter: blur(30px) saturate(122%);
-  backdrop-filter: blur(30px) saturate(122%);
-}
-
-.workspace-cool-glass .glass-card,
-.workspace-cool-glass .glass-toolbar,
-.workspace-cool-glass .glass-subcard,
-.workspace-cool-glass .glass-soft,
-.workspace-cool-glass .glass-code-block,
-.workspace-cool-glass .glass-table-footer,
-.workspace-cool-glass .el-card,
-.workspace-cool-glass .el-dialog,
-.workspace-cool-glass .el-message-box,
-.workspace-cool-glass .el-popover.el-popper {
-  border-color: var(--glass-border-soft) !important;
-  background: linear-gradient(180deg, rgba(242, 248, 255, 0.22), rgba(229, 237, 248, 0.14));
-  box-shadow: var(--glass-shadow-soft);
-}
-
-.workspace-cool-glass .glass-subcard,
-.workspace-cool-glass .glass-soft,
-.workspace-cool-glass .glass-code-block,
-.workspace-cool-glass .glass-table-footer {
-  border-color: rgba(255, 255, 255, 0.28) !important;
-  background: linear-gradient(180deg, rgba(248, 252, 255, 0.3), rgba(236, 243, 252, 0.2));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    0 14px 26px -24px rgba(88, 110, 148, 0.14),
-    0 0 0 1px rgba(255, 255, 255, 0.05);
-}
-
-.workspace-cool-glass .glass-chip {
-  border-color: rgba(255, 255, 255, 0.2);
-  background: rgba(245, 250, 255, 0.24);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    0 10px 20px -20px rgba(83, 105, 144, 0.12);
-}
-
-.workspace-cool-glass .glass-icon-badge {
-  border-color: rgba(255, 255, 255, 0.2);
-  background: rgba(245, 250, 255, 0.24);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    0 14px 24px -22px rgba(83, 105, 144, 0.12);
-}
-
-.workspace-cool-glass .el-table {
-  background: rgba(245, 250, 255, 0.22);
-  --el-table-border-color: rgba(255, 255, 255, 0.18);
-  --el-table-header-bg-color: rgba(248, 252, 255, 0.24);
-  --el-table-current-row-bg-color: rgba(246, 250, 255, 0.18);
-  --el-table-row-hover-bg-color: rgba(246, 250, 255, 0.22);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 12px 22px -22px rgba(83, 105, 144, 0.1);
-}
-
-.workspace-cool-glass .el-descriptions {
-  --el-descriptions-table-border: rgba(255, 255, 255, 0.18);
-  --el-descriptions-item-bordered-label-background: rgba(247, 251, 255, 0.22);
-  --el-descriptions-item-bordered-content-background: rgba(245, 250, 255, 0.14);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 12px 22px -22px rgba(83, 105, 144, 0.1);
-}
-
-.workspace-cool-glass .el-input__wrapper,
-.workspace-cool-glass .el-select__wrapper,
-.workspace-cool-glass .el-textarea__inner,
-.workspace-cool-glass .el-input-number {
-  background: rgba(247, 251, 255, 0.24) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 12px 20px -22px rgba(83, 105, 144, 0.1) !important;
-}
-
-.workspace-cool-glass .el-alert,
-.workspace-cool-glass .el-tag {
-  border-color: rgba(255, 255, 255, 0.2) !important;
-  background: rgba(246, 250, 255, 0.2) !important;
-}
-
 .el-card {
-  border-radius: 26px;
+  border-radius: 24px;
   overflow: hidden;
 }
 
@@ -374,7 +264,6 @@ body {
 .el-dialog,
 .el-message-box {
   border-radius: 28px !important;
-  border: 1px solid var(--glass-border) !important;
 }
 
 .el-dialog {
@@ -387,12 +276,13 @@ body {
   backdrop-filter: blur(10px);
 }
 
+/* 优化 Element Plus 表格 */
 .el-table {
   overflow: hidden;
-  border-radius: 22px;
-  background: linear-gradient(180deg, rgba(245, 249, 255, 0.32), rgba(231, 239, 250, 0.18));
+  border-radius: 20px;
+  background: var(--glass-surface-soft) !important;
   --el-table-border-color: rgba(255, 255, 255, 0.2);
-  --el-table-header-bg-color: rgba(244, 248, 255, 0.18);
+  --el-table-header-bg-color: transparent;
   --el-table-tr-bg-color: transparent;
   --el-table-current-row-bg-color: rgba(244, 248, 255, 0.14);
   --el-table-row-hover-bg-color: rgba(244, 248, 255, 0.18);
@@ -425,6 +315,7 @@ body {
   border-bottom-color: rgba(255, 255, 255, 0.16);
 }
 
+/* 优化 Descriptions */
 .el-descriptions {
   overflow: hidden;
   border-radius: 20px;
@@ -433,26 +324,28 @@ body {
   --el-descriptions-item-bordered-content-background: rgba(255, 255, 255, 0.08);
 }
 
+/* 优化表单控件 */
 .el-input__wrapper,
 .el-select__wrapper,
 .el-textarea__inner,
 .el-input-number {
-  background: rgba(255, 255, 255, 0.26) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42), 0 18px 36px -30px rgba(15, 23, 42, 0.18) !important;
-  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  background: var(--glass-surface-soft) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42), 0 8px 16px -10px rgba(15, 23, 42, 0.08) !important;
+  border: 1px solid var(--glass-border) !important;
 }
 
 .el-input__wrapper.is-focus,
 .el-select__wrapper.is-focused,
 .el-textarea__inner:focus,
 .el-input-number:focus-within {
-  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.34), 0 20px 40px -30px rgba(37, 99, 235, 0.35) !important;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.34), 0 10px 20px -10px rgba(37, 99, 235, 0.2) !important;
 }
 
 .el-textarea__inner {
   min-height: 96px;
 }
 
+/* 按钮样式优化 */
 .el-button {
   border-radius: 16px;
   transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease, border-color 180ms ease;
@@ -463,16 +356,16 @@ body {
 }
 
 .el-button:not(.el-button--primary):not(.is-link) {
-  background: rgba(255, 255, 255, 0.24);
-  border-color: rgba(255, 255, 255, 0.3);
-  box-shadow: 0 16px 32px -28px rgba(15, 23, 42, 0.26);
+  background: var(--glass-surface-soft);
+  border-color: var(--glass-border);
+  box-shadow: var(--glass-shadow-soft);
   color: #203047;
 }
 
 .el-button--primary {
   border-color: rgba(96, 165, 250, 0.24) !important;
   background: linear-gradient(135deg, rgba(37, 99, 235, 0.92), rgba(96, 165, 250, 0.92)) !important;
-  box-shadow: 0 22px 38px -24px rgba(37, 99, 235, 0.7);
+  box-shadow: 0 12px 24px -12px rgba(37, 99, 235, 0.5);
 }
 
 .el-button--danger.is-plain,
@@ -481,55 +374,21 @@ body {
   background: rgba(255, 255, 255, 0.2);
 }
 
-.el-button.is-link {
-  box-shadow: none;
-  background: transparent !important;
-  border-color: transparent !important;
-  padding-left: 0 !important;
-  padding-right: 0 !important;
-}
-
-.workspace-cool-glass .el-button.is-link,
+.el-button.is-link,
 .glass-link-button {
+  box-shadow: none !important;
   background: transparent !important;
   border-color: transparent !important;
-  box-shadow: none !important;
 }
 
 .workspace-cool-glass .el-button--primary.is-link,
-.glass-link-button.el-button--primary,
-.glass-link-button.link-primary {
+.glass-link-button.el-button--primary {
   color: #2563eb !important;
 }
 
 .workspace-cool-glass .el-button--primary.is-link:hover,
-.glass-link-button.el-button--primary:hover,
-.glass-link-button.link-primary:hover {
+.glass-link-button.el-button--primary:hover {
   color: #1d4ed8 !important;
-}
-
-.workspace-cool-glass .el-button--warning.is-link,
-.glass-link-button.el-button--warning,
-.glass-link-button.link-warning {
-  color: #d97706 !important;
-}
-
-.workspace-cool-glass .el-button--warning.is-link:hover,
-.glass-link-button.el-button--warning:hover,
-.glass-link-button.link-warning:hover {
-  color: #b45309 !important;
-}
-
-.workspace-cool-glass .el-button--danger.is-link,
-.glass-link-button.el-button--danger,
-.glass-link-button.link-danger {
-  color: #dc2626 !important;
-}
-
-.workspace-cool-glass .el-button--danger.is-link:hover,
-.glass-link-button.el-button--danger:hover,
-.glass-link-button.link-danger:hover {
-  color: #b91c1c !important;
 }
 
 .el-tag,
@@ -541,9 +400,9 @@ body {
 .el-pagination .btn-prev,
 .el-pagination .btn-next,
 .el-pagination .el-pager li {
-  background: rgba(255, 255, 255, 0.24) !important;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  box-shadow: 0 14px 30px -28px rgba(15, 23, 42, 0.24);
+  background: var(--glass-surface-soft) !important;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow-soft);
 }
 
 .el-pagination .el-pager li.is-active {
@@ -554,7 +413,7 @@ body {
 
 .el-checkbox__inner,
 .el-radio__inner {
-  background: rgba(255, 255, 255, 0.24) !important;
+  background: var(--glass-surface-soft) !important;
   border-color: rgba(255, 255, 255, 0.26) !important;
 }
 
@@ -562,27 +421,11 @@ body {
 .el-checkbox__input.is-indeterminate .el-checkbox__inner {
   background: linear-gradient(135deg, rgba(37, 99, 235, 0.96), rgba(96, 165, 250, 0.96)) !important;
   border-color: rgba(37, 99, 235, 0.92) !important;
-  box-shadow: 0 14px 24px -20px rgba(37, 99, 235, 0.45);
-}
-
-.el-checkbox__input.is-checked .el-checkbox__inner::after {
-  border-color: #ffffff !important;
-  background-color: transparent !important;
-}
-
-.el-checkbox__input.is-indeterminate .el-checkbox__inner::before {
-  border-color: #ffffff !important;
-  background-color: #ffffff !important;
 }
 
 .el-radio__input.is-checked .el-radio__inner {
   background: linear-gradient(135deg, rgba(37, 99, 235, 0.96), rgba(96, 165, 250, 0.96)) !important;
   border-color: rgba(37, 99, 235, 0.92) !important;
-  box-shadow: 0 14px 24px -20px rgba(37, 99, 235, 0.45);
-}
-
-.el-radio__input.is-checked .el-radio__inner::after {
-  background-color: #ffffff !important;
 }
 
 .el-skeleton__item {

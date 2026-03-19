@@ -1,10 +1,17 @@
 <template>
-  <div class="flex h-screen flex-col overflow-hidden bg-ui-bg text-ui-text">
-    <AppShellHeader :username="username" @logout="handleLogout" />
+  <div class="app-shell-lighting flex h-screen flex-col overflow-hidden text-ui-text relative">
+    
+    <div class="light-effects">
+      <div class="glow-1"></div>
+      <div class="glow-2"></div>
+      <div class="glow-3"></div>
+    </div>
 
-    <div class="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col gap-4 px-3 py-4 sm:px-5 lg:flex-row lg:px-6">
+    <AppShellHeader class="relative z-10" :username="username" @logout="handleLogout" />
+
+    <div class="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col gap-4 px-3 py-4 sm:px-5 lg:flex-row lg:px-6 relative z-10">
       <aside class="shrink-0 lg:w-[92px]">
-        <div class="flex rounded-[28px] border border-white/45 bg-white/18 p-2 shadow-[0_30px_70px_-42px_rgba(15,23,42,0.38)] backdrop-blur-[30px] lg:h-full lg:flex-col">
+        <div class="shell-surface flex rounded-[28px] border border-white/20 bg-white/10 shadow-sm backdrop-blur-[24px] lg:h-full lg:flex-col p-2">
           <nav class="grid flex-1 grid-cols-3 gap-2 sm:grid-cols-6 lg:grid-cols-1">
             <router-link
               v-for="item in navItems"
@@ -12,12 +19,12 @@
               :to="item.path"
               class="group flex min-w-0 flex-col items-center gap-2 rounded-[20px] px-2 py-3 text-center transition-all duration-200"
               :class="isActive(item)
-                ? 'bg-[linear-gradient(180deg,rgba(255,255,255,0.28),rgba(255,255,255,0.12))] text-brand shadow-[inset_0_0_0_1px_rgba(96,165,250,0.16),0_18px_30px_-26px_rgba(37,99,235,0.42)] backdrop-blur-xl'
-                : 'text-ui-subtext hover:bg-ui-panel hover:text-ui-text'"
+                ? 'bg-white/20 text-brand shadow-sm backdrop-blur-xl'
+                : 'text-ui-subtext hover:bg-white/10 hover:text-ui-text'"
             >
               <span
                 class="flex h-11 w-11 items-center justify-center rounded-2xl transition-colors"
-                :class="isActive(item) ? 'bg-brand/12 text-brand' : 'bg-white/14 text-ui-subtext group-hover:bg-white/24'"
+                :class="isActive(item) ? 'bg-brand/10 text-brand' : 'bg-transparent text-ui-subtext group-hover:bg-white/10'"
               >
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon" />
@@ -27,7 +34,7 @@
             </router-link>
           </nav>
 
-          <div class="mt-2 hidden rounded-[22px] border border-white/16 bg-white/14 px-3 py-3 text-center text-[11px] font-medium text-ui-subtext backdrop-blur-xl lg:block">
+          <div class="mt-2 hidden rounded-[22px] border border-white/10 bg-white/5 px-3 py-3 text-center text-[11px] font-medium text-ui-subtext backdrop-blur-xl lg:block">
             {{ username || '游客' }}
           </div>
         </div>
@@ -40,7 +47,7 @@
             <h1 class="mt-2 text-[26px] font-semibold tracking-[-0.04em] text-ui-text">{{ pageTitle }}</h1>
           </div>
 
-          <div class="hidden items-center gap-2 rounded-full border border-white/38 bg-white/16 px-4 py-2 text-xs text-ui-subtext backdrop-blur-xl md:flex">
+          <div class="hidden items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs text-ui-subtext backdrop-blur-xl md:flex">
             <span class="inline-flex h-2 w-2 rounded-full" :class="username ? 'bg-ui-success' : 'bg-ui-warning'"></span>
             {{ username ? '账号在线' : '未登录' }}
           </div>
@@ -118,13 +125,10 @@ const pageTitle = computed(() => route.meta?.title || '总览')
 const pageEyebrow = computed(() => route.path === '/dashboard' ? 'Overview' : 'Workspace')
 
 const mainContentClass = computed(() => {
-  const baseClass = 'flex-1 min-h-0 rounded-[30px] border border-white/42 bg-white/18 shadow-[0_30px_70px_-42px_rgba(15,23,42,0.35)] backdrop-blur-[30px]'
+  /* 移除了极其复杂的双层阴影，使用全局清透变量 */
+  const baseClass = 'shell-surface flex-1 min-h-0 rounded-[30px] border border-white/20 bg-white/10 shadow-sm backdrop-blur-[24px]'
 
-  if (route.path === '/dashboard') {
-    return `${baseClass} overflow-hidden`
-  }
-
-  if (route.path === '/alert-settings') {
+  if (route.path === '/dashboard' || route.path === '/alert-settings') {
     return `${baseClass} overflow-hidden`
   }
 
@@ -154,6 +158,43 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* ==============================================
+   底部几何光晕特效 (无色带、无性能问题的完美版)
+============================================== */
+.light-effects {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background-color: #f0f4f9; 
+}
+
+.glow-1 {
+  position: absolute; top: -10%; right: 5%; width: 45vw; height: 45vw;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.25) 0%, rgba(37, 99, 235, 0.08) 40%, transparent 70%);
+  border-radius: 50%; animation: float 20s ease-in-out infinite alternate;
+}
+
+.glow-2 {
+  position: absolute; bottom: -15%; left: 5%; width: 55vw; height: 55vw;
+  background: radial-gradient(circle, rgba(79, 70, 229, 0.15) 0%, rgba(79, 70, 229, 0.05) 40%, transparent 70%);
+  border-radius: 50%; animation: float 25s ease-in-out infinite alternate-reverse;
+}
+
+.glow-3 {
+  position: absolute; top: 30%; left: 35%; width: 30vw; height: 30vw;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.2) 0%, rgba(6, 182, 212, 0.06) 40%, transparent 70%);
+  border-radius: 50%;
+}
+
+@keyframes float {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(3%, 5%); }
+}
+
+/* ==============================================
+   滚动条样式优化
+============================================== */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
@@ -163,8 +204,7 @@ onUnmounted(() => {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #c7d6ea;
+  background-color: rgba(148, 163, 184, 0.5);
   border-radius: 999px;
 }
 </style>
-

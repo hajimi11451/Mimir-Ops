@@ -303,11 +303,6 @@ onMounted(() => {
 
 .disposal-detail-chip {
   border-color: rgba(255, 255, 255, 0.34) !important;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(241, 247, 255, 0.42));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.62),
-    0 18px 28px -24px rgba(88, 110, 148, 0.14),
-    0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 .disposal-detail-label {
@@ -323,34 +318,21 @@ onMounted(() => {
 
 .disposal-detail-block {
   border-color: rgba(255, 255, 255, 0.34) !important;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.66), rgba(243, 248, 255, 0.4));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.58),
-    0 20px 32px -26px rgba(88, 110, 148, 0.14),
-    0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 :deep(.disposal-detail-modal) {
-  background: rgba(203, 213, 225, 0.18) !important;
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
 }
 
 :deep(.disposal-detail-dialog) {
   border: 1px solid rgba(255, 255, 255, 0.44) !important;
-  background:
-    linear-gradient(180deg, rgba(252, 253, 255, 0.92), rgba(240, 246, 253, 0.84)) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.72),
-    0 28px 60px -36px rgba(83, 105, 144, 0.28),
-    0 0 0 1px rgba(255, 255, 255, 0.16) !important;
   -webkit-backdrop-filter: blur(28px) saturate(135%);
   backdrop-filter: blur(28px) saturate(135%);
 }
 
 :deep(.disposal-detail-dialog .el-dialog__header) {
   border-bottom: 1px solid rgba(255, 255, 255, 0.34);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(248, 251, 255, 0.18));
 }
 
 :deep(.disposal-detail-dialog .el-dialog__title) {

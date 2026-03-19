@@ -170,6 +170,7 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
                     result.put("reply", agentResult.getFinalSummary());
                     result.put("execResult", "Agent 循环已完成。");
                     mergeChartAdvice(result, agentResult);
+                    AGENT_HISTORY.remove(session.getId());
                 } catch (OpsAgentService.HighRiskCommandException e) {
                     AGENT_HISTORY.put(session.getId(), e.getHistory());
                     result.put("executed", false);
@@ -235,6 +236,7 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
             result.put("reply", agentResult.getFinalSummary());
             result.put("execResult", "Agent 循环已完成，请参考上方实时进度日志。");
             mergeChartAdvice(result, agentResult);
+            AGENT_HISTORY.remove(session.getId());
         } catch (OpsAgentService.HighRiskCommandException e) {
             AGENT_HISTORY.put(session.getId(), e.getHistory());
             result.put("executed", false);

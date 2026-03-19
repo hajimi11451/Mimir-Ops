@@ -52,7 +52,7 @@ const router = createRouter({
           name: 'ops-assistant',
           component: OpsAssistantView,
           meta: {
-            title: '助手',
+            title: '灵枢助手',
           },
         },
         {

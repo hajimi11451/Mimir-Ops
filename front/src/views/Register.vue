@@ -1,14 +1,18 @@
 <template>
-  <div class="min-h-screen bg-ui-bg text-ui-text">
-    <AppShellHeader show-auth-links />
+  <div class="min-h-screen text-ui-text relative">
+    <div class="light-effects">
+      <div class="glow-1"></div>
+      <div class="glow-2"></div>
+      <div class="glow-3"></div>
+    </div>
 
-    <main class="mx-auto flex w-full max-w-[1460px] flex-col gap-6 px-4 py-6 sm:px-6 lg:flex-row lg:items-stretch lg:px-8">
-      <section class="relative overflow-hidden rounded-[32px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(240,247,255,0.96))] p-8 shadow-[0_30px_80px_-44px_rgba(15,23,42,0.28)] lg:flex lg:flex-1 lg:flex-col lg:justify-between">
-        <div class="pointer-events-none absolute right-[-60px] top-[-60px] h-48 w-48 rounded-full bg-brand/10 blur-3xl"></div>
-        <div class="pointer-events-none absolute bottom-[-40px] left-[-40px] h-40 w-40 rounded-full bg-sky-200/50 blur-3xl"></div>
+    <AppShellHeader class="relative z-10" show-auth-links />
+
+    <main class="mx-auto flex w-full max-w-[1460px] flex-col gap-6 px-4 py-6 sm:px-6 lg:flex-row lg:items-stretch lg:px-8 relative z-10">
+      <section class="glass-card relative overflow-hidden p-8 lg:flex lg:flex-1 lg:flex-col lg:justify-between">
 
         <div class="relative z-10 max-w-xl space-y-6">
-          <span class="inline-flex rounded-full border border-brand/12 bg-brand/6 px-4 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-brand">
+          <span class="inline-flex rounded-full border border-brand/20 bg-brand/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-brand">
             创建账号
           </span>
           <div>
@@ -20,17 +24,17 @@
         </div>
 
         <div class="relative z-10 mt-8 grid gap-4 sm:grid-cols-3">
-          <div class="rounded-[24px] border border-white/32 bg-white/20 p-5 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.22)] backdrop-blur-[24px]">
+          <div class="glass-soft p-5">
             <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">总览</div>
             <div class="mt-3 text-xl font-semibold text-ui-text">状态清晰</div>
             <p class="mt-2 text-sm text-ui-subtext">统一查看服务器健康和最新告警。</p>
           </div>
-          <div class="rounded-[24px] border border-white/32 bg-white/20 p-5 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.22)] backdrop-blur-[24px]">
+          <div class="glass-soft p-5">
             <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">助手</div>
             <div class="mt-3 text-xl font-semibold text-ui-text">智能协同</div>
             <p class="mt-2 text-sm text-ui-subtext">对话式生成命令并保留操作记录。</p>
           </div>
-          <div class="rounded-[24px] border border-white/32 bg-white/20 p-5 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.22)] backdrop-blur-[24px]">
+          <div class="glass-soft p-5">
             <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">通知</div>
             <div class="mt-3 text-xl font-semibold text-ui-text">闭环提醒</div>
             <p class="mt-2 text-sm text-ui-subtext">关键告警通过邮件触达接收人。</p>
@@ -38,9 +42,9 @@
         </div>
       </section>
 
-      <section class="w-full rounded-[32px] border border-white/42 bg-white/18 p-6 shadow-[0_34px_88px_-48px_rgba(15,23,42,0.38)] backdrop-blur-[30px] sm:p-8 lg:w-[460px]">
+      <section class="glass-card p-6 sm:p-8 lg:w-[460px]">
         <div class="space-y-2">
-          <span class="inline-flex rounded-full bg-brand/8 px-3 py-1 text-xs font-semibold tracking-[0.18em] text-brand">注册</span>
+          <span class="inline-flex rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold tracking-[0.18em] text-brand">注册</span>
           <h2 class="text-2xl font-semibold tracking-[-0.03em] text-ui-text">创建账号</h2>
           <p class="text-sm text-ui-subtext">填写信息后立即开始使用。</p>
         </div>
@@ -91,7 +95,7 @@
 
           <el-button
             type="primary"
-            class="w-full !h-auto rounded-2xl border-0 px-4 py-3 text-sm font-semibold text-white shadow-[0_22px_38px_-24px_rgba(37,99,235,0.85)] transition-all duration-150 hover:translate-y-[-1px]"
+            class="w-full !h-auto px-4 py-3 text-sm font-semibold text-white transition-all duration-150"
             :loading="loading"
             :disabled="loading"
             @click="handleRegister"
@@ -163,4 +167,57 @@ const handleRegister = async () => {
   }
 }
 </script>
+
+<style scoped>
+/* 同样的光效动画背景 */
+.light-effects {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background-color: #f0f4f9;
+}
+
+.glow-1 {
+  position: absolute;
+  top: -10%;
+  right: 5%;
+  width: 45vw;
+  height: 45vw;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.25) 0%, rgba(37, 99, 235, 0.08) 40%, transparent 70%);
+  border-radius: 50%;
+  animation: float 20s ease-in-out infinite alternate;
+}
+
+.glow-2 {
+  position: absolute;
+  bottom: -15%;
+  left: 5%;
+  width: 55vw;
+  height: 55vw;
+  background: radial-gradient(circle, rgba(79, 70, 229, 0.15) 0%, rgba(79, 70, 229, 0.05) 40%, transparent 70%);
+  border-radius: 50%;
+  animation: float 25s ease-in-out infinite alternate-reverse;
+}
+
+.glow-3 {
+  position: absolute;
+  top: 30%;
+  left: 35%;
+  width: 30vw;
+  height: 30vw;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.2) 0%, rgba(6, 182, 212, 0.06) 40%, transparent 70%);
+  border-radius: 50%;
+}
+
+@keyframes float {
+  0% {
+    transform: translate(0, 0);
+  }
+
+  100% {
+    transform: translate(3%, 5%);
+  }
+}
+</style>
 

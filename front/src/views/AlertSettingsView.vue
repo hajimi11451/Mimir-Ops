@@ -307,12 +307,7 @@ onMounted(() => {
   min-height: 0;
   flex-direction: column;
   min-width: 0;
-  background: linear-gradient(180deg, rgba(248, 252, 255, 0.3), rgba(236, 243, 252, 0.2));
   border: 1px solid rgba(255, 255, 255, 0.26);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.2),
-    0 14px 28px -22px rgba(88, 110, 148, 0.2),
-    0 0 0 1px rgba(176, 197, 228, 0.18);
 }
 
 .status-plain-descriptions :deep(.el-descriptions__body) {

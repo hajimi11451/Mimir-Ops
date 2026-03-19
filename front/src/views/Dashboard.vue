@@ -10,51 +10,44 @@
     >
       <section class="dashboard-page">
         <div class="dashboard-page-shell h-full" :style="getPageMotionStyle(0)">
-          <div class="flex h-full min-h-0 flex-col overflow-y-auto bg-ui-bg p-6 lg:p-8 custom-scrollbar">
+          <div class="flex h-full min-h-0 flex-col overflow-y-auto p-6 lg:p-8 custom-scrollbar">
             <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <div class="glass-card rounded-[24px] p-5">
+              <div class="glass-card p-5">
                 <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">已接入</div>
                 <div class="mt-3 text-3xl font-bold text-ui-text">{{ dashboardStats.total }}</div>
                 <p class="mt-2 text-sm text-ui-subtext">服务器监控数量</p>
               </div>
 
-              <div class="glass-card rounded-[24px] p-5">
+              <div class="glass-card p-5">
                 <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">健康</div>
                 <div class="mt-3 text-3xl font-bold text-ui-text">{{ dashboardStats.success }}</div>
                 <p class="mt-2 text-sm text-ui-subtext">CPU / 内存稳定</p>
               </div>
 
-              <div class="glass-card rounded-[24px] p-5">
+              <div class="glass-card p-5">
                 <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">关注</div>
                 <div class="mt-3 text-3xl font-bold text-ui-text">{{ dashboardStats.warning }}</div>
                 <p class="mt-2 text-sm text-ui-subtext">资源波动需关注</p>
               </div>
 
-              <div class="glass-card rounded-[24px] p-5">
+              <div class="glass-card p-5">
                 <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">健康均值</div>
                 <div class="mt-3 text-3xl font-bold text-brand">{{ dashboardStats.averageScore }}%</div>
                 <p class="mt-2 text-sm text-ui-subtext">更新：{{ lastUpdatedLabel }}</p>
               </div>
             </div>
 
-            <div class="glass-card mt-4 flex flex-1 min-h-0 flex-col rounded-[28px] p-4 lg:p-5">
+            <div class="glass-card mt-4 flex flex-1 min-h-0 flex-col p-4 lg:p-5">
               <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <h3 class="text-lg font-bold text-ui-text">服务器态势</h3>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-3">
-                  <!-- <div class="hidden xl:flex items-center gap-2 rounded-full border border-ui-border bg-white px-3 py-2 text-xs text-ui-subtext shadow-sm">
-                    <svg class="h-4 w-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18m-4 4l4-4m0 0l-4-4" />
-                    </svg>
-                    左右滑动 / 触控板 / 多点触控 
-                  </div> -->
-
                   <div class="glass-chip p-1">
                     <button
                       type="button"
-                      class="flex h-9 w-9 items-center justify-center rounded-full text-ui-subtext transition-colors hover:bg-ui-bg hover:text-ui-text disabled:cursor-not-allowed disabled:opacity-40"
+                      class="flex h-9 w-9 items-center justify-center rounded-full text-ui-subtext transition-colors hover:bg-white/10 hover:text-ui-text disabled:cursor-not-allowed disabled:opacity-40"
                       :disabled="activeCardIndex <= 0"
                       @click="switchCarousel(-1)"
                     >
@@ -64,7 +57,7 @@
                     </button>
                     <button
                       type="button"
-                      class="flex h-9 w-9 items-center justify-center rounded-full text-ui-subtext transition-colors hover:bg-ui-bg hover:text-ui-text disabled:cursor-not-allowed disabled:opacity-40"
+                      class="flex h-9 w-9 items-center justify-center rounded-full text-ui-subtext transition-colors hover:bg-white/10 hover:text-ui-text disabled:cursor-not-allowed disabled:opacity-40"
                       :disabled="activeCardIndex >= carouselItems.length - 1"
                       @click="switchCarousel(1)"
                     >
@@ -99,7 +92,7 @@
                     :tabindex="0"
                   >
                     <template v-if="item.type === 'add'">
-                      <div class="glass-card flex h-full flex-col items-center justify-center rounded-[24px] border-dashed p-8 text-center">
+                      <div class="glass-card flex h-full flex-col items-center justify-center border-dashed p-8 text-center">
                         <div class="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-brand/10 text-brand">
                           <svg class="h-10 w-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6" />
@@ -117,7 +110,7 @@
 
                     <template v-else>
                       <div
-                        class="server-status-card glass-card flex h-full flex-col justify-between rounded-[24px] px-4 py-3 ring-1 ring-white/14"
+                        class="server-status-card glass-card flex h-full flex-col justify-between px-4 py-3 ring-1 ring-white/14"
                         :style="getServerCardVisualStyle(item)"
                       >
                         <div class="flex items-start justify-between gap-3">
@@ -172,11 +165,11 @@
                         </div>
 
                         <div class="server-metric-grid grid grid-cols-2 gap-2.5">
-                          <div class="server-metric-card glass-soft rounded-2xl px-3 py-2">
+                          <div class="server-metric-card glass-soft px-3 py-2">
                             <div class="text-xs uppercase tracking-[0.18em] text-ui-subtext">CPU</div>
                             <div class="server-metric-value mt-1.5 text-lg font-semibold text-ui-text">{{ item.health.cpuUsage }}%</div>
                           </div>
-                          <div class="server-metric-card glass-soft rounded-2xl px-3 py-2">
+                          <div class="server-metric-card glass-soft px-3 py-2">
                             <div class="text-xs uppercase tracking-[0.18em] text-ui-subtext">MEM</div>
                             <div class="server-metric-value mt-1.5 text-lg font-semibold text-ui-text">{{ item.health.memUsage }}%</div>
                           </div>
@@ -202,7 +195,7 @@
                   ></button>
                 </div>
 
-                <div v-if="!serverCards.length" class="glass-soft pt-4 rounded-2xl border-dashed px-4 py-5 text-center text-sm text-ui-subtext">
+                <div v-if="!serverCards.length" class="glass-soft pt-4 px-4 py-5 text-center text-sm text-ui-subtext">
                   暂无服务器监控，可先添加一台。
                 </div>
               </div>
@@ -213,7 +206,7 @@
 
       <section class="dashboard-page">
         <div class="dashboard-page-shell h-full" :style="getPageMotionStyle(1)">
-          <div class="dashboard-detail-shell glass-card h-full min-h-0 flex flex-col overflow-hidden rounded-[34px]">
+          <div class="dashboard-detail-shell glass-card h-full min-h-0 flex flex-col overflow-hidden">
             <div class="glass-toolbar flex items-center justify-between gap-4 rounded-none border-x-0 border-t-0 px-5 py-4 lg:px-6">
               <div class="flex items-center gap-3">
                 <button
@@ -261,7 +254,7 @@
       width="520px"
       destroy-on-close
     >
-      <div class="glass-subcard rounded-2xl px-4 py-3 text-sm text-brand">
+      <div class="glass-subcard px-4 py-3 text-sm text-brand">
         保存后开始采集 CPU / 内存。
       </div>
 
@@ -974,18 +967,12 @@ onUnmounted(() => {
   display: none !important;
 }
 
+/* 彻底清理了卡片硬编码的浑浊色调，由 global glass-card 继承，这里只保留动画必须的属性 */
 .server-status-card {
   position: relative;
   overflow: hidden;
   isolation: isolate;
   transform-style: preserve-3d;
-  border-color: rgba(255, 255, 255, 0.24);
-  background: linear-gradient(180deg, rgba(243, 248, 255, 0.24), rgba(229, 237, 248, 0.16));
-  box-shadow: 0 20px 38px -28px rgba(88, 110, 148, 0.16);
-}
-
-.server-status-card::before {
-  display: none;
 }
 
 .server-status-card > * {
@@ -1107,21 +1094,12 @@ onUnmounted(() => {
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.42);
 }
 
+/* 清理了硬编码渐变，由 glass-soft 接管 */
 .server-metric-card {
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  border-color: rgba(255, 255, 255, 0.22);
-  background: rgba(241, 247, 255, 0.16);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.14),
-    0 8px 18px -18px rgba(88, 110, 148, 0.16),
-    0 0 0 1px rgba(170, 191, 224, 0.12);
   transform: translateZ(8px);
-}
-
-.server-metric-card::before {
-  display: none;
 }
 
 .server-metric-grid {

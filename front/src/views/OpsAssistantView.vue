@@ -1,13 +1,13 @@
 <template>
   <div class="workspace-cool-glass mx-auto max-w-7xl space-y-5">
-    <el-card class="assistant-shell-card glass-card rounded-[34px]" :body-style="{ padding: '20px' }">
+    <el-card class="glass-card rounded-[34px]" :body-style="{ padding: '20px' }">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 class="text-lg font-bold text-ui-text">运维助手</h2>
+          <h2 class="text-lg font-bold text-ui-text">灵枢运维助手</h2>
           <p class="text-xs text-ui-subtext mt-1">对话、规划、执行</p>
         </div>
         <div class="flex items-center gap-2">
-          <span class="glass-chip px-2.5 py-1 text-xs font-medium" :class="connected ? 'border-emerald-200/30 bg-emerald-400/10 text-ui-success' : 'border-slate-200/20 bg-slate-200/8 text-ui-subtext'">
+          <span class="glass-chip px-2.5 py-1 text-xs font-medium" :class="connected ? 'text-ui-success' : 'text-ui-subtext'">
             {{ connected ? '在线' : '离线' }}
           </span>
           <el-button size="small" @click="connectWs" :disabled="connected">连接</el-button>
@@ -16,7 +16,7 @@
       </div>
     </el-card>
 
-    <el-card class="assistant-shell-card glass-card rounded-[34px]" :body-style="{ padding: '20px' }">
+    <el-card class="glass-card rounded-[34px]" :body-style="{ padding: '20px' }">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <el-select
           v-model="selectedSavedConnection"
@@ -43,14 +43,14 @@
       <p class="text-xs text-ui-subtext mt-3">默认只规划；勾选后通过 SSH 执行。</p>
     </el-card>
 
-    <el-card class="assistant-shell-card glass-card rounded-[34px]" :body-style="{ padding: '20px' }">
-      <div ref="chatBox" class="assistant-chat-panel glass-subcard custom-scrollbar h-[460px] min-h-0 overflow-y-auto overflow-x-hidden rounded-[30px] p-4 space-y-3">
+    <el-card class="glass-card rounded-[34px]" :body-style="{ padding: '20px' }">
+      <div ref="chatBox" class="glass-subcard custom-scrollbar h-[460px] min-h-0 overflow-y-auto overflow-x-hidden rounded-[30px] p-4 space-y-3">
         <div v-for="(msg, idx) in messages" :key="idx" class="flex" :class="msg.role === 'user' ? 'justify-end' : 'justify-start'">
           <div
-            class="assistant-message-bubble max-w-[85%] rounded-[24px] px-4 py-3 text-sm whitespace-pre-wrap"
+            class="max-w-[85%] rounded-[24px] px-4 py-3 text-sm whitespace-pre-wrap"
             :class="msg.role === 'user'
               ? 'assistant-user-bubble text-white'
-              : 'assistant-reply-bubble glass-soft text-ui-text'"
+              : 'glass-soft text-ui-text'"
           >
             <div class="font-semibold text-xs mb-1 opacity-80">{{ msg.role === 'user' ? '你' : '运维助手' }}</div>
             <template v-if="msg.type === 'confirm'">
@@ -136,7 +136,7 @@
           :disabled="isAgentRunning ? !connected : !input.trim()"
           @click="isAgentRunning ? forceStop() : sendMessage()"
         >
-          {{ isAgentRunning ? '强制停止' : '发送' }}
+          {{ isAgentRunning ? '中断执行' : '发送' }}
         </el-button>
       </div>
     </el-card>
@@ -283,6 +283,53 @@ const getWsUrl = () => {
   return `${protocol}//${window.location.host}/ws/server/connect`
 }
 
+const parseServerEndpoint = value => {
+  const text = String(value || '').trim()
+  if (!text) {
+    return { raw: '', host: '', port: '' }
+  }
+
+  if (text.startsWith('[')) {
+    const endBracket = text.indexOf(']')
+    if (endBracket > -1) {
+      const host = text.slice(1, endBracket).trim().toLowerCase()
+      const suffix = text.slice(endBracket + 1)
+      const port = suffix.startsWith(':') ? suffix.slice(1).trim() : ''
+      return { raw: text, host, port }
+    }
+  }
+
+  const lastColonIndex = text.lastIndexOf(':')
+  if (lastColonIndex > -1 && text.indexOf(':') === lastColonIndex) {
+    const host = text.slice(0, lastColonIndex).trim().toLowerCase()
+    const port = text.slice(lastColonIndex + 1).trim()
+    if (host && /^\d+$/.test(port)) {
+      return { raw: text, host, port }
+    }
+  }
+
+  return {
+    raw: text,
+    host: text.toLowerCase(),
+    port: '',
+  }
+}
+
+const isSameServerEndpoint = (left, right) => {
+  const a = parseServerEndpoint(left)
+  const b = parseServerEndpoint(right)
+
+  if (!a.host || !b.host || a.host !== b.host) {
+    return false
+  }
+  if (a.port === b.port) {
+    return true
+  }
+
+  // Bare IP and IP:22 should be treated as the same target.
+  return (!a.port && b.port === '22') || (!b.port && a.port === '22')
+}
+
 const readPendingTask = () => {
   if (pendingTaskHandled.value || route.query.autostart !== '1') return null
   try {
@@ -309,16 +356,15 @@ const tryApplyPendingConnection = pendingTask => {
     return Boolean(serverIp.value && username.value && password.value)
   }
 
-  serverIp.value = targetIp
-
-  const matched = savedConnections.value.find(item => item.serverIp === targetIp)
+  const matched = savedConnections.value.find(item => isSameServerEndpoint(item.serverIp, targetIp))
   if (matched) {
     selectedSavedConnection.value = matched.id
     handleSavedConnectionChange(matched.id)
     return true
   }
 
-  return serverIp.value === targetIp && Boolean(username.value && password.value)
+  serverIp.value = targetIp
+  return isSameServerEndpoint(serverIp.value, targetIp) && Boolean(username.value && password.value)
 }
 
 const maybeRunPendingTask = async () => {
@@ -336,20 +382,23 @@ const maybeRunPendingTask = async () => {
 
   const canExecute = tryApplyPendingConnection(pendingTask)
   input.value = String(pendingTask.query || '').trim()
-  execute.value = Boolean(pendingTask.autoExecute)
+  const requestedExecute = Boolean(pendingTask.autoExecute)
+  execute.value = requestedExecute
 
   if (!input.value) {
     await clearPendingTask()
     return
   }
 
-  if (!canExecute && execute.value) {
-    await appendMessage('assistant', '已带入选中的处理方式，但未找到匹配的服务器连接，请先补全或选择连接后再发送。')
-    await clearPendingTask()
-    return
+  if (!canExecute && requestedExecute) {
+    execute.value = false
+    await appendMessage('assistant', '未找到与该告警匹配的服务器连接，已自动切换为规划模式；如需直接执行，请先选择或补全连接。')
   }
 
-  await sendMessage(input.value)
+  const started = await sendMessage(input.value)
+  if (started === false) {
+    return
+  }
   await clearPendingTask()
 }
 
@@ -443,18 +492,17 @@ const disconnectWs = () => {
 }
 
 const sendMessage = async presetText => {
-  if (isAgentRunning.value) return
+  if (isAgentRunning.value) return false
   const text = typeof presetText === 'string' ? presetText.trim() : input.value.trim()
-  if (!text) return
+  if (!text) return false
 
   if (!connected.value || !ws.value) {
     await appendMessage('assistant', '当前未连接，正在自动连接...')
     connectWs()
-    return
+    return false
   }
 
-  await appendMessage('user', text)
-  await appendMessage('assistant', execute.value ? '收到，正在执行中...' : '收到，正在处理中...')
+  isAgentRunning.value = true
 
   const payload = {
     type: 'ops_chat',
@@ -466,11 +514,17 @@ const sendMessage = async presetText => {
     maxRounds: Math.min(50, Math.max(1, Number(maxRounds.value) || 15)),
   }
 
-  ws.value.send(JSON.stringify(payload))
-  if (execute.value) {
-    isAgentRunning.value = true
+  try {
+    await appendMessage('user', text)
+    await appendMessage('assistant', execute.value ? '收到，正在执行中...' : '收到，正在处理中...')
+    ws.value.send(JSON.stringify(payload))
+    input.value = ''
+    return true
+  } catch (error) {
+    isAgentRunning.value = false
+    await appendMessage('assistant', error?.message || '发送失败，请稍后重试。')
+    return false
   }
-  input.value = ''
 }
 
 const executeByConfirmation = async query => {
@@ -752,46 +806,10 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.assistant-shell-card {
-  border-radius: 34px !important;
-}
-
-.assistant-shell-card :deep(.el-card__body) {
-  border-radius: inherit;
-}
-
-.assistant-chat-panel {
-  border-radius: 30px !important;
-  background: linear-gradient(180deg, rgba(249, 252, 255, 0.34), rgba(236, 243, 252, 0.22));
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    0 16px 30px -24px rgba(88, 110, 148, 0.12),
-    0 0 0 1px rgba(255, 255, 255, 0.06);
-}
-
-.assistant-message-bubble {
-  border-radius: 24px !important;
-}
-
+/* 用户气泡使用品牌蓝纯色底色加亮，机器人回复交给 global glass-soft */
 .assistant-user-bubble {
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.98), rgba(96, 165, 250, 0.94));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 18px 36px -24px rgba(37, 99, 235, 0.5);
-}
-
-.assistant-reply-bubble {
-  border-color: rgba(255, 255, 255, 0.24) !important;
-  background: linear-gradient(180deg, rgba(250, 253, 255, 0.42), rgba(238, 245, 253, 0.3));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.24),
-    0 16px 28px -24px rgba(88, 110, 148, 0.16),
-    0 0 0 1px rgba(255, 255, 255, 0.05);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.96), rgba(96, 165, 250, 0.94));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 8px 16px -6px rgba(37, 99, 235, 0.4);
 }
 
 :deep(.markdown-body ul) {
@@ -805,16 +823,16 @@ onUnmounted(() => {
   margin-bottom: 0.75em;
 }
 :deep(.markdown-body pre) {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.08));
+  background: rgba(255, 255, 255, 0.2);
   padding: 1em;
   border-radius: 0.75rem;
   overflow-x: auto;
   margin-bottom: 0.75em;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(18px);
 }
 :deep(.markdown-body code) {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.2);
   padding: 0.2em 0.4em;
   border-radius: 0.35rem;
   font-family: monospace;
@@ -839,7 +857,7 @@ onUnmounted(() => {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(148, 163, 184, 0.72);
+  background-color: rgba(148, 163, 184, 0.5);
   border-radius: 999px;
 }
 </style>

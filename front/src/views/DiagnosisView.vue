@@ -1,8 +1,7 @@
 <template>
   <div class="workspace-cool-glass mx-auto max-w-7xl space-y-6">
-    <!-- 1. 添加监控配置区 -->
     <el-card
-      class="diagnosis-section-card glass-card rounded-[34px]"
+      class="glass-card rounded-[34px]"
       :body-style="{ padding: '24px' }"
     >
       <h2 class="text-lg font-bold mb-4 text-ui-text flex items-center">
@@ -22,7 +21,6 @@
         新增监控
       </h2>
 
-      <!-- SSH认证失败提示 -->
       <el-alert
         v-if="errorMessage"
         :title="errorMessage"
@@ -44,7 +42,6 @@
 
       <el-form :model="config" label-position="top">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <!-- 服务器 IP -->
           <el-form-item
             class="mb-0"
             label="服务器 IP"
@@ -60,13 +57,11 @@
             </template>
             <el-input
               v-model="config.serverIp"
-              placeholder="192.168.1.10 或 192.168.1.10:2222"
-              class="w-full border-ui-border rounded-lg shadow-sm focus:ring-brand focus:border-brand transition-all"
+              placeholder="192.168.1.10"
               clearable
             />
           </el-form-item>
 
-          <!-- SSH 用户名 -->
           <el-form-item
             class="mb-0"
             label="SSH 用户名"
@@ -74,12 +69,10 @@
             <el-input
               v-model="config.username"
               placeholder="root"
-              class="w-full border-ui-border rounded-lg shadow-sm focus:ring-brand focus:border-brand transition-all"
               clearable
             />
           </el-form-item>
 
-          <!-- SSH 密码 -->
           <el-form-item
             class="mb-0"
             label="SSH 密码"
@@ -89,17 +82,14 @@
               type="password"
               placeholder="请输入密码"
               show-password
-              class="w-full border-ui-border rounded-lg shadow-sm focus:ring-brand focus:border-brand transition-all"
             />
           </el-form-item>
 
           <el-form-item class="mb-0" label="日志提权">
-            <div class="diagnosis-privilege-card glass-subcard flex min-h-[40px] items-center justify-between rounded-[22px] px-4 py-3">
+            <div class="glass-subcard flex min-h-[40px] items-center justify-between px-4 py-3 w-full">
               <div>
                 <div class="text-sm font-medium text-ui-text">使用 sudo 读取日志</div>
-                <div class="text-xs text-ui-subtext">
-                  当前 SSH 用户需要具备 sudo 权限，默认按 SSH 密码尝试 sudo 校验
-                </div>
+                <div class="text-xs text-ui-subtext">当前 SSH 用户需要具备 sudo 权限</div>
               </div>
               <el-switch
                 v-model="config.useSudo"
@@ -111,7 +101,6 @@
             </div>
           </el-form-item>
 
-          <!-- 组件名称 -->
           <el-form-item
             class="mb-0"
             label="组件名称"
@@ -121,21 +110,14 @@
               v-model="config.component"
               @blur="handleComponentChange"
               placeholder="如 MySQL"
-              class="w-full border-ui-border rounded-lg shadow-sm focus:ring-brand focus:border-brand transition-all"
               clearable
             />
           </el-form-item>
 
-          <!-- 日志路径 -->
           <el-form-item class="mb-0" label="日志路径">
             <template #label>
               <label class="block text-sm font-medium text-ui-subtext mb-1 flex justify-between items-center">
-                <span>
-                  日志路径
-                  <span class="text-xs text-ui-subtext font-normal ml-2">
-                    (可选)
-                  </span>
-                </span>
+                <span>日志路径 <span class="text-xs text-ui-subtext font-normal ml-2">(可选)</span></span>
                 <span
                   v-if="config.logPath"
                   :class="isVerified ? 'text-ui-success' : 'text-ui-warning'"
@@ -143,17 +125,13 @@
                 >
                   {{ isVerified ? '已验证' : '识别中' }}
                 </span>
-                <span v-else class="text-xs text-ui-brand">
-                  <span class="inline-block w-2 h-2 rounded-full bg-brand mr-1"></span>
-                  自动探测
-                </span>
+                <span v-else class="text-xs text-brand">自动探测</span>
               </label>
             </template>
             <div class="relative w-full">
               <el-input
                 v-model="config.logPath"
                 placeholder="留空自动探测"
-                class="w-full border-ui-border rounded-lg shadow-sm focus:ring-brand focus:border-brand transition-all"
                 clearable
               />
               <div v-if="pathLoading" class="absolute right-3 top-3">
@@ -167,36 +145,19 @@
       <div class="mt-6 flex justify-end">
         <el-button
           type="primary"
-          class="flex items-center justify-center px-6 py-2.5 text-white font-bold rounded-lg transition-all shadow-md group"
-          :class="loading || !config.serverIp || !config.component ? 'bg-gray-400 cursor-not-allowed' : 'bg-brand hover:bg-brand-hover'"
+          class="px-6"
           :loading="loading"
           :disabled="loading || !config.serverIp || !config.component"
           @click="handleAddConfig"
         >
-          <span class="flex items-center">
-            <svg
-              class="w-4 h-4 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-            <span v-if="loading">保存中...</span>
-            <span v-else>保存</span>
-          </span>
+          <span v-if="loading">保存中...</span>
+          <span v-else>保存</span>
         </el-button>
       </div>
     </el-card>
 
-    <!-- 2. 监控列表 -->
     <el-card
-      class="diagnosis-section-card glass-card rounded-[34px]"
+      class="glass-card rounded-[34px]"
       :body-style="{ padding: '24px' }"
     >
       <h2 class="text-lg font-bold mb-4 text-ui-text flex items-center">
@@ -489,14 +450,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.diagnosis-section-card {
-  border-radius: 34px !important;
-}
-
-.diagnosis-section-card :deep(.el-card__body) {
-  border-radius: inherit;
-}
-
+/* 已经移除了所有会导致画面发脏的覆盖背景，一切由全局 glass-card/glass-subcard 接管 */
 .diagnosis-table-wrap {
   overflow: hidden;
   border-radius: 28px;
@@ -509,50 +463,6 @@ onMounted(() => {
 .diagnosis-table-wrap :deep(.el-table__inner-wrapper) {
   border-radius: inherit;
   overflow: hidden;
-}
-
-.diagnosis-section-card {
-  border-color: rgba(255, 255, 255, 0.34) !important;
-  background: linear-gradient(180deg, rgba(247, 251, 255, 0.34), rgba(234, 241, 251, 0.22)) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.28),
-    0 20px 38px -28px rgba(88, 110, 148, 0.14),
-    0 0 0 1px rgba(255, 255, 255, 0.06);
-}
-
-.diagnosis-section-card :deep(.el-input__wrapper),
-.diagnosis-section-card :deep(.el-select__wrapper),
-.diagnosis-section-card :deep(.el-input-number),
-.diagnosis-section-card :deep(.el-textarea__inner) {
-  background: rgba(251, 253, 255, 0.38) !important;
-  border-color: rgba(255, 255, 255, 0.28) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.28),
-    0 14px 22px -24px rgba(88, 110, 148, 0.12) !important;
-}
-
-.diagnosis-privilege-card {
-  border-color: rgba(255, 255, 255, 0.3) !important;
-  background: linear-gradient(180deg, rgba(252, 254, 255, 0.48), rgba(240, 246, 254, 0.28)) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    0 16px 26px -24px rgba(88, 110, 148, 0.12),
-    0 0 0 1px rgba(255, 255, 255, 0.08);
-}
-
-.diagnosis-privilege-card :deep(.el-switch) {
-  --el-switch-on-color: #2563eb;
-  --el-switch-off-color: rgba(148, 163, 184, 0.58);
-}
-
-.diagnosis-table-wrap :deep(.el-table) {
-  background: linear-gradient(180deg, rgba(249, 252, 255, 0.34), rgba(237, 244, 252, 0.22));
-  --el-table-header-bg-color: rgba(251, 253, 255, 0.3);
-  --el-table-row-hover-bg-color: rgba(247, 251, 255, 0.24);
-}
-
-.diagnosis-table-wrap :deep(.el-table th.el-table__cell) {
-  color: #4b5d78;
 }
 </style>
 

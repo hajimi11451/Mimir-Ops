@@ -171,8 +171,12 @@ public class OpsAgentService {
         stopFlags.put(sessionId, new java.util.concurrent.atomic.AtomicBoolean(false));
 
         try {
-            List<Map<String, Object>> messages = existingHistory;
-            if (messages == null || messages.isEmpty()) {
+            boolean hasExistingHistory = existingHistory != null && !existingHistory.isEmpty();
+            List<Map<String, Object>> messages = hasExistingHistory
+                    ? new ArrayList<>(existingHistory)
+                    : new ArrayList<>();
+
+            if (!hasExistingHistory) {
                 messages = new ArrayList<>();
                 messages.add(systemMessage());
 
@@ -182,11 +186,13 @@ public class OpsAgentService {
                         + "\n目标服务器: " + serverIp
                         + "\n请你自主分析并逐步执行，完成后必须调用 finish_task。");
                 messages.add(userMsg);
+            } else {
+                appendResumeMessage(messages, userQuery, serverIp, approvedRiskCommand);
             }
 
             List<Map<String, Object>> tools = buildTools();
             // 只有首次运行时才发送 agent_start
-            if (existingHistory == null || existingHistory.isEmpty()) {
+            if (!hasExistingHistory) {
                 sendProgress(session, "agent_start", "进入 Agent 自主循环", System.currentTimeMillis() - start);
             } else {
                 sendProgress(session, "agent_resume", "Agent 继续执行", System.currentTimeMillis() - start);
@@ -377,6 +383,42 @@ public class OpsAgentService {
         } finally {
             stopFlags.remove(sessionId);
         }
+    }
+
+    private void appendResumeMessage(List<Map<String, Object>> messages,
+                                     String userQuery,
+                                     String serverIp,
+                                     String approvedRiskCommand) {
+        if (messages == null) {
+            return;
+        }
+
+        String normalizedQuery = String.valueOf(userQuery == null ? "" : userQuery).trim();
+        if (!StringUtils.hasText(normalizedQuery) && !StringUtils.hasText(approvedRiskCommand)) {
+            return;
+        }
+
+        Map<String, Object> userMsg = new LinkedHashMap<>();
+        userMsg.put("role", "user");
+
+        StringBuilder content = new StringBuilder();
+        content.append("继续上一轮尚未完成的任务，不要重复已经完成的检查和命令。")
+                .append("\n目标服务器: ")
+                .append(StringUtils.hasText(serverIp) ? serverIp : "当前服务器");
+
+        if (StringUtils.hasText(normalizedQuery)) {
+            content.append("\n补充指令: ")
+                    .append(normalizedQuery);
+        }
+
+        if (StringUtils.hasText(approvedRiskCommand)) {
+            content.append("\n已授权继续执行的高风险命令: ")
+                    .append(approvedRiskCommand);
+        }
+
+        content.append("\n请基于已有历史、最近一次命令输出和工具结果继续推进；如果当前信息已经足够，请直接调用 finish_task 给出最终结论。");
+        userMsg.put("content", content.toString());
+        messages.add(userMsg);
     }
 
     private void fillFinalResult(AgentRunResult finalResult,
