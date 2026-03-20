@@ -279,6 +279,7 @@ async function handleDeleteCurrent() {
         confirmButtonText: '删除',
         cancelButtonText: '取消',
         type: 'warning',
+        modalClass: 'keep-bright-overlay',
       },
     )
   } catch {

@@ -16,7 +16,7 @@
       </div>
     </el-card> -->
 
-    <el-card class="glass-card rounded-[34px]" :body-style="{ padding: '20px' }">
+    <el-card class="assistant-shell-card glass-card rounded-[34px]" :body-style="{ padding: '20px' }">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <el-select
           v-model="selectedSavedConnection"
@@ -43,7 +43,7 @@
       <p class="text-xs text-ui-subtext mt-3">默认只规划；勾选后通过 SSH 执行。</p>
     </el-card>
 
-    <el-card class="glass-card rounded-[34px]" :body-style="{ padding: '20px' }">
+    <el-card class="assistant-shell-card glass-card rounded-[34px]" :body-style="{ padding: '20px' }">
       <div ref="chatBox" class="glass-subcard custom-scrollbar h-[460px] min-h-0 overflow-y-auto overflow-x-hidden rounded-[30px] p-4 space-y-3">
         <div v-for="(msg, idx) in messages" :key="idx" class="flex" :class="msg.role === 'user' ? 'justify-end' : 'justify-start'">
           <div
@@ -1129,6 +1129,14 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.assistant-shell-card {
+  border-radius: 34px !important;
+}
+
+.assistant-shell-card :deep(.el-card__body) {
+  border-radius: inherit;
+}
+
 /* 用户气泡使用品牌蓝纯色底色加亮，机器人回复交给 global glass-soft */
 .assistant-user-bubble {
   background: linear-gradient(135deg, rgba(37, 99, 235, 0.96), rgba(96, 165, 250, 0.94));

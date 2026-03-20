@@ -230,7 +230,8 @@ async function handleClearAll() {
       {
         confirmButtonText: '确认',
         cancelButtonText: '取消',
-        type: 'warning'
+        type: 'warning',
+        modalClass: 'keep-bright-overlay',
       }
     )
   } catch {

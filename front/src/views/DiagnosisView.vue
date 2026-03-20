@@ -1,7 +1,7 @@
 <template>
   <div class="workspace-cool-glass mx-auto max-w-7xl space-y-6">
     <el-card
-      class="glass-card rounded-[34px]"
+      class="diagnosis-shell-card glass-card rounded-[34px]"
       :body-style="{ padding: '24px' }"
     >
       <h2 class="text-lg font-bold mb-4 text-ui-text flex items-center">
@@ -157,7 +157,7 @@
     </el-card>
 
     <el-card
-      class="glass-card rounded-[34px]"
+      class="diagnosis-shell-card glass-card rounded-[34px]"
       :body-style="{ padding: '24px' }"
     >
       <h2 class="text-lg font-bold mb-4 text-ui-text flex items-center">
@@ -451,6 +451,14 @@ onMounted(() => {
 
 <style scoped>
 /* 已经移除了所有会导致画面发脏的覆盖背景，一切由全局 glass-card/glass-subcard 接管 */
+.diagnosis-shell-card {
+  border-radius: 34px !important;
+}
+
+.diagnosis-shell-card :deep(.el-card__body) {
+  border-radius: inherit;
+}
+
 .diagnosis-table-wrap {
   overflow: hidden;
   border-radius: 28px;

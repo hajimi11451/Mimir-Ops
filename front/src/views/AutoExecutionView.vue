@@ -68,7 +68,7 @@
 
           <el-table-column
             prop="problemLog"
-            label="问题"
+            label="日志"
             min-width="260"
             show-overflow-tooltip
           >
@@ -112,39 +112,44 @@
     <el-dialog
       v-model="detailVisible"
       title="处置详情"
-      width="760px"
+      width="86vw"
       class="disposal-detail-dialog"
-      modal-class="disposal-detail-modal"
+      modal-class="keep-bright-overlay"
+      append-to-body
+      :close-on-click-modal="true"
+      :close-on-press-escape="true"
       destroy-on-close
     >
-        <div v-if="selectedProcess" class="space-y-5">
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div class="disposal-detail-chip glass-subcard rounded-[24px] px-4 py-3">
-              <div class="disposal-detail-label text-xs mb-1">时间</div>
-              <div class="disposal-detail-value text-sm">{{ formatDate(selectedProcess.processTime) }}</div>
-            </div>
-            <div class="disposal-detail-chip glass-subcard rounded-[24px] px-4 py-3">
-              <div class="disposal-detail-label text-xs mb-1">服务器 IP</div>
-              <div class="disposal-detail-value text-sm">{{ selectedProcess.serverIp || '-' }}</div>
-            </div>
-            <div class="disposal-detail-chip glass-subcard rounded-[24px] px-4 py-3">
-              <div class="disposal-detail-label text-xs mb-1">组件</div>
-              <div class="disposal-detail-value text-sm">{{ selectedProcess.component || '-' }}</div>
-            </div>
+      <div v-if="selectedProcess" class="disposal-detail-layout flex min-h-0 flex-col gap-6">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div class="disposal-detail-chip glass-subcard rounded-[24px] px-4 py-3">
+            <div class="disposal-detail-label text-xs mb-1">时间</div>
+            <div class="disposal-detail-value text-sm">{{ formatDate(selectedProcess.processTime) }}</div>
           </div>
-
-        <div>
-          <div class="text-sm font-semibold text-ui-text mb-2">问题</div>
-          <div class="disposal-detail-block glass-code-block rounded-[24px] px-4 py-3 whitespace-pre-wrap text-sm leading-6 text-ui-text">
-            {{ selectedProcess.problemLog || '-' }}
+          <div class="disposal-detail-chip glass-subcard rounded-[24px] px-4 py-3">
+            <div class="disposal-detail-label text-xs mb-1">服务器 IP</div>
+            <div class="disposal-detail-value text-sm">{{ selectedProcess.serverIp || '-' }}</div>
+          </div>
+          <div class="disposal-detail-chip glass-subcard rounded-[24px] px-4 py-3">
+            <div class="disposal-detail-label text-xs mb-1">组件</div>
+            <div class="disposal-detail-value text-sm">{{ selectedProcess.component || '-' }}</div>
           </div>
         </div>
 
-        <div>
-          <div class="text-sm font-semibold text-ui-text mb-2">处置</div>
-          <div class="disposal-detail-block glass-code-block rounded-[24px] px-4 py-3 whitespace-pre-wrap text-sm leading-6 text-ui-text">
-            {{ selectedProcess.processMethod || '-' }}
-          </div>
+        <div class="disposal-detail-content grid min-h-0 flex-1 grid-cols-1 gap-6 xl:grid-cols-2">
+          <section class="disposal-detail-section glass-subcard flex min-h-0 flex-col rounded-[28px] p-5">
+            <div class="text-sm font-semibold text-ui-text mb-3">问题日志</div>
+            <div class="disposal-detail-block glass-code-block min-h-0 flex-1 overflow-y-auto rounded-[24px] px-4 py-3 text-sm leading-6 text-ui-text">
+              {{ selectedProcess.problemLog || '-' }}
+            </div>
+          </section>
+
+          <section class="disposal-detail-section glass-subcard flex min-h-0 flex-col rounded-[28px] p-5">
+            <div class="text-sm font-semibold text-ui-text mb-3">处置</div>
+            <div class="disposal-detail-block glass-code-block min-h-0 flex-1 overflow-y-auto rounded-[24px] px-4 py-3 text-sm leading-6 text-ui-text">
+              {{ selectedProcess.processMethod || '-' }}
+            </div>
+          </section>
         </div>
       </div>
     </el-dialog>
@@ -318,29 +323,58 @@ onMounted(() => {
 
 .disposal-detail-block {
   border-color: rgba(255, 255, 255, 0.34) !important;
+  white-space: pre-wrap;
 }
 
-:deep(.disposal-detail-modal) {
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
+.disposal-detail-section {
+  border-color: rgba(255, 255, 255, 0.34) !important;
 }
 
 :deep(.disposal-detail-dialog) {
+  width: min(1380px, calc(100vw - 96px)) !important;
+  max-width: calc(100vw - 96px);
+  height: 60vh;
+  max-height: 60vh;
+  margin: 20vh auto 0 !important;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.44) !important;
   -webkit-backdrop-filter: blur(28px) saturate(135%);
   backdrop-filter: blur(28px) saturate(135%);
 }
 
+:deep(.disposal-detail-dialog .el-dialog__headerbtn) {
+  top: 10px;
+  right: 10px;
+}
+
 :deep(.disposal-detail-dialog .el-dialog__header) {
   border-bottom: 1px solid rgba(255, 255, 255, 0.34);
+  padding: 22px 28px 18px;
 }
 
 :deep(.disposal-detail-dialog .el-dialog__title) {
   color: #0f172a;
   font-weight: 700;
+  font-size: 1.125rem;
 }
 
 :deep(.disposal-detail-dialog .el-dialog__body) {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  padding: 0 28px 28px;
   background: transparent;
+}
+
+@media (max-width: 768px) {
+  :deep(.disposal-detail-dialog) {
+    width: calc(100vw - 24px) !important;
+    max-width: calc(100vw - 24px);
+    max-height: calc(100vh - 24px);
+    margin: 12px auto 0 !important;
+  }
 }
 </style>

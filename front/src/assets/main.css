@@ -276,6 +276,22 @@ body {
   backdrop-filter: blur(10px);
 }
 
+.keep-bright-overlay,
+.el-overlay.keep-bright-overlay {
+  background: rgba(255, 255, 255, 0.02) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(125%) !important;
+  backdrop-filter: blur(14px) saturate(125%) !important;
+}
+
+.keep-bright-overlay .el-overlay-dialog,
+.keep-bright-overlay .el-overlay-message-box,
+.el-overlay.keep-bright-overlay .el-overlay-dialog,
+.el-overlay.keep-bright-overlay .el-overlay-message-box {
+  background: transparent !important;
+  -webkit-backdrop-filter: blur(14px) saturate(125%) !important;
+  backdrop-filter: blur(14px) saturate(125%) !important;
+}
+
 /* 优化 Element Plus 表格 */
 .el-table {
   overflow: hidden;
