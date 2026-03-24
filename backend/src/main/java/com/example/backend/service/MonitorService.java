@@ -9,6 +9,7 @@ import com.example.backend.mapper.ComponentConfigMapper;
 import com.example.backend.mapper.InformationMapper;
 import com.example.backend.mapper.UserLoginMapper;
 import com.example.backend.utils.InfoNormalizationUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
@@ -18,6 +19,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -36,11 +38,20 @@ public class MonitorService {
 
     private static final String MONITOR_FAILURE_COMPONENT = "系统监控";
     private static final String MONITOR_FAILURE_SUMMARY = "SSH服务器网络异常";
-    private static final String MONITOR_FAILURE_ANALYSIS = "采集不到 CPU 和内存数据，请检查 SSH 连接、服务器网络状态以及目标主机是否可达。";
+    private static final String MONITOR_FAILURE_ANALYSIS = "采集不到系统监控数据，请检查 SSH 连接、服务器网络状态以及目标主机是否可达。";
     private static final String SYSTEM_MONITOR_CONFIG_KEY = "system_monitor";
     private static final Pattern NUMERIC_PATTERN = Pattern.compile("-?\\d+(?:\\.\\d+)?");
     private static final int SSH_CONNECT_TIMEOUT_MS = 5000;
     private static final int SSH_SOCKET_TIMEOUT_MS = 10000;
+    private static final String CPU_CMD = "vmstat 1 2 | tail -1 | awk '{print 100 - $15}'";
+    private static final String MEM_CMD = "awk '/MemTotal/ {total=$2} /MemAvailable/ {avail=$2} END {if (total>0 && avail>=0) print (total-avail)/total*100}' /proc/meminfo";
+    private static final String UPTIME_CMD = "uptime -p";
+    private static final String OS_CMD = "cat /etc/os-release | grep PRETTY_NAME | cut -d= -f2 | tr -d '\"'";
+    private static final String TOTAL_MEM_CMD = "free -h | awk '/Mem:/ {print $2}'";
+    private static final String AVAILABLE_MEM_CMD = "free -h | awk '/Mem:/ {print $7}'";
+    private static final String NET_COUNTER_CMD = "awk 'NR>2 {gsub(/:/,\"\",$1); iface=$1; if (iface != \"lo\" && iface !~ /^(docker|veth|br-|virbr|vmnet|zt|tailscale|tun|tap)/) {rx+=$2; tx+=$10}} END {printf \"%.0f %.0f\", rx+0, tx+0}' /proc/net/dev";
+    private static final String DISK_COUNTER_CMD = "awk '$3 ~ /^(sd[a-z]+|vd[a-z]+|xvd[a-z]+|nvme[0-9]+n[0-9]+)$/ {read+=$6*512; write+=$10*512} END {printf \"%.0f %.0f\", read+0, write+0}' /proc/diskstats";
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
     private ComponentConfigMapper componentConfigMapper;
@@ -60,27 +71,31 @@ public class MonitorService {
     // IP -> Current Info Map
     private final Map<String, Map<String, Object>> currentInfoMap = new ConcurrentHashMap<>();
 
+    // IP -> 上一轮原始计数器，用于计算网卡/磁盘速率
+    private final Map<String, RawCounterSnapshot> counterSnapshotMap = new ConcurrentHashMap<>();
+
     /**
      * 定时任务：每隔一段时间执行一次 (由 monitor.schedule.fixed-rate 配置，默认 60000ms)
-     * 遍历数据库中的服务器配置，远程采集 CPU 和内存使用率
+     * 遍历数据库中的服务器配置，远程采集启用的系统监控指标
      */
     @Scheduled(
             initialDelayString = "${monitor.schedule.fixed-rate:60000}",
             fixedRateString = "${monitor.schedule.fixed-rate:60000}"
     )
     public void collectMetrics() {
-        // 1. 获取所有配置的服务器 (去重，取第一个配置)
         List<ComponentConfig> configs = componentConfigMapper.selectList(new QueryWrapper<ComponentConfig>()
-                .select("DISTINCT server_ip, username, password")
                 .eq("config_key", SYSTEM_MONITOR_CONFIG_KEY)
-                .eq("is_enabled", 1));
-        
-        // 简单的去重逻辑 (按IP)
-        Map<String, ComponentConfig> uniqueServers = new HashMap<>();
+                .eq("is_enabled", 1)
+                .orderByDesc("updated_at"));
+
+        Map<String, ComponentConfig> uniqueServers = new LinkedHashMap<>();
         for (ComponentConfig config : configs) {
-            if (config.getServerIp() != null && !uniqueServers.containsKey(config.getServerIp())) {
-                uniqueServers.put(config.getServerIp(), config);
+            String serverIp = normalizeServerIp(config == null ? null : config.getServerIp());
+            if (!StringUtils.hasText(serverIp) || uniqueServers.containsKey(serverIp)) {
+                continue;
             }
+            config.setServerIp(serverIp);
+            uniqueServers.put(serverIp, config);
         }
 
         if (uniqueServers.isEmpty()) {
@@ -88,7 +103,6 @@ public class MonitorService {
             return;
         }
 
-        // 2. 遍历采集
         for (ComponentConfig server : uniqueServers.values()) {
             collectServerMetrics(server);
         }
@@ -96,23 +110,34 @@ public class MonitorService {
 
     @EventListener(ApplicationReadyEvent.class)
     public void collectMetricsOnStartup() {
-        System.out.println("应用启动完成，立即执行一次 CPU/内存采集");
+        System.out.println("应用启动完成，立即执行一次系统监控采集");
         collectMetrics();
     }
 
     private void collectServerMetrics(ComponentConfig server) {
-        String ip = server.getServerIp();
-        String user = server.getUsername();
-        String password = server.getPassword();
-        
-        // 如果没有用户名密码，无法监控
-        if (user == null || password == null) {
+        String ip = normalizeServerIp(server == null ? null : server.getServerIp());
+        String user = server == null ? null : server.getUsername();
+        String password = server == null ? null : server.getPassword();
+        MonitorSettings settings = parseMonitorSettings(server == null ? null : server.getConfigValue());
+
+        if (!StringUtils.hasText(ip)) {
+            return;
+        }
+
+        if (!StringUtils.hasText(user) || !StringUtils.hasText(password)) {
             System.err.println("跳过服务器 " + ip + ": 缺少用户名或密码");
             return;
         }
 
+        if (!settings.hasAnyMetricEnabled()) {
+            counterSnapshotMap.remove(ip);
+            cacheDisabledSnapshot(ip, settings);
+            System.out.println("服务器 " + ip + " 当前未启用任何采集指标，已跳过系统监控采样");
+            return;
+        }
+
         try {
-            MetricSnapshot snapshot = collectMetricSnapshot(ip, user, password);
+            MetricSnapshot snapshot = collectMetricSnapshot(ip, user, password, settings);
             MetricDTO metric = cacheMetricSnapshot(ip, snapshot);
 
             System.out.println("已采集服务器 " + ip + " 数据: " + metric);
@@ -123,21 +148,44 @@ public class MonitorService {
         }
     }
 
-    private MetricSnapshot collectMetricSnapshot(String host, String user, String password) throws Exception {
-        String cpuCmd = "vmstat 1 2 | tail -1 | awk '{print 100 - $15}'";
-        String memCmd = "awk '/MemTotal/ {total=$2} /MemAvailable/ {avail=$2} END {if (total>0 && avail>=0) print (total-avail)/total*100}' /proc/meminfo";
-        String uptimeCmd = "uptime -p";
-        String osCmd = "cat /etc/os-release | grep PRETTY_NAME | cut -d= -f2 | tr -d '\"'";
-        String totalMemCmd = "free -h | grep Mem | awk '{print $2}'";
-
+    private MetricSnapshot collectMetricSnapshot(String host, String user, String password, MonitorSettings settings) throws Exception {
         Session session = openSession(host, user, password);
+        long collectedAtMs = System.currentTimeMillis();
         try {
-            double cpuUsage = parseMetricValue(sshExec(session, cpuCmd), "CPU");
-            double memUsage = parseMetricValue(sshExec(session, memCmd), "内存");
-            String upTime = sshExec(session, uptimeCmd).trim();
-            String os = sshExec(session, osCmd).trim();
-            String totalMem = sshExec(session, totalMemCmd).trim();
-            return new MetricSnapshot(cpuUsage, memUsage, upTime, os, totalMem);
+            String upTime = safeTrim(sshExec(session, UPTIME_CMD));
+            String os = safeTrim(sshExec(session, OS_CMD));
+            String totalMem = safeTrim(sshExec(session, TOTAL_MEM_CMD));
+            String availableMem = safeTrim(sshExec(session, AVAILABLE_MEM_CMD));
+
+            Double cpuUsage = settings.cpuEnabled()
+                    ? parseMetricValue(sshExec(session, CPU_CMD), "CPU")
+                    : null;
+            Double memUsage = settings.memEnabled()
+                    ? parseMetricValue(sshExec(session, MEM_CMD), "内存")
+                    : null;
+
+            long[] netCounters = settings.hasAnyNetworkMetricEnabled()
+                    ? parseCounterPair(sshExec(session, NET_COUNTER_CMD), "网卡")
+                    : null;
+            long[] diskCounters = settings.hasAnyDiskMetricEnabled()
+                    ? parseCounterPair(sshExec(session, DISK_COUNTER_CMD), "磁盘")
+                    : null;
+
+            RateSnapshot rateSnapshot = resolveRateSnapshot(host, settings, netCounters, diskCounters, collectedAtMs);
+
+            return new MetricSnapshot(
+                    cpuUsage,
+                    memUsage,
+                    rateSnapshot.netRxBytesPerSec(),
+                    rateSnapshot.netTxBytesPerSec(),
+                    rateSnapshot.diskReadBytesPerSec(),
+                    rateSnapshot.diskWriteBytesPerSec(),
+                    upTime,
+                    os,
+                    totalMem,
+                    availableMem,
+                    settings
+            );
         } finally {
             if (session != null && session.isConnected()) {
                 session.disconnect();
@@ -149,8 +197,12 @@ public class MonitorService {
         String currentTime = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"));
         MetricDTO metric = new MetricDTO(
                 currentTime,
-                Math.round(snapshot.cpuUsage() * 10.0) / 10.0,
-                Math.round(snapshot.memUsage() * 10.0) / 10.0
+                roundNullable(snapshot.cpuUsage()),
+                roundNullable(snapshot.memUsage()),
+                roundNullable(snapshot.netRxBytesPerSec()),
+                roundNullable(snapshot.netTxBytesPerSec()),
+                roundNullable(snapshot.diskReadBytesPerSec()),
+                roundNullable(snapshot.diskWriteBytesPerSec())
         );
 
         historyMap.computeIfAbsent(serverIp, k -> new CopyOnWriteArrayList<>()).add(metric);
@@ -164,10 +216,109 @@ public class MonitorService {
         info.put("upTime", snapshot.upTime());
         info.put("cpuUsage", metric.getCpuUsage());
         info.put("memUsage", metric.getMemUsage());
+        info.put("netRxBytesPerSec", metric.getNetRxBytesPerSec());
+        info.put("netTxBytesPerSec", metric.getNetTxBytesPerSec());
+        info.put("diskReadBytesPerSec", metric.getDiskReadBytesPerSec());
+        info.put("diskWriteBytesPerSec", metric.getDiskWriteBytesPerSec());
         info.put("totalMemory", snapshot.totalMem());
+        info.put("availableMemory", snapshot.availableMem());
         info.put("processor", "Remote Server");
+        info.put("monitorSettings", snapshot.settings().toMap());
         currentInfoMap.put(serverIp, info);
         return metric;
+    }
+
+    private void cacheDisabledSnapshot(String serverIp, MonitorSettings settings) {
+        Map<String, Object> previous = currentInfoMap.getOrDefault(serverIp, Collections.emptyMap());
+        Map<String, Object> info = new LinkedHashMap<>(previous);
+        info.put("cpuUsage", null);
+        info.put("memUsage", null);
+        info.put("netRxBytesPerSec", null);
+        info.put("netTxBytesPerSec", null);
+        info.put("diskReadBytesPerSec", null);
+        info.put("diskWriteBytesPerSec", null);
+        info.put("monitorSettings", settings.toMap());
+        if (!info.containsKey("os")) {
+            info.put("os", "Linux");
+        }
+        if (!info.containsKey("upTime")) {
+            info.put("upTime", "");
+        }
+        if (!info.containsKey("totalMemory")) {
+            info.put("totalMemory", "");
+        }
+        if (!info.containsKey("availableMemory")) {
+            info.put("availableMemory", "");
+        }
+        info.put("processor", "Remote Server");
+        currentInfoMap.put(serverIp, info);
+    }
+
+    private RateSnapshot resolveRateSnapshot(String serverIp,
+                                             MonitorSettings settings,
+                                             long[] netCounters,
+                                             long[] diskCounters,
+                                             long collectedAtMs) {
+        RawCounterSnapshot previous = counterSnapshotMap.get(serverIp);
+
+        Double netRxRate = calculateRate(
+                settings.netRxEnabled(),
+                previous == null ? null : previous.netRxBytes(),
+                netCounters == null ? null : netCounters[0],
+                previous == null ? null : previous.collectedAtMs(),
+                collectedAtMs
+        );
+        Double netTxRate = calculateRate(
+                settings.netTxEnabled(),
+                previous == null ? null : previous.netTxBytes(),
+                netCounters == null ? null : netCounters[1],
+                previous == null ? null : previous.collectedAtMs(),
+                collectedAtMs
+        );
+        Double diskReadRate = calculateRate(
+                settings.diskReadEnabled(),
+                previous == null ? null : previous.diskReadBytes(),
+                diskCounters == null ? null : diskCounters[0],
+                previous == null ? null : previous.collectedAtMs(),
+                collectedAtMs
+        );
+        Double diskWriteRate = calculateRate(
+                settings.diskWriteEnabled(),
+                previous == null ? null : previous.diskWriteBytes(),
+                diskCounters == null ? null : diskCounters[1],
+                previous == null ? null : previous.collectedAtMs(),
+                collectedAtMs
+        );
+
+        counterSnapshotMap.put(
+                serverIp,
+                new RawCounterSnapshot(
+                        collectedAtMs,
+                        settings.hasAnyNetworkMetricEnabled() && netCounters != null ? netCounters[0] : null,
+                        settings.hasAnyNetworkMetricEnabled() && netCounters != null ? netCounters[1] : null,
+                        settings.hasAnyDiskMetricEnabled() && diskCounters != null ? diskCounters[0] : null,
+                        settings.hasAnyDiskMetricEnabled() && diskCounters != null ? diskCounters[1] : null
+                )
+        );
+
+        return new RateSnapshot(netRxRate, netTxRate, diskReadRate, diskWriteRate);
+    }
+
+    private Double calculateRate(boolean enabled, Long previousValue, Long currentValue, Long previousTimeMs, long currentTimeMs) {
+        if (!enabled) {
+            return null;
+        }
+        if (previousValue == null || currentValue == null || previousTimeMs == null) {
+            return 0.0;
+        }
+
+        long delta = currentValue - previousValue;
+        long elapsedMs = currentTimeMs - previousTimeMs;
+        if (delta < 0 || elapsedMs <= 0) {
+            return 0.0;
+        }
+
+        return delta * 1000.0 / elapsedMs;
     }
 
     private Session openSession(String host, String user, String password) throws Exception {
@@ -223,7 +374,7 @@ public class MonitorService {
     }
 
     private double parseMetricValue(String str, String metricName) {
-        String raw = str == null ? "" : str.trim();
+        String raw = safeTrim(str);
         if (isNetworkFailure(raw)) {
             throw new RuntimeException(MONITOR_FAILURE_SUMMARY);
         }
@@ -239,6 +390,27 @@ public class MonitorService {
         }
     }
 
+    private long[] parseCounterPair(String str, String metricName) {
+        String raw = safeTrim(str);
+        if (isNetworkFailure(raw)) {
+            throw new RuntimeException(MONITOR_FAILURE_SUMMARY);
+        }
+
+        Matcher matcher = NUMERIC_PATTERN.matcher(raw.replace(",", "."));
+        List<Long> values = new ArrayList<>(2);
+        while (matcher.find()) {
+            values.add((long) Double.parseDouble(matcher.group()));
+            if (values.size() >= 2) {
+                break;
+            }
+        }
+
+        if (values.size() < 2) {
+            throw new RuntimeException(metricName + "速率采集失败");
+        }
+        return new long[]{values.get(0), values.get(1)};
+    }
+
     private boolean isNetworkFailure(String raw) {
         if (raw == null || raw.isBlank()) {
             return false;
@@ -252,6 +424,38 @@ public class MonitorService {
                 || raw.contains("Auth fail")
                 || raw.contains("timeout")
                 || raw.contains("refused");
+    }
+
+    private MonitorSettings parseMonitorSettings(String configValue) {
+        if (!StringUtils.hasText(configValue)) {
+            return MonitorSettings.defaultEnabled();
+        }
+
+        try {
+            Map<?, ?> raw = objectMapper.readValue(configValue, Map.class);
+            return new MonitorSettings(
+                    readSetting(raw, "cpuEnabled", true),
+                    readSetting(raw, "memEnabled", true),
+                    readSetting(raw, "netRxEnabled", true),
+                    readSetting(raw, "netTxEnabled", true),
+                    readSetting(raw, "diskReadEnabled", true),
+                    readSetting(raw, "diskWriteEnabled", true)
+            );
+        } catch (Exception ignored) {
+            return MonitorSettings.defaultEnabled();
+        }
+    }
+
+    private boolean readSetting(Map<?, ?> raw, String key, boolean defaultValue) {
+        if (raw == null || !raw.containsKey(key)) {
+            return defaultValue;
+        }
+
+        Object value = raw.get(key);
+        if (value instanceof Boolean bool) {
+            return bool;
+        }
+        return Boolean.parseBoolean(String.valueOf(value));
     }
 
     private void createMonitorFailureInfo(String serverIp, String detailMessage) {
@@ -335,8 +539,9 @@ public class MonitorService {
         );
         Set<String> ownedIps = new LinkedHashSet<>();
         for (ComponentConfig cfg : ownedConfigs) {
-            if (cfg.getServerIp() != null && !cfg.getServerIp().isBlank()) {
-                ownedIps.add(cfg.getServerIp());
+            String serverIp = normalizeServerIp(cfg == null ? null : cfg.getServerIp());
+            if (StringUtils.hasText(serverIp)) {
+                ownedIps.add(serverIp);
             }
         }
         return new ArrayList<>(ownedIps);
@@ -394,22 +599,41 @@ public class MonitorService {
      * 采样成功会写入 historyMap / currentInfoMap，便于后续 getMetrics 直接拿到数据。
      */
     public Map<String, Object> sampleMetricsOnce(String serverIp, String username, String password) {
-        Map<String, Object> sample = new LinkedHashMap<>();
-        sample.put("serverIp", serverIp);
+        return sampleMetricsOnce(serverIp, username, password, null);
+    }
 
-        if (serverIp == null || serverIp.isBlank() || username == null || username.isBlank() || password == null || password.isBlank()) {
+    public Map<String, Object> sampleMetricsOnce(String serverIp, String username, String password, String configValue) {
+        Map<String, Object> sample = new LinkedHashMap<>();
+        String normalizedServerIp = normalizeServerIp(serverIp);
+        sample.put("serverIp", normalizedServerIp);
+
+        if (!StringUtils.hasText(normalizedServerIp)
+                || !StringUtils.hasText(username)
+                || !StringUtils.hasText(password)) {
             sample.put("success", false);
             sample.put("error", "serverIp/username/password 不能为空");
             return sample;
         }
 
+        MonitorSettings settings = parseMonitorSettings(configValue);
+        if (!settings.hasAnyMetricEnabled()) {
+            counterSnapshotMap.remove(normalizedServerIp);
+            cacheDisabledSnapshot(normalizedServerIp, settings);
+            sample.put("success", true);
+            sample.put("message", "当前未启用任何系统指标采集项");
+            sample.put("current", currentInfoMap.get(normalizedServerIp));
+            sample.put("monitorSettings", settings.toMap());
+            return sample;
+        }
+
         try {
-            MetricSnapshot snapshot = collectMetricSnapshot(serverIp, username, password);
-            MetricDTO metric = cacheMetricSnapshot(serverIp, snapshot);
+            MetricSnapshot snapshot = collectMetricSnapshot(normalizedServerIp, username, password, settings);
+            MetricDTO metric = cacheMetricSnapshot(normalizedServerIp, snapshot);
 
             sample.put("success", true);
             sample.put("metric", metric);
-            sample.put("current", currentInfoMap.get(serverIp));
+            sample.put("current", currentInfoMap.get(normalizedServerIp));
+            sample.put("monitorSettings", settings.toMap());
             return sample;
         } catch (Exception e) {
             sample.put("success", false);
@@ -419,11 +643,13 @@ public class MonitorService {
     }
 
     public void clearServerCache(String serverIp) {
-        if (serverIp == null || serverIp.isBlank()) {
+        String normalizedServerIp = normalizeServerIp(serverIp);
+        if (!StringUtils.hasText(normalizedServerIp)) {
             return;
         }
-        historyMap.remove(serverIp.trim());
-        currentInfoMap.remove(serverIp.trim());
+        historyMap.remove(normalizedServerIp);
+        currentInfoMap.remove(normalizedServerIp);
+        counterSnapshotMap.remove(normalizedServerIp);
     }
 
     private int calcPointsByRange(String timeRange, long intervalMs) {
@@ -453,34 +679,151 @@ public class MonitorService {
 
     private Map<String, Object> buildSummary(List<MetricDTO> metrics) {
         Map<String, Object> summary = new LinkedHashMap<>();
-        if (metrics == null || metrics.isEmpty()) {
-            summary.put("avgCpu", 0.0);
-            summary.put("maxCpu", 0.0);
-            summary.put("avgMem", 0.0);
-            summary.put("maxMem", 0.0);
-            return summary;
+        MetricAccumulator cpuStats = new MetricAccumulator();
+        MetricAccumulator memStats = new MetricAccumulator();
+        MetricAccumulator netRxStats = new MetricAccumulator();
+        MetricAccumulator netTxStats = new MetricAccumulator();
+        MetricAccumulator diskReadStats = new MetricAccumulator();
+        MetricAccumulator diskWriteStats = new MetricAccumulator();
+
+        if (metrics != null) {
+            for (MetricDTO metric : metrics) {
+                cpuStats.accept(metric.getCpuUsage());
+                memStats.accept(metric.getMemUsage());
+                netRxStats.accept(metric.getNetRxBytesPerSec());
+                netTxStats.accept(metric.getNetTxBytesPerSec());
+                diskReadStats.accept(metric.getDiskReadBytesPerSec());
+                diskWriteStats.accept(metric.getDiskWriteBytesPerSec());
+            }
         }
 
-        double sumCpu = 0.0;
-        double sumMem = 0.0;
-        double maxCpu = 0.0;
-        double maxMem = 0.0;
-        for (MetricDTO m : metrics) {
-            double cpu = m.getCpuUsage() == null ? 0.0 : m.getCpuUsage();
-            double mem = m.getMemUsage() == null ? 0.0 : m.getMemUsage();
-            sumCpu += cpu;
-            sumMem += mem;
-            maxCpu = Math.max(maxCpu, cpu);
-            maxMem = Math.max(maxMem, mem);
-        }
-        summary.put("avgCpu", Math.round((sumCpu / metrics.size()) * 10.0) / 10.0);
-        summary.put("maxCpu", Math.round(maxCpu * 10.0) / 10.0);
-        summary.put("avgMem", Math.round((sumMem / metrics.size()) * 10.0) / 10.0);
-        summary.put("maxMem", Math.round(maxMem * 10.0) / 10.0);
+        summary.put("avgCpu", cpuStats.average());
+        summary.put("maxCpu", cpuStats.max());
+        summary.put("avgMem", memStats.average());
+        summary.put("maxMem", memStats.max());
+        summary.put("avgNetRxBytesPerSec", netRxStats.average());
+        summary.put("maxNetRxBytesPerSec", netRxStats.max());
+        summary.put("avgNetTxBytesPerSec", netTxStats.average());
+        summary.put("maxNetTxBytesPerSec", netTxStats.max());
+        summary.put("avgDiskReadBytesPerSec", diskReadStats.average());
+        summary.put("maxDiskReadBytesPerSec", diskReadStats.max());
+        summary.put("avgDiskWriteBytesPerSec", diskWriteStats.average());
+        summary.put("maxDiskWriteBytesPerSec", diskWriteStats.max());
         return summary;
     }
 
-    private record MetricSnapshot(double cpuUsage, double memUsage, String upTime, String os, String totalMem) {}
+    private Double roundNullable(Double value) {
+        if (value == null || !Double.isFinite(value)) {
+            return null;
+        }
+        return Math.round(value * 10.0) / 10.0;
+    }
 
-    private record HostAndPort(String host, int port) {}
+    private String safeTrim(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private String normalizeServerIp(String serverIp) {
+        return StringUtils.hasText(serverIp) ? serverIp.trim() : null;
+    }
+
+    private record MetricSnapshot(
+            Double cpuUsage,
+            Double memUsage,
+            Double netRxBytesPerSec,
+            Double netTxBytesPerSec,
+            Double diskReadBytesPerSec,
+            Double diskWriteBytesPerSec,
+            String upTime,
+            String os,
+            String totalMem,
+            String availableMem,
+            MonitorSettings settings
+    ) {
+    }
+
+    private record RateSnapshot(
+            Double netRxBytesPerSec,
+            Double netTxBytesPerSec,
+            Double diskReadBytesPerSec,
+            Double diskWriteBytesPerSec
+    ) {
+    }
+
+    private record RawCounterSnapshot(
+            long collectedAtMs,
+            Long netRxBytes,
+            Long netTxBytes,
+            Long diskReadBytes,
+            Long diskWriteBytes
+    ) {
+    }
+
+    private record MonitorSettings(
+            boolean cpuEnabled,
+            boolean memEnabled,
+            boolean netRxEnabled,
+            boolean netTxEnabled,
+            boolean diskReadEnabled,
+            boolean diskWriteEnabled
+    ) {
+        private static MonitorSettings defaultEnabled() {
+            return new MonitorSettings(true, true, true, true, true, true);
+        }
+
+        private boolean hasAnyMetricEnabled() {
+            return cpuEnabled || memEnabled || netRxEnabled || netTxEnabled || diskReadEnabled || diskWriteEnabled;
+        }
+
+        private boolean hasAnyNetworkMetricEnabled() {
+            return netRxEnabled || netTxEnabled;
+        }
+
+        private boolean hasAnyDiskMetricEnabled() {
+            return diskReadEnabled || diskWriteEnabled;
+        }
+
+        private Map<String, Object> toMap() {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("cpuEnabled", cpuEnabled);
+            map.put("memEnabled", memEnabled);
+            map.put("netRxEnabled", netRxEnabled);
+            map.put("netTxEnabled", netTxEnabled);
+            map.put("diskReadEnabled", diskReadEnabled);
+            map.put("diskWriteEnabled", diskWriteEnabled);
+            return map;
+        }
+    }
+
+    private static final class MetricAccumulator {
+        private double sum;
+        private double max;
+        private int count;
+
+        private void accept(Double value) {
+            if (value == null || !Double.isFinite(value)) {
+                return;
+            }
+            sum += value;
+            max = Math.max(max, value);
+            count++;
+        }
+
+        private double average() {
+            if (count <= 0) {
+                return 0.0;
+            }
+            return Math.round((sum / count) * 10.0) / 10.0;
+        }
+
+        private double max() {
+            if (count <= 0) {
+                return 0.0;
+            }
+            return Math.round(max * 10.0) / 10.0;
+        }
+    }
+
+    private record HostAndPort(String host, int port) {
+    }
 }

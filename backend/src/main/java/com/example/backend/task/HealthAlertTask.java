@@ -174,7 +174,8 @@ public class HealthAlertTask {
         Map<String, Object> sample = monitorService.sampleMetricsOnce(
                 alert.getServerIp(),
                 config.getUsername(),
-                config.getPassword()
+                config.getPassword(),
+                config.getConfigValue()
         );
 
         if (Boolean.TRUE.equals(sample.get("success"))) {

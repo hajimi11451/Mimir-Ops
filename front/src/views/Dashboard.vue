@@ -21,7 +21,7 @@
               <div class="glass-card p-5">
                 <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">健康</div>
                 <div class="mt-3 text-3xl font-bold text-ui-text">{{ dashboardStats.success }}</div>
-                <p class="mt-2 text-sm text-ui-subtext">CPU / 内存稳定</p>
+                <p class="mt-2 text-sm text-ui-subtext">核心资源稳定</p>
               </div>
 
               <div class="glass-card p-5">
@@ -100,7 +100,7 @@
                         </div>
                         <h4 class="mt-6 text-2xl font-bold text-ui-text">新增服务器</h4>
                         <p class="mt-3 max-w-[260px] text-sm leading-6 text-ui-subtext">
-                          仅采集服务器级 CPU / 内存指标。
+                          可按需采集 CPU、内存、网卡收发与磁盘读写速率。
                         </p>
                         <div class="mt-6 inline-flex items-center rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm">
                           添加
@@ -123,13 +123,13 @@
                           </span>
                         </div>
 
-                        <div class="server-health-stage my-2">
+                        <div class="server-health-stage my-1.5">
                           <span class="server-health-shadow" aria-hidden="true"></span>
                           <span class="server-health-aura" aria-hidden="true"></span>
                           <span class="server-health-plate" aria-hidden="true"></span>
                           <span class="server-health-reflection" aria-hidden="true"></span>
 
-                          <svg class="server-health-ring h-[148px] w-[148px] -rotate-90" viewBox="0 0 160 160" aria-hidden="true">
+                          <svg class="server-health-ring h-[132px] w-[132px] -rotate-90" viewBox="0 0 160 160" aria-hidden="true">
                             <defs>
                               <linearGradient :id="`server-card-gradient-${index}`" x1="0%" y1="0%" x2="100%" y2="0%">
                                 <stop offset="0%" :stop-color="item.tone.gradientStart" />
@@ -159,23 +159,25 @@
                           </svg>
 
                           <div class="server-health-value">
-                            <div class="server-health-score text-[28px] font-bold" :class="item.tone.text">{{ item.health.score }}%</div>
-                            <div class="server-health-caption mt-1.5 text-[12px] font-medium" :class="item.tone.softText">系统健康度</div>
+                            <div class="server-health-score text-[24px] font-bold" :class="item.tone.text">{{ item.health.score }}%</div>
+                            <div class="server-health-caption mt-1 text-[11px] font-medium" :class="item.tone.softText">系统健康度</div>
                           </div>
                         </div>
 
-                        <div class="server-metric-grid grid grid-cols-2 gap-2.5">
-                          <div class="server-metric-card glass-soft px-3 py-2">
-                            <div class="text-xs uppercase tracking-[0.18em] text-ui-subtext">CPU</div>
-                            <div class="server-metric-value mt-1.5 text-lg font-semibold text-ui-text">{{ item.health.cpuUsage }}%</div>
-                          </div>
-                          <div class="server-metric-card glass-soft px-3 py-2">
-                            <div class="text-xs uppercase tracking-[0.18em] text-ui-subtext">MEM</div>
-                            <div class="server-metric-value mt-1.5 text-lg font-semibold text-ui-text">{{ item.health.memUsage }}%</div>
+                        <div class="server-metric-grid grid grid-cols-3 gap-2">
+                          <div
+                            v-for="metric in item.metrics"
+                            :key="metric.key"
+                            class="server-metric-card glass-soft px-2.5 py-2"
+                          >
+                            <div class="text-[10px] uppercase tracking-[0.16em] text-ui-subtext">{{ metric.label }}</div>
+                            <div class="server-metric-value mt-1 text-[13px] font-semibold leading-tight" :class="metric.valueClass">
+                              {{ metric.value }}
+                            </div>
                           </div>
                         </div>
 
-                        <div class="mt-2 flex items-center justify-between text-sm">
+                        <div class="mt-1.5 flex items-center justify-between text-sm">
                           <span class="text-ui-subtext">进入详情</span>
                           <span class="font-semibold text-brand">查看</span>
                         </div>
@@ -255,7 +257,7 @@
       destroy-on-close
     >
       <div class="glass-subcard px-4 py-3 text-sm text-brand">
-        保存后开始采集 CPU / 内存。
+        保存后按勾选项开始采集，默认六项全部开启。
       </div>
 
       <el-form class="mt-5" label-position="top">
@@ -272,6 +274,17 @@
             <el-input v-model="addMonitorForm.password" type="password" placeholder="请输入 SSH 密码" show-password />
           </el-form-item>
         </div>
+
+        <el-form-item label="采集项">
+          <div class="glass-subcard grid w-full gap-3 px-4 py-4 sm:grid-cols-2">
+            <el-checkbox v-model="addMonitorForm.cpuEnabled">CPU 使用率</el-checkbox>
+            <el-checkbox v-model="addMonitorForm.memEnabled">内存使用率</el-checkbox>
+            <el-checkbox v-model="addMonitorForm.netRxEnabled">网卡接收速率</el-checkbox>
+            <el-checkbox v-model="addMonitorForm.netTxEnabled">网卡发送速率</el-checkbox>
+            <el-checkbox v-model="addMonitorForm.diskReadEnabled">磁盘读取速率</el-checkbox>
+            <el-checkbox v-model="addMonitorForm.diskWriteEnabled">磁盘写入速率</el-checkbox>
+          </div>
+        </el-form-item>
       </el-form>
 
       <template #footer>
@@ -296,6 +309,7 @@ import DashboardOverviewDetail from '../components/DashboardOverviewDetail.vue'
 import {
   formatDate,
   getDateTimestamp,
+  normalizeMonitorSettings,
   normalizeRiskLevel,
   resolveSystemHealth,
 } from '../utils/dashboardHealth'
@@ -328,10 +342,21 @@ const lastUpdatedAt = ref('')
 const addMonitorDialogVisible = ref(false)
 const addMonitorLoading = ref(false)
 const stoppingMonitor = ref(false)
+
+const defaultMonitorSettings = () => ({
+  cpuEnabled: true,
+  memEnabled: true,
+  netRxEnabled: true,
+  netTxEnabled: true,
+  diskReadEnabled: true,
+  diskWriteEnabled: true,
+})
+
 const addMonitorForm = reactive({
   serverIp: '',
   username: '',
   password: '',
+  ...defaultMonitorSettings(),
 })
 
 let refreshTimer = null
@@ -407,6 +432,59 @@ const buildUsageTone = usage => {
   return { text: 'text-ui-success' }
 }
 
+const formatCompactRate = value => {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed) || parsed < 0) return '--'
+  if (parsed >= 1024 ** 3) return `${(parsed / 1024 ** 3).toFixed(1)}G/s`
+  if (parsed >= 1024 ** 2) return `${(parsed / 1024 ** 2).toFixed(1)}M/s`
+  if (parsed >= 1024) return `${(parsed / 1024).toFixed(1)}K/s`
+  return `${parsed.toFixed(0)}B/s`
+}
+
+const buildServerMetricItems = (snapshot, health) => {
+  const current = snapshot?.current || {}
+  const settings = normalizeMonitorSettings(current.monitorSettings)
+
+  return [
+    {
+      key: 'cpu',
+      label: 'CPU',
+      value: settings.cpuEnabled ? `${health.cpuUsage}%` : 'OFF',
+      valueClass: settings.cpuEnabled ? buildUsageTone(health.cpuUsage).text : 'text-ui-subtext',
+    },
+    {
+      key: 'mem',
+      label: 'MEM',
+      value: settings.memEnabled ? `${health.memUsage}%` : 'OFF',
+      valueClass: settings.memEnabled ? buildUsageTone(health.memUsage).text : 'text-ui-subtext',
+    },
+    {
+      key: 'rx',
+      label: 'RX',
+      value: settings.netRxEnabled ? formatCompactRate(current.netRxBytesPerSec) : 'OFF',
+      valueClass: settings.netRxEnabled ? 'text-ui-text' : 'text-ui-subtext',
+    },
+    {
+      key: 'tx',
+      label: 'TX',
+      value: settings.netTxEnabled ? formatCompactRate(current.netTxBytesPerSec) : 'OFF',
+      valueClass: settings.netTxEnabled ? 'text-ui-text' : 'text-ui-subtext',
+    },
+    {
+      key: 'read',
+      label: 'READ',
+      value: settings.diskReadEnabled ? formatCompactRate(current.diskReadBytesPerSec) : 'OFF',
+      valueClass: settings.diskReadEnabled ? 'text-ui-text' : 'text-ui-subtext',
+    },
+    {
+      key: 'write',
+      label: 'WRITE',
+      value: settings.diskWriteEnabled ? formatCompactRate(current.diskWriteBytesPerSec) : 'OFF',
+      valueClass: settings.diskWriteEnabled ? 'text-ui-text' : 'text-ui-subtext',
+    },
+  ]
+}
+
 const getServerInfoList = serverIp => {
   if (!serverIp) return []
   return infoList.value.filter(item => item.serverIp === serverIp)
@@ -424,7 +502,7 @@ const buildPendingHealthState = infoItems => {
       description: `${baseState.description} 当前监控数据暂未刷新，资源占用按 0% 暂存显示。`,
       reasons: [
         ...baseState.reasons,
-        '当前服务器尚未拿到最新 CPU / 内存采样数据，将在下一次采样后刷新。',
+        '当前服务器尚未拿到最新系统监控采样数据，将在下一次采样后刷新。',
       ],
     }
   }
@@ -434,8 +512,8 @@ const buildPendingHealthState = infoItems => {
     score: 0,
     label: '待采样',
     level: 'warning',
-    description: '暂未获取到 CPU 与内存监控数据，请稍候等待首次采样。',
-    reasons: ['当前服务器还没有最新监控数据，系统将继续采集 CPU 与内存状态。'],
+    description: '暂未获取到系统监控数据，请稍候等待首次采样。',
+    reasons: ['当前服务器还没有最新监控数据，系统将继续采集已启用的资源指标。'],
   }
 }
 
@@ -478,11 +556,10 @@ const serverCards = computed(() => serverList.value.map(serverIp => {
     serverIp,
     subtitle: snapshot.monitorEnabled === false
       ? '检测已暂停，保留状态盘展示'
-      : (snapshot.current?.os || '等待首次 CPU / 内存采样'),
+      : (snapshot.current?.os || '等待首次系统监控采样'),
     health,
     tone: getToneByLevel(health.level),
-    cpuTone: buildUsageTone(health.cpuUsage),
-    memTone: buildUsageTone(health.memUsage),
+    metrics: buildServerMetricItems(snapshot, health),
   }
 }))
 
@@ -770,9 +847,12 @@ const openServerDetail = async serverIp => {
 }
 
 const resetAddMonitorForm = () => {
-  addMonitorForm.serverIp = ''
-  addMonitorForm.username = ''
-  addMonitorForm.password = ''
+  Object.assign(addMonitorForm, {
+    serverIp: '',
+    username: '',
+    password: '',
+    ...defaultMonitorSettings(),
+  })
 }
 
 const openAddMonitorDialog = () => {
@@ -792,8 +872,18 @@ const submitAddServerMonitor = async () => {
   addMonitorLoading.value = true
 
   try {
-    await addServerMonitor({ serverIp, username, password })
-    ElMessage.success('服务器监控已添加，开始采集 CPU 与内存数据')
+    await addServerMonitor({
+      serverIp,
+      username,
+      password,
+      cpuEnabled: addMonitorForm.cpuEnabled,
+      memEnabled: addMonitorForm.memEnabled,
+      netRxEnabled: addMonitorForm.netRxEnabled,
+      netTxEnabled: addMonitorForm.netTxEnabled,
+      diskReadEnabled: addMonitorForm.diskReadEnabled,
+      diskWriteEnabled: addMonitorForm.diskWriteEnabled,
+    })
+    ElMessage.success('服务器监控已添加，开始按配置采集系统指标')
     addMonitorDialogVisible.value = false
     resetAddMonitorForm()
 

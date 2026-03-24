@@ -1,56 +1,60 @@
 <template>
-  <div class="h-full min-h-0 flex flex-col overflow-hidden">
+  <div class="flex h-full min-h-0 flex-col overflow-hidden">
     <div class="flex flex-1 min-h-0 flex-col gap-4 xl:flex-row">
       <el-card
         class="glass-card flex-1 min-h-0 rounded-[30px]"
-        :body-style="{ padding: '24px', height: '100%' }"
+        :body-style="{ padding: '20px', height: '100%' }"
       >
         <div class="flex h-full min-h-0 flex-col">
-          <div class="mb-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div class="mb-3 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div class="min-w-0">
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="glass-chip px-3 py-1 text-xs font-medium" :class="healthTone.chip">
-                  健康度 {{ healthState.score }}%
-                </span>
-                <span class="glass-chip px-3 py-1 text-xs font-medium border-white/24 bg-white/12 text-ui-text">
-                  告警 {{ healthState.activeAlertCount }}
-                </span>
-                <span class="glass-chip px-3 py-1 text-xs font-medium border-white/24 bg-white/12 text-ui-text">
-                  日志 {{ healthState.totalLogsCount }}
-                </span>
-                <span class="glass-chip px-3 py-1 text-xs font-medium border-white/24 bg-white/12 text-ui-text">
-                  服务器 {{ serverList.length }}
-                </span>
-              </div>
-
-              <h3 class="mt-4 text-lg font-bold text-ui-text">监控趋势</h3>
-              <p class="mt-1 text-sm" :class="healthTone.softText">
+              <h3 class="mt-0 text-lg font-bold text-ui-text">监控趋势</h3>
+              <p class="mt-0.5 text-sm" :class="healthTone.softText">
                 {{ healthState.description }}
               </p>
             </div>
 
-            <div class="flex flex-wrap gap-2 lg:max-w-[260px] lg:justify-end">
-              <span class="glass-chip px-2.5 py-1 text-xs font-medium" :class="getUsageBadgeClass(currentInfo.cpuUsage)">
-                CPU: {{ toUsageValue(currentInfo.cpuUsage) }}%
-              </span>
-              <span class="glass-chip px-2.5 py-1 text-xs font-medium" :class="getUsageBadgeClass(currentInfo.memUsage)">
-                Mem: {{ toUsageValue(currentInfo.memUsage) }}%
-              </span>
+            <div class="flex flex-wrap gap-1.5 lg:max-w-[420px] lg:justify-end">
+             <span class="glass-chip px-2.5 py-0.5 text-xs font-medium" :class="healthTone.chip">
+                  健康度 {{ healthState.score }}%
+                </span>
             </div>
           </div>
 
-          <div class="glass-subcard mb-4 grid grid-cols-1 gap-4 p-4 text-sm text-ui-subtext md:grid-cols-2">
-            <div><span class="font-bold">OS:</span> {{ currentInfo.os || 'N/A' }}</div>
-            <div><span class="font-bold">运行:</span> {{ currentInfo.upTime || 'N/A' }}</div>
-            <div><span class="font-bold">CPU:</span> {{ currentInfo.processor || 'N/A' }}</div>
-            <div><span class="font-bold">内存:</span> {{ currentInfo.availableMemory || 'N/A' }} / {{ currentInfo.totalMemory || 'N/A' }}</div>
+          <div class="glass-subcard mb-3 flex flex-col gap-3 p-3 text-sm text-ui-subtext">
+            <!-- <div class="flex flex-wrap gap-1.5">
+              <span
+                v-for="item in enabledMetricLabels"
+                :key="item"
+                class="glass-chip border-white/24 bg-white/12 px-2 py-0.5 text-xs font-medium text-ui-text"
+              >
+                {{ item }}
+              </span>
+              <span
+                v-if="!enabledMetricLabels.length"
+                class="glass-chip border-amber-200/30 bg-amber-400/10 px-2 py-0.5 text-xs font-medium text-ui-warning"
+              >
+                当前未启用任何系统指标采集
+              </span>
+            </div> -->
+
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div><span class="font-bold">OS:</span> {{ currentInfo.os || 'N/A' }}</div>
+              <div><span class="font-bold">运行:</span> {{ currentInfo.upTime || 'N/A' }}</div>
+              <div><span class="font-bold">节点:</span> {{ currentInfo.processor || 'N/A' }}</div>
+              <div><span class="font-bold">内存:</span> {{ currentInfo.availableMemory || 'N/A' }} / {{ currentInfo.totalMemory || 'N/A' }}</div>
+              <div><span class="font-bold">网卡接收(RX):</span> {{ formatRate(currentInfo.netRxBytesPerSec) }}</div>
+              <div><span class="font-bold">网卡发送(TX):</span> {{ formatRate(currentInfo.netTxBytesPerSec) }}</div>
+              <div><span class="font-bold">磁盘读取:</span> {{ formatRate(currentInfo.diskReadBytesPerSec) }}</div>
+              <div><span class="font-bold">磁盘写入:</span> {{ formatRate(currentInfo.diskWriteBytesPerSec) }}</div>
+            </div>
           </div>
 
-          <div class="glass-subcard flex-1 min-h-0 overflow-hidden p-3 lg:p-4">
-            <div class="relative h-full min-h-[320px] w-full">
+          <div class="glass-subcard flex-1 min-h-0 overflow-hidden p-2.5 lg:p-3">
+            <div class="relative h-full min-h-[280px] w-full lg:min-h-[300px]">
               <canvas v-if="hasChartData" ref="monitorChartRef" class="h-full w-full"></canvas>
               <div v-else class="flex h-full items-center justify-center text-sm text-ui-subtext">
-                {{ loadingMonitor ? '加载监控数据...' : '暂无监控数据' }}
+                {{ loadingMonitor ? '加载监控数据...' : emptyChartLabel }}
               </div>
             </div>
           </div>
@@ -73,7 +77,7 @@
           </div>
 
           <div class="glass-subcard flex-1 min-h-0 overflow-hidden p-3">
-            <div class="h-full min-h-0 space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+            <div class="custom-scrollbar h-full min-h-0 space-y-2 overflow-y-auto pr-1">
               <div v-if="loadingInfo" class="flex h-full items-center justify-center text-ui-subtext">加载中</div>
 
               <div v-else-if="infoList.length === 0" class="flex h-full items-center justify-center text-ui-subtext">暂无记录</div>
@@ -115,7 +119,12 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import Chart from 'chart.js/auto'
-import { formatDate, getAlertClass, normalizeRiskLevel } from '../utils/dashboardHealth'
+import {
+  formatDate,
+  getAlertClass,
+  normalizeMonitorSettings,
+  normalizeRiskLevel,
+} from '../utils/dashboardHealth'
 
 const props = defineProps({
   healthState: {
@@ -165,6 +174,8 @@ const props = defineProps({
 const monitorChartRef = ref(null)
 let monitorChartInstance = null
 
+const monitorSettings = computed(() => normalizeMonitorSettings(props.currentInfo?.monitorSettings))
+
 const healthTone = computed(() => {
   const toneMap = {
     success: {
@@ -184,20 +195,178 @@ const healthTone = computed(() => {
   return toneMap[props.healthState.level] || toneMap.success
 })
 
-const hasChartData = computed(() => props.historyData.length > 0)
+const enabledMetricLabels = computed(() => {
+  const items = []
+  if (monitorSettings.value.cpuEnabled) items.push('CPU 使用率')
+  if (monitorSettings.value.memEnabled) items.push('内存使用率')
+  if (monitorSettings.value.netRxEnabled) items.push('网卡接收速率')
+  if (monitorSettings.value.netTxEnabled) items.push('网卡发送速率')
+  if (monitorSettings.value.diskReadEnabled) items.push('磁盘读取速率')
+  if (monitorSettings.value.diskWriteEnabled) items.push('磁盘写入速率')
+  return items
+})
 
-const toUsageValue = value => {
+const formatUsageValue = value => {
   const parsed = Number(value)
-  return Number.isFinite(parsed) ? Number(parsed.toFixed(1)) : 0
+  return Number.isFinite(parsed) ? `${Number(parsed.toFixed(1))}%` : '--'
 }
 
-const getUsageBadgeClass = value => {
-  if (Number.isFinite(toUsageValue(value))) {
-    return 'border-white/24 bg-white/12 text-ui-text'
-  }
+const formatRate = value => {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed) || parsed < 0) return '--'
 
+  if (parsed >= 1024 ** 3) return `${(parsed / 1024 ** 3).toFixed(1)} GB/s`
+  if (parsed >= 1024 ** 2) return `${(parsed / 1024 ** 2).toFixed(1)} MB/s`
+  if (parsed >= 1024) return `${(parsed / 1024).toFixed(1)} KB/s`
+  return `${parsed.toFixed(1)} B/s`
+}
+
+const getMetricBadgeClass = value => {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) {
+    return 'border-white/24 bg-white/12 text-ui-subtext'
+  }
   return 'border-white/24 bg-white/12 text-ui-text'
 }
+
+const monitorMetricBadges = computed(() => {
+  const badges = []
+
+  if (monitorSettings.value.cpuEnabled) {
+    badges.push({
+      key: 'cpuUsage',
+      label: 'CPU',
+      value: formatUsageValue(props.currentInfo?.cpuUsage),
+      badgeClass: getMetricBadgeClass(props.currentInfo?.cpuUsage),
+    })
+  }
+  if (monitorSettings.value.memEnabled) {
+    badges.push({
+      key: 'memUsage',
+      label: 'Mem',
+      value: formatUsageValue(props.currentInfo?.memUsage),
+      badgeClass: getMetricBadgeClass(props.currentInfo?.memUsage),
+    })
+  }
+  if (monitorSettings.value.netRxEnabled) {
+    badges.push({
+      key: 'netRxBytesPerSec',
+      label: 'RX',
+      value: formatRate(props.currentInfo?.netRxBytesPerSec),
+      badgeClass: getMetricBadgeClass(props.currentInfo?.netRxBytesPerSec),
+    })
+  }
+  if (monitorSettings.value.netTxEnabled) {
+    badges.push({
+      key: 'netTxBytesPerSec',
+      label: 'TX',
+      value: formatRate(props.currentInfo?.netTxBytesPerSec),
+      badgeClass: getMetricBadgeClass(props.currentInfo?.netTxBytesPerSec),
+    })
+  }
+  if (monitorSettings.value.diskReadEnabled) {
+    badges.push({
+      key: 'diskReadBytesPerSec',
+      label: 'Disk Read',
+      value: formatRate(props.currentInfo?.diskReadBytesPerSec),
+      badgeClass: getMetricBadgeClass(props.currentInfo?.diskReadBytesPerSec),
+    })
+  }
+  if (monitorSettings.value.diskWriteEnabled) {
+    badges.push({
+      key: 'diskWriteBytesPerSec',
+      label: 'Disk Write',
+      value: formatRate(props.currentInfo?.diskWriteBytesPerSec),
+      badgeClass: getMetricBadgeClass(props.currentInfo?.diskWriteBytesPerSec),
+    })
+  }
+
+  return badges
+})
+
+const datasetBlueprints = computed(() => {
+  const blueprints = []
+
+  if (monitorSettings.value.cpuEnabled) {
+    blueprints.push({
+      key: 'cpuUsage',
+      label: 'CPU使用率 (%)',
+      borderColor: '#3182ce',
+      backgroundColor: 'rgba(49, 130, 206, 0.12)',
+      yAxisID: 'usage',
+      formatter: 'usage',
+    })
+  }
+  if (monitorSettings.value.memEnabled) {
+    blueprints.push({
+      key: 'memUsage',
+      label: '内存使用率 (%)',
+      borderColor: '#38a169',
+      backgroundColor: 'rgba(56, 161, 105, 0.12)',
+      yAxisID: 'usage',
+      formatter: 'usage',
+    })
+  }
+  if (monitorSettings.value.netRxEnabled) {
+    blueprints.push({
+      key: 'netRxBytesPerSec',
+      label: '网卡接收速率',
+      borderColor: '#7c3aed',
+      backgroundColor: 'rgba(124, 58, 237, 0.08)',
+      yAxisID: 'rate',
+      formatter: 'rate',
+    })
+  }
+  if (monitorSettings.value.netTxEnabled) {
+    blueprints.push({
+      key: 'netTxBytesPerSec',
+      label: '网卡发送速率',
+      borderColor: '#d97706',
+      backgroundColor: 'rgba(217, 119, 6, 0.08)',
+      yAxisID: 'rate',
+      formatter: 'rate',
+    })
+  }
+  if (monitorSettings.value.diskReadEnabled) {
+    blueprints.push({
+      key: 'diskReadBytesPerSec',
+      label: '磁盘读取速率',
+      borderColor: '#0f766e',
+      backgroundColor: 'rgba(15, 118, 110, 0.08)',
+      yAxisID: 'rate',
+      formatter: 'rate',
+    })
+  }
+  if (monitorSettings.value.diskWriteEnabled) {
+    blueprints.push({
+      key: 'diskWriteBytesPerSec',
+      label: '磁盘写入速率',
+      borderColor: '#dc2626',
+      backgroundColor: 'rgba(220, 38, 38, 0.08)',
+      yAxisID: 'rate',
+      formatter: 'rate',
+    })
+  }
+
+  return blueprints
+})
+
+const chartDatasets = computed(() => datasetBlueprints.value
+  .map(blueprint => ({
+    ...blueprint,
+    data: props.historyData.map(item => {
+      const parsed = Number(item?.[blueprint.key])
+      return Number.isFinite(parsed) ? Number(parsed.toFixed(1)) : null
+    }),
+  }))
+  .filter(dataset => dataset.data.some(value => value !== null)))
+
+const hasChartData = computed(() => props.historyData.length > 0 && chartDatasets.value.length > 0)
+
+const emptyChartLabel = computed(() => {
+  if (!enabledMetricLabels.value.length) return '当前未启用任何可绘制的监控项'
+  return '暂无监控数据'
+})
 
 const getCompactAlertTitle = info => {
   const component = String(info?.component || '未命名组件').trim()
@@ -236,50 +405,38 @@ const destroyChart = () => {
   }
 }
 
-const renderMonitorChart = async () => {
-  await nextTick()
+const resolveXAxisLabelStep = labels => {
+  const total = Array.isArray(labels) ? labels.length : 0
+  if (total <= 8) return 1
+  if (total <= 16) return 2
+  if (total <= 24) return 3
+  return Math.ceil(total / 8)
+}
 
-  if (!monitorChartRef.value || !props.historyData.length) {
-    destroyChart()
-    return
-  }
+const buildMonitorChartConfig = labels => {
+  const hasUsageAxis = chartDatasets.value.some(dataset => dataset.yAxisID === 'usage')
+  const hasRateAxis = chartDatasets.value.some(dataset => dataset.yAxisID === 'rate')
+  const xAxisLabelStep = resolveXAxisLabelStep(labels)
+  const denseData = labels.length > 18
 
-  const labels = props.historyData.map(item => item.time)
-  const cpuData = props.historyData.map(item => item.cpuUsage)
-  const memData = props.historyData.map(item => item.memUsage)
-
-  if (monitorChartInstance) {
-    monitorChartInstance.data.labels = labels
-    monitorChartInstance.data.datasets[0].data = cpuData
-    monitorChartInstance.data.datasets[1].data = memData
-    monitorChartInstance.update()
-    return
-  }
-
-  monitorChartInstance = new Chart(monitorChartRef.value, {
+  return {
     type: 'line',
     data: {
       labels,
-      datasets: [
-        {
-          label: 'CPU使用率 (%)',
-          data: cpuData,
-          borderColor: '#3182ce',
-          backgroundColor: 'rgba(49, 130, 206, 0.12)',
-          fill: true,
-          tension: 0.35,
-          yAxisID: 'y',
-        },
-        {
-          label: '内存使用率 (%)',
-          data: memData,
-          borderColor: '#38a169',
-          backgroundColor: 'rgba(56, 161, 105, 0.12)',
-          fill: true,
-          tension: 0.35,
-          yAxisID: 'y',
-        },
-      ],
+      datasets: chartDatasets.value.map(dataset => ({
+        label: dataset.label,
+        data: dataset.data,
+        borderColor: dataset.borderColor,
+        backgroundColor: dataset.backgroundColor,
+        fill: false,
+        tension: 0.35,
+        borderWidth: 2,
+        pointRadius: denseData ? 0 : 1.5,
+        pointHoverRadius: 4,
+        pointHitRadius: 10,
+        yAxisID: dataset.yAxisID,
+        metricFormatter: dataset.formatter,
+      })),
     },
     options: {
       responsive: true,
@@ -304,20 +461,47 @@ const renderMonitorChart = async () => {
           padding: 12,
           callbacks: {
             label(context) {
-              return `${context.dataset.label}: ${context.parsed.y.toFixed(1)}%`
+              const formatter = context.dataset.metricFormatter
+              if (formatter === 'rate') {
+                return `${context.dataset.label}: ${formatRate(context.parsed.y)}`
+              }
+              return `${context.dataset.label}: ${Number(context.parsed.y || 0).toFixed(1)}%`
             },
           },
         },
       },
       scales: {
-        y: {
+        usage: {
+          display: hasUsageAxis,
           beginAtZero: true,
           max: 100,
           grid: { color: 'rgba(148, 163, 184, 0.16)' },
-          ticks: { color: '#5f6f87' },
+          ticks: {
+            color: '#5f6f87',
+            callback(value) {
+              return `${value}%`
+            },
+          },
           title: {
-            display: true,
+            display: hasUsageAxis,
             text: '使用率 (%)',
+            color: '#5f6f87',
+          },
+        },
+        rate: {
+          display: hasRateAxis,
+          position: 'right',
+          beginAtZero: true,
+          grid: { drawOnChartArea: false },
+          ticks: {
+            color: '#5f6f87',
+            callback(value) {
+              return formatRate(Number(value))
+            },
+          },
+          title: {
+            display: hasRateAxis,
+            text: '速率',
             color: '#5f6f87',
           },
         },
@@ -325,12 +509,42 @@ const renderMonitorChart = async () => {
           grid: { display: false },
           ticks: {
             color: '#5f6f87',
-            maxTicksLimit: 10,
+            autoSkip: false,
+            maxRotation: 0,
+            minRotation: 0,
+            padding: 6,
+            callback(value, index) {
+              if (index === 0 || index === labels.length - 1 || index % xAxisLabelStep === 0) {
+                return labels[index]
+              }
+              return ''
+            },
           },
         },
       },
     },
-  })
+  }
+}
+
+const renderMonitorChart = async () => {
+  await nextTick()
+
+  if (!monitorChartRef.value || !hasChartData.value) {
+    destroyChart()
+    return
+  }
+
+  const labels = props.historyData.map(item => item.time)
+  const config = buildMonitorChartConfig(labels)
+
+  if (monitorChartInstance) {
+    monitorChartInstance.data = config.data
+    monitorChartInstance.options = config.options
+    monitorChartInstance.update()
+    return
+  }
+
+  monitorChartInstance = new Chart(monitorChartRef.value, config)
 }
 
 const handleResize = () => {
@@ -340,6 +554,7 @@ const handleResize = () => {
 }
 
 watch(() => props.historyData, renderMonitorChart, { deep: true })
+watch(monitorSettings, renderMonitorChart, { deep: true })
 
 onMounted(() => {
   renderMonitorChart()

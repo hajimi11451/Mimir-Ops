@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -57,7 +58,7 @@ public class DiagnosisService {
 
     private static final String SYSTEM_MONITOR_CONFIG_KEY = "system_monitor";
 
-    private static final String SYSTEM_MONITOR_CONFIG_VALUE = "仅监控CPU和内存";
+    private static final String SYSTEM_MONITOR_CONFIG_VALUE = "默认采集全部系统指标";
 
     private static final int ENABLED = 1;
 
@@ -563,6 +564,26 @@ public class DiagnosisService {
         }
     }
 
+    private boolean resolveMetricEnabled(Boolean value) {
+        return value == null || Boolean.TRUE.equals(value);
+    }
+
+    private String buildSystemMonitorConfigValue(ComponentConfig config) {
+        Map<String, Object> settings = new LinkedHashMap<>();
+        settings.put("cpuEnabled", resolveMetricEnabled(config.getCpuEnabled()));
+        settings.put("memEnabled", resolveMetricEnabled(config.getMemEnabled()));
+        settings.put("netRxEnabled", resolveMetricEnabled(config.getNetRxEnabled()));
+        settings.put("netTxEnabled", resolveMetricEnabled(config.getNetTxEnabled()));
+        settings.put("diskReadEnabled", resolveMetricEnabled(config.getDiskReadEnabled()));
+        settings.put("diskWriteEnabled", resolveMetricEnabled(config.getDiskWriteEnabled()));
+
+        try {
+            return objectMapper.writeValueAsString(settings);
+        } catch (Exception ignored) {
+            return SYSTEM_MONITOR_CONFIG_VALUE;
+        }
+    }
+
     public Map<String, Object> addServerMonitor(ComponentConfig config) {
         Long resolvedUserId = resolveUserIdFromAppUsername(config.getAppUsername());
         if (resolvedUserId != null) {
@@ -584,7 +605,8 @@ public class DiagnosisService {
 
         config.setComponent(SYSTEM_MONITOR_COMPONENT);
         config.setConfigKey(SYSTEM_MONITOR_CONFIG_KEY);
-        config.setConfigValue(SYSTEM_MONITOR_CONFIG_VALUE);
+        String monitorConfigValue = buildSystemMonitorConfigValue(config);
+        config.setConfigValue(monitorConfigValue);
         config.setUseSudo(false);
 
         log.info("保存服务器监控配置：开始执行 SSH 连接验证 - {}@{}", username, serverIp);
@@ -608,7 +630,7 @@ public class DiagnosisService {
             existing.setPassword(password);
             existing.setUseSudo(false);
             existing.setComponent(SYSTEM_MONITOR_COMPONENT);
-            existing.setConfigValue(SYSTEM_MONITOR_CONFIG_VALUE);
+            existing.setConfigValue(monitorConfigValue);
             existing.setIsVerified(1);
             existing.setIsEnabled(ENABLED);
             existing.setUpdatedAt(java.time.LocalDateTime.now());
@@ -620,7 +642,7 @@ public class DiagnosisService {
             componentConfigMapper.insert(config);
         }
 
-        Map<String, Object> sampleResult = monitorService.sampleMetricsOnce(serverIp, username, password);
+        Map<String, Object> sampleResult = monitorService.sampleMetricsOnce(serverIp, username, password, monitorConfigValue);
 
         Map<String, Object> result = new HashMap<>();
         result.put("serverIp", serverIp);

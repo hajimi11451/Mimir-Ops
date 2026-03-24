@@ -24,7 +24,7 @@ public class MetricsTool implements AgentTool {
 
     @Override
     public String getDescription() {
-        return "获取指定服务器最近的 CPU 和内存监控数据。";
+        return "获取指定服务器最近的系统监控数据，包含 CPU、内存、网卡和磁盘速率。";
     }
 
     @Override

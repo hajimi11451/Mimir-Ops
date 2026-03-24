@@ -6,6 +6,15 @@ const parseUsage = value => {
   return clamp(Number(parsed.toFixed(1)), 0, 100)
 }
 
+export const normalizeMonitorSettings = settings => ({
+  cpuEnabled: settings?.cpuEnabled !== false,
+  memEnabled: settings?.memEnabled !== false,
+  netRxEnabled: settings?.netRxEnabled !== false,
+  netTxEnabled: settings?.netTxEnabled !== false,
+  diskReadEnabled: settings?.diskReadEnabled !== false,
+  diskWriteEnabled: settings?.diskWriteEnabled !== false,
+})
+
 const toDate = value => {
   if (!value) return null
 
@@ -75,8 +84,9 @@ const summarizeRiskLevels = (infoList = []) => infoList.reduce((summary, item) =
 })
 
 export const resolveSystemHealth = ({ currentInfo = {}, infoList = [] } = {}) => {
-  const cpuUsage = parseUsage(currentInfo?.cpuUsage)
-  const memUsage = parseUsage(currentInfo?.memUsage)
+  const monitorSettings = normalizeMonitorSettings(currentInfo?.monitorSettings)
+  const cpuUsage = monitorSettings.cpuEnabled ? parseUsage(currentInfo?.cpuUsage) : 0
+  const memUsage = monitorSettings.memEnabled ? parseUsage(currentInfo?.memUsage) : 0
   const riskSummary = summarizeRiskLevels(infoList)
 
   const highRiskCount = riskSummary.高
@@ -85,10 +95,10 @@ export const resolveSystemHealth = ({ currentInfo = {}, infoList = [] } = {}) =>
   const normalCount = riskSummary.无
   const activeAlertCount = highRiskCount + mediumRiskCount + lowRiskCount
 
-  const highCpu = cpuUsage >= 70
-  const highMem = memUsage >= 80
-  const veryHighCpu = cpuUsage >= 85
-  const veryHighMem = memUsage >= 85
+  const highCpu = monitorSettings.cpuEnabled && cpuUsage >= 70
+  const highMem = monitorSettings.memEnabled && memUsage >= 80
+  const veryHighCpu = monitorSettings.cpuEnabled && cpuUsage >= 85
+  const veryHighMem = monitorSettings.memEnabled && memUsage >= 85
   const hasHighRisk = highRiskCount > 0
   const hasNonCriticalAlerts = mediumRiskCount + lowRiskCount > 0
 
@@ -96,8 +106,12 @@ export const resolveSystemHealth = ({ currentInfo = {}, infoList = [] } = {}) =>
   score -= highRiskCount * 18
   score -= mediumRiskCount * 8
   score -= lowRiskCount * 4
-  score -= Math.max(cpuUsage - 30, 0) * 0.6
-  score -= Math.max(memUsage - 35, 0) * 0.5
+  if (monitorSettings.cpuEnabled) {
+    score -= Math.max(cpuUsage - 30, 0) * 0.6
+  }
+  if (monitorSettings.memEnabled) {
+    score -= Math.max(memUsage - 35, 0) * 0.5
+  }
 
   if (veryHighCpu) score -= 8
   if (veryHighMem) score -= 8
@@ -130,8 +144,11 @@ export const resolveSystemHealth = ({ currentInfo = {}, infoList = [] } = {}) =>
 
   if (hasHighRisk) reasons.push(`高风险告警 ${highRiskCount} 条，健康度直接进入红色区间`)
   if (hasNonCriticalAlerts) reasons.push(`需关注告警 ${mediumRiskCount + lowRiskCount} 条，健康度进入黄色区间`)
-  if (cpuUsage > 0) reasons.push(`CPU 当前占用 ${cpuUsage}%`)
-  if (memUsage > 0) reasons.push(`内存当前占用 ${memUsage}%`)
+  if (monitorSettings.cpuEnabled && cpuUsage > 0) reasons.push(`CPU 当前占用 ${cpuUsage}%`)
+  if (monitorSettings.memEnabled && memUsage > 0) reasons.push(`内存当前占用 ${memUsage}%`)
+  if (!monitorSettings.cpuEnabled && !monitorSettings.memEnabled) {
+    reasons.push('当前未启用 CPU / 内存采集，健康度按告警态势计算')
+  }
   if (!reasons.length) reasons.push('当前未发现异常信号，系统整体运行平稳')
 
   return {
@@ -149,5 +166,6 @@ export const resolveSystemHealth = ({ currentInfo = {}, infoList = [] } = {}) =>
     lowRiskCount,
     normalCount,
     totalLogsCount: infoList.length,
+    monitorSettings,
   }
 }

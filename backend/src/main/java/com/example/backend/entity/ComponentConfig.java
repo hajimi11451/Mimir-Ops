@@ -38,6 +38,24 @@ public class ComponentConfig {
      */
     @TableField(exist = false)
     private String appUsername;
+
+    @TableField(exist = false)
+    private Boolean cpuEnabled;
+
+    @TableField(exist = false)
+    private Boolean memEnabled;
+
+    @TableField(exist = false)
+    private Boolean netRxEnabled;
+
+    @TableField(exist = false)
+    private Boolean netTxEnabled;
+
+    @TableField(exist = false)
+    private Boolean diskReadEnabled;
+
+    @TableField(exist = false)
+    private Boolean diskWriteEnabled;
     
     private String component;
     
