@@ -5,6 +5,7 @@
       <div class="glow-1"></div>
       <div class="glow-2"></div>
       <div class="glow-3"></div>
+      <div class="glow-4"></div>
     </div>
 
     <AppShellHeader class="relative z-10" :username="username" @logout="handleLogout" />
@@ -176,8 +177,8 @@ onUnmounted(() => {
 }
 
 .glow-2 {
-  position: absolute; bottom: -15%; left: 5%; width: 55vw; height: 55vw;
-  background: radial-gradient(circle, rgba(79, 70, 229, 0.15) 0%, rgba(79, 70, 229, 0.05) 40%, transparent 70%);
+  position: absolute; bottom: -16%; left: -2%; width: 58vw; height: 58vw;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.16) 0%, rgba(96, 165, 250, 0.08) 36%, transparent 70%);
   border-radius: 50%; animation: float 25s ease-in-out infinite alternate-reverse;
 }
 
@@ -187,9 +188,22 @@ onUnmounted(() => {
   border-radius: 50%;
 }
 
+.glow-4 {
+  position: absolute; bottom: 2%; left: 16%; width: 28vw; height: 28vw;
+  background: radial-gradient(circle, rgba(125, 211, 252, 0.18) 0%, rgba(59, 130, 246, 0.09) 36%, transparent 72%);
+  border-radius: 50%;
+  filter: blur(10px);
+  animation: float-left 18s ease-in-out infinite alternate;
+}
+
 @keyframes float {
   0% { transform: translate(0, 0); }
   100% { transform: translate(3%, 5%); }
+}
+
+@keyframes float-left {
+  0% { transform: translate(0, 0) scale(0.98); }
+  100% { transform: translate(-2%, -4%) scale(1.03); }
 }
 
 /* ==============================================

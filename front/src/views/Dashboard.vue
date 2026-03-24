@@ -124,11 +124,7 @@
                         </div>
 
                         <div class="server-health-stage my-1.5 flex justify-center">
-                          <div class="liquid-sphere-wrapper" :style="{
-                            '--color-start': item.tone.gradientStart,
-                            '--color-end': item.tone.gradientEnd,
-                            '--fill-level': item.health.score + '%'
-                          }">
+                          <div class="liquid-sphere-wrapper" :style="getLiquidSphereStyle(item)">
                             <div class="liquid-sphere">
                               <div class="liquid-level">
                                 <div class="wave wave-back"></div>
@@ -378,6 +374,33 @@ const toneMap = {
   },
 }
 
+const liquidSphereToneMap = {
+  success: {
+    start: '#5af29f',
+    end: '#14c767',
+    shellTop: '#effff6',
+    shellMid: '#baf7d5',
+    shellBottom: '#76e9b5',
+    text: '#ffffff',
+  },
+  warning: {
+    start: '#ffd54f',
+    end: '#ff8a1f',
+    shellTop: '#fff6dc',
+    shellMid: '#ffe0a8',
+    shellBottom: '#ffbf74',
+    text: '#fffdf8',
+  },
+  error: {
+    start: '#ff8fab',
+    end: '#ff4b4b',
+    shellTop: '#ffe7ed',
+    shellMid: '#ffc0cd',
+    shellBottom: '#ff92a7',
+    text: '#fffafb',
+  },
+}
+
 const hexToRgba = (hex, alpha) => {
   const normalized = String(hex || '').trim().replace('#', '')
   const fullHex = normalized.length === 3
@@ -407,9 +430,49 @@ const getServerCardVisualStyle = item => ({
   '--server-ring-shadow-soft': hexToRgba(item?.tone?.gradientEnd, 0.18),
 })
 
+const getLiquidSphereStyle = item => {
+  const palette = liquidSphereToneMap[item?.health?.level] || liquidSphereToneMap.success
+  const score = Math.max(0, Math.min(Number(item?.health?.score) || 0, 100))
+
+  return {
+    '--color-start': palette.start,
+    '--color-end': palette.end,
+    '--fill-level': `${score}%`,
+    '--sphere-shell-top': hexToRgba(palette.shellTop, 0.56),
+    '--sphere-shell-mid': hexToRgba(palette.shellMid, 0.34),
+    '--sphere-shell-bottom': hexToRgba(palette.shellBottom, 0.22),
+    '--sphere-glow': hexToRgba(palette.end, 0.44),
+    '--sphere-glow-soft': hexToRgba(palette.start, 0.32),
+    '--sphere-ring': hexToRgba(palette.end, 0.54),
+    '--sphere-highlight': hexToRgba(palette.shellTop, 0.88),
+    '--sphere-liquid-shadow': hexToRgba(palette.end, 0.3),
+    '--sphere-text': palette.text,
+  }
+}
+
 const buildUsageTone = usage => {
   if (usage >= 85) return { text: 'text-ui-error' }
   if (usage >= 70) return { text: 'text-ui-warning' }
+  return { text: 'text-ui-success' }
+}
+
+// 通用服务器的经验阈值：绿色表示日常波动，橙色表示明显偏高，红色表示较少见的高占用。
+const metricRateThresholds = {
+  network: {
+    warning: 5 * 1024 ** 2,
+    error: 20 * 1024 ** 2,
+  },
+  disk: {
+    warning: 12 * 1024 ** 2,
+    error: 48 * 1024 ** 2,
+  },
+}
+
+const buildRateTone = (value, thresholds) => {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed) || parsed < 0) return { text: 'text-ui-subtext' }
+  if (parsed >= thresholds.error) return { text: 'text-ui-error' }
+  if (parsed >= thresholds.warning) return { text: 'text-ui-warning' }
   return { text: 'text-ui-success' }
 }
 
@@ -443,25 +506,33 @@ const buildServerMetricItems = (snapshot, health) => {
       key: 'rx',
       label: 'RX',
       value: settings.netRxEnabled ? formatCompactRate(current.netRxBytesPerSec) : 'OFF',
-      valueClass: settings.netRxEnabled ? 'text-ui-text' : 'text-ui-subtext',
+      valueClass: settings.netRxEnabled
+        ? buildRateTone(current.netRxBytesPerSec, metricRateThresholds.network).text
+        : 'text-ui-subtext',
     },
     {
       key: 'tx',
       label: 'TX',
       value: settings.netTxEnabled ? formatCompactRate(current.netTxBytesPerSec) : 'OFF',
-      valueClass: settings.netTxEnabled ? 'text-ui-text' : 'text-ui-subtext',
+      valueClass: settings.netTxEnabled
+        ? buildRateTone(current.netTxBytesPerSec, metricRateThresholds.network).text
+        : 'text-ui-subtext',
     },
     {
       key: 'read',
       label: 'READ',
       value: settings.diskReadEnabled ? formatCompactRate(current.diskReadBytesPerSec) : 'OFF',
-      valueClass: settings.diskReadEnabled ? 'text-ui-text' : 'text-ui-subtext',
+      valueClass: settings.diskReadEnabled
+        ? buildRateTone(current.diskReadBytesPerSec, metricRateThresholds.disk).text
+        : 'text-ui-subtext',
     },
     {
       key: 'write',
       label: 'WRITE',
       value: settings.diskWriteEnabled ? formatCompactRate(current.diskWriteBytesPerSec) : 'OFF',
-      valueClass: settings.diskWriteEnabled ? 'text-ui-text' : 'text-ui-subtext',
+      valueClass: settings.diskWriteEnabled
+        ? buildRateTone(current.diskWriteBytesPerSec, metricRateThresholds.disk).text
+        : 'text-ui-subtext',
     },
   ]
 }
@@ -1076,12 +1147,18 @@ onUnmounted(() => {
 .liquid-sphere-wrapper::before {
   content: '';
   position: absolute;
-  inset: -10px;
+  inset: -12px;
   border-radius: 50%;
-  background: radial-gradient(circle at 50% 50%, var(--color-start) 0%, transparent 65%);
-  opacity: 0.25;
+  background: radial-gradient(
+    circle at 50% 52%,
+    var(--sphere-glow, rgba(20, 199, 103, 0.44)) 0%,
+    var(--sphere-glow-soft, rgba(90, 242, 159, 0.32)) 34%,
+    transparent 72%
+  );
+  opacity: 0.78;
   z-index: 0;
-  filter: blur(12px);
+  filter: blur(16px);
+  animation: liquid-sphere-pulse 3.2s ease-in-out infinite;
 }
 
 .liquid-sphere {
@@ -1091,21 +1168,23 @@ onUnmounted(() => {
   border-radius: 50%;
   background: linear-gradient(
     160deg,
-    rgba(226, 238, 255, 0.34) 0%,
-    rgba(207, 226, 255, 0.22) 48%,
-    rgba(185, 211, 248, 0.16) 100%
+    var(--sphere-shell-top, rgba(239, 255, 246, 0.56)) 0%,
+    var(--sphere-shell-mid, rgba(186, 247, 213, 0.34)) 48%,
+    var(--sphere-shell-bottom, rgba(118, 233, 181, 0.22)) 100%
   );
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--sphere-ring, rgba(20, 199, 103, 0.54));
   box-shadow:
-    inset 0 0 24px rgba(226, 238, 255, 0.52),
-    inset 0 -14px 30px rgba(15, 23, 42, 0.12),
-    0 8px 24px rgba(37, 99, 235, 0.08),
-    0 0 0 1px rgba(207, 226, 255, 0.46);
+    inset 0 0 24px var(--sphere-highlight, rgba(239, 255, 246, 0.88)),
+    inset 0 -18px 32px rgba(15, 23, 42, 0.14),
+    0 10px 28px var(--sphere-glow-soft, rgba(90, 242, 159, 0.32)),
+    0 0 0 1px rgba(255, 255, 255, 0.18);
   overflow: hidden;
   z-index: 1;
   isolation: isolate;
   transform: translateZ(8px);
+  filter: saturate(1.12);
 }
 
 .liquid-level {
@@ -1131,20 +1210,37 @@ onUnmounted(() => {
 
 .wave-back {
   background: var(--color-start);
-  opacity: 0.5;
+  opacity: 0.72;
   animation: liquid-spin 6s linear infinite;
+  filter: saturate(1.08);
 }
 
 .wave-front {
   background: linear-gradient(180deg, var(--color-start) 0%, var(--color-end) 100%);
-  opacity: 0.85;
+  opacity: 0.98;
   animation: liquid-spin 4.5s linear infinite;
-  border-radius: 43%; 
+  border-radius: 43%;
+  box-shadow:
+    inset 0 10px 20px rgba(255, 255, 255, 0.16),
+    0 0 22px var(--sphere-liquid-shadow, rgba(20, 199, 103, 0.3));
 }
 
 @keyframes liquid-spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+@keyframes liquid-sphere-pulse {
+  0%,
+  100% {
+    transform: scale(0.98);
+    opacity: 0.7;
+  }
+
+  50% {
+    transform: scale(1.04);
+    opacity: 0.9;
+  }
 }
 
 .sphere-glare {
@@ -1154,7 +1250,7 @@ onUnmounted(() => {
   width: 80%;
   height: 35%;
   border-radius: 50%;
-  background: linear-gradient(180deg, rgba(226, 238, 255, 0.76), rgba(226, 238, 255, 0));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0));
   z-index: 2;
   pointer-events: none;
 }
@@ -1179,10 +1275,10 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   pointer-events: none;
-  color: rgb(91, 91, 91);
+  color: var(--sphere-text, #ffffff);
   text-shadow:
-    0 6px 18px rgba(15, 23, 42, 0.18),
-    0 0 14px rgba(219, 234, 254, 0.14);
+    0 8px 18px rgba(15, 23, 42, 0.32),
+    0 0 16px rgba(255, 255, 255, 0.18);
 }
 
 /* 清理了硬编码渐变，由 glass-soft 接管 */
