@@ -50,7 +50,7 @@
             </div>
           </div>
 
-          <div class="glass-subcard flex-1 min-h-0 overflow-hidden p-2.5 lg:p-3">
+          <div class="glass-subcard flex-1 min-h-0 overflow-hidden p-2.5 lg:p-3" @wheel.prevent="handleTrendSliderWheel">
             <div class="flex h-full min-h-[280px] flex-col gap-3 lg:min-h-[300px]">
               <div class="relative min-h-0 flex-1 w-full">
                 <canvas v-if="hasChartData" ref="monitorChartRef" class="h-full w-full"></canvas>
@@ -63,9 +63,10 @@
                 v-if="showTrendSlider"
                 class="rounded-[18px] border border-white/18 bg-white/8 px-3 py-2.5"
               >
-                <div class="mb-2 flex items-center justify-between gap-3 text-xs text-ui-subtext">
-                  <span>窗口 {{ trendWindowRangeLabel }}</span>
-                  <span>共 {{ props.historyData.length }} 个点，每次展示 {{ trendWindowSize }} 个点</span>
+                
+                <div class="mb-2 flex items-center justify-between text-xs text-ui-subtext">
+                  <span>时间范围</span>
+                  <span>{{ trendWindowRangeLabel }} / {{ props.historyData.length }}</span>
                 </div>
                 <input
                   v-model="trendWindowStart"
@@ -478,6 +479,8 @@ const buildMonitorChartConfig = labels => {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      //数据图刷新动画
+      animation: false,
       interaction: {
         mode: 'index',
         intersect: false,
@@ -584,6 +587,18 @@ const renderMonitorChart = async () => {
   monitorChartInstance = new Chart(monitorChartRef.value, config)
 }
 
+const handleTrendSliderWheel = event => {
+  if (!showTrendSlider.value) return
+
+  const direction = Number(event?.deltaY) || 0
+  if (!direction) return
+
+  const currentStart = Number(trendWindowStart.value) || 0
+  //步长控制
+  const nextStart = direction < 0 ? currentStart - 20 : currentStart + 20
+  trendWindowStart.value = Math.max(0, Math.min(nextStart, maxTrendWindowStart.value))
+}
+
 const handleResize = () => {
   if (monitorChartInstance) {
     monitorChartInstance.resize()
@@ -648,7 +663,7 @@ onBeforeUnmount(() => {
   appearance: none;
   height: 6px;
   border-radius: 999px;
-  background: linear-gradient(90deg, rgba(37, 99, 235, 0.2), rgba(37, 99, 235, 0.65));
+  background: rgba(37, 99, 235, 0.15); /* More subtle blue */
   outline: none;
 }
 
@@ -656,20 +671,20 @@ onBeforeUnmount(() => {
   appearance: none;
   width: 16px;
   height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(255, 255, 255, 0.7); /* Slightly less opaque border */
   border-radius: 999px;
-  background: #2563eb;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+  background: rgba(37, 99, 235, 0.7); /* More translucent blue */
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2); /* Softer shadow */
   cursor: ew-resize;
 }
 
 .trend-slider::-moz-range-thumb {
   width: 16px;
   height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(255, 255, 255, 0.7);
   border-radius: 999px;
-  background: #2563eb;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+  background: rgba(37, 99, 235, 0.7);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
   cursor: ew-resize;
 }
 </style>
