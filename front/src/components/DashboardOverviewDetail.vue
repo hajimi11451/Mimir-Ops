@@ -384,9 +384,17 @@ const visibleHistoryData = computed(() => {
 const showTrendSlider = computed(() => props.historyData.length > trendWindowSize)
 
 const trendWindowRangeLabel = computed(() => {
-  const start = Math.max(0, Math.min(Number(trendWindowStart.value) || 0, maxTrendWindowStart.value))
-  const end = Math.min(start + trendWindowSize, props.historyData.length)
-  return `${start + 1}-${end}`
+  const startIdx = Math.max(0, Math.min(Number(trendWindowStart.value) || 0, maxTrendWindowStart.value))
+  const endIdx = Math.min(startIdx + trendWindowSize, props.historyData.length)
+
+  if (visibleHistoryData.value.length === 0) {
+    return 'N/A'
+  }
+
+  const startTime = visibleHistoryData.value[0]?.time || 'N/A'
+  const endTime = visibleHistoryData.value[visibleHistoryData.value.length - 1]?.time || 'N/A'
+
+  return `${startTime} - ${endTime}`
 })
 
 const chartDatasets = computed(() => datasetBlueprints.value
