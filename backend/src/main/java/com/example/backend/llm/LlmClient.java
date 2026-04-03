@@ -12,12 +12,15 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -49,17 +52,20 @@ public class LlmClient {
                 .baseUrl(normalizeBaseUrl(baseUrl))
                 .requestFactory(factory)
                 .build();
+        log.info("LLM client initialized, baseUrl={}, chatModel={}, agentReadTimeoutSeconds={}, tokenConfigured={}",
+                normalizeBaseUrl(baseUrl), chatModelName, Math.max(agentReadTimeoutSeconds, 5), StringUtils.hasText(token));
     }
 
     public LlmResponse call(List<Message> messages, List<Map<String, Object>> toolDefinitions) {
         long start = System.currentTimeMillis();
+        String requestId = UUID.randomUUID().toString().substring(0, 8);
 
         Map<String, Object> requestBody = new LinkedHashMap<>();
         requestBody.put("model", chatModelName);
         requestBody.put("messages", toApiMessages(messages));
         requestBody.put("tools", toolDefinitions == null ? Collections.emptyList() : toolDefinitions);
 
-        JsonNode root = post(requestBody);
+        JsonNode root = post(requestId, "tool-call", requestBody);
         JsonNode messageNode = firstMessageNode(root);
         String content = extractMessageContent(messageNode);
 
@@ -88,7 +94,9 @@ public class LlmClient {
                 .toolCalls(toolCalls)
                 .build();
 
-        log.info("LLM tool call success, toolCalls={}, elapsedMs={}", toolCalls.size(), System.currentTimeMillis() - start);
+        log.info("LLM tool call success, requestId={}, toolCalls={}, elapsedMs={}, contentLength={}, contentPreview={}",
+                requestId, toolCalls.size(), System.currentTimeMillis() - start,
+                content == null ? 0 : content.length(), summarizeText(content, 300));
         return response;
     }
 
@@ -103,13 +111,14 @@ public class LlmClient {
 
     public JsonNode callForJson(List<Message> messages) {
         long start = System.currentTimeMillis();
+        String requestId = UUID.randomUUID().toString().substring(0, 8);
 
         Map<String, Object> requestBody = new LinkedHashMap<>();
         requestBody.put("model", chatModelName);
         requestBody.put("messages", toApiMessages(messages));
         requestBody.put("response_format", Map.of("type", "json_object"));
 
-        JsonNode root = post(requestBody);
+        JsonNode root = post(requestId, "json", requestBody);
         JsonNode messageNode = firstMessageNode(root);
         String content = extractMessageContent(messageNode);
 
@@ -119,15 +128,29 @@ public class LlmClient {
 
         try {
             JsonNode jsonNode = objectMapper.readTree(extractJsonText(content));
-            log.info("LLM JSON call success, elapsedMs={}", System.currentTimeMillis() - start);
+            log.info("LLM JSON call success, requestId={}, elapsedMs={}, contentLength={}, contentPreview={}",
+                    requestId, System.currentTimeMillis() - start, content.length(), summarizeText(content, 300));
             return jsonNode;
         } catch (Exception e) {
+            log.error("LLM JSON parse failed, requestId={}, elapsedMs={}, rawContent={}",
+                    requestId, System.currentTimeMillis() - start, summarizeText(content, 500), e);
             throw new IllegalStateException("LLM JSON 解析失败: " + e.getMessage(), e);
         }
     }
 
-    private JsonNode post(Map<String, Object> requestBody) {
+    private JsonNode post(String requestId, String requestType, Map<String, Object> requestBody) {
+        long start = System.currentTimeMillis();
         try {
+            log.info("LLM request start, requestId={}, type={}, model={}, url={}, messageCount={}, toolCount={}, responseFormat={}, messagePreview={}, toolPreview={}",
+                    requestId,
+                    requestType,
+                    requestBody.get("model"),
+                    normalizeBaseUrl(baseUrl) + "/chat/completions",
+                    countItems(requestBody.get("messages")),
+                    countItems(requestBody.get("tools")),
+                    summarizeText(String.valueOf(requestBody.get("response_format")), 120),
+                    summarizeMessages(requestBody.get("messages")),
+                    summarizeTools(requestBody.get("tools")));
             String responseBody = restClient.post()
                     .uri("/chat/completions")
                     .contentType(MediaType.APPLICATION_JSON)
@@ -136,16 +159,58 @@ public class LlmClient {
                     .retrieve()
                     .body(String.class);
 
+            log.info("LLM response received, requestId={}, type={}, elapsedMs={}, bodyLength={}, bodyPreview={}",
+                    requestId,
+                    requestType,
+                    System.currentTimeMillis() - start,
+                    responseBody == null ? 0 : responseBody.length(),
+                    summarizeText(responseBody, 500));
+
             if (!StringUtils.hasText(responseBody)) {
+                log.error("LLM response empty, requestId={}, type={}, elapsedMs={}",
+                        requestId, requestType, System.currentTimeMillis() - start);
                 throw new IllegalStateException("LLM 返回为空。");
             }
 
             JsonNode root = objectMapper.readTree(responseBody);
             if (root.has("error")) {
+                log.error("LLM response contained error, requestId={}, type={}, elapsedMs={}, error={}",
+                        requestId, requestType, System.currentTimeMillis() - start, root.path("error"));
                 throw new IllegalStateException("LLM API error: " + root.path("error"));
             }
             return root;
+        } catch (RestClientResponseException e) {
+            log.error("LLM request response exception, requestId={}, type={}, status={}, elapsedMs={}, responseBody={}, messagePreview={}, toolPreview={}",
+                    requestId,
+                    requestType,
+                    e.getStatusCode(),
+                    System.currentTimeMillis() - start,
+                    summarizeText(e.getResponseBodyAsString(), 500),
+                    summarizeMessages(requestBody.get("messages")),
+                    summarizeTools(requestBody.get("tools")),
+                    e);
+            throw new IllegalStateException("调用 LLM 失败: " + e.getMessage(), e);
+        } catch (ResourceAccessException e) {
+            log.error("LLM request access exception, requestId={}, type={}, elapsedMs={}, errorType={}, message={}, messagePreview={}, toolPreview={}",
+                    requestId,
+                    requestType,
+                    System.currentTimeMillis() - start,
+                    e.getClass().getSimpleName(),
+                    e.getMessage(),
+                    summarizeMessages(requestBody.get("messages")),
+                    summarizeTools(requestBody.get("tools")),
+                    e);
+            throw new IllegalStateException("调用 LLM 失败: " + e.getMessage(), e);
         } catch (Exception e) {
+            log.error("LLM request failed, requestId={}, type={}, elapsedMs={}, errorType={}, message={}, messagePreview={}, toolPreview={}",
+                    requestId,
+                    requestType,
+                    System.currentTimeMillis() - start,
+                    e.getClass().getSimpleName(),
+                    e.getMessage(),
+                    summarizeMessages(requestBody.get("messages")),
+                    summarizeTools(requestBody.get("tools")),
+                    e);
             throw new IllegalStateException("调用 LLM 失败: " + e.getMessage(), e);
         }
     }
@@ -176,6 +241,60 @@ public class LlmClient {
         } catch (Exception ignored) {
             return new LinkedHashMap<>();
         }
+    }
+
+    private int countItems(Object value) {
+        if (value instanceof List<?> list) {
+            return list.size();
+        }
+        return 0;
+    }
+
+    private String summarizeMessages(Object messagesObj) {
+        if (!(messagesObj instanceof List<?> messages) || messages.isEmpty()) {
+            return "[]";
+        }
+        List<String> parts = new ArrayList<>();
+        for (Object item : messages) {
+            if (!(item instanceof Map<?, ?> messageMap)) {
+                parts.add(summarizeText(String.valueOf(item), 120));
+                continue;
+            }
+            parts.add(String.valueOf(messageMap.getOrDefault("role", "unknown")) + ":"
+                    + summarizeText(String.valueOf(messageMap.getOrDefault("content", "")), 160));
+        }
+        return parts.toString();
+    }
+
+    private String summarizeTools(Object toolsObj) {
+        if (!(toolsObj instanceof List<?> tools) || tools.isEmpty()) {
+            return "[]";
+        }
+        List<String> parts = new ArrayList<>();
+        for (Object item : tools) {
+            if (!(item instanceof Map<?, ?> toolMap)) {
+                parts.add(summarizeText(String.valueOf(item), 120));
+                continue;
+            }
+            Object functionObj = toolMap.get("function");
+            if (functionObj instanceof Map<?, ?> functionMap) {
+                parts.add(String.valueOf(functionMap.get("name")));
+            } else {
+                parts.add(summarizeText(String.valueOf(toolMap), 120));
+            }
+        }
+        return parts.toString();
+    }
+
+    private String summarizeText(String text, int maxLength) {
+        if (!StringUtils.hasText(text)) {
+            return "";
+        }
+        String normalized = text.replaceAll("\\s+", " ").trim();
+        if (normalized.length() <= maxLength) {
+            return normalized;
+        }
+        return normalized.substring(0, maxLength) + "...";
     }
 
     private String normalizeBaseUrl(String rawBaseUrl) {

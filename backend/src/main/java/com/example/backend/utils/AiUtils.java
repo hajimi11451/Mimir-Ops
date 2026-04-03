@@ -11,8 +11,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClientResponseException;
 import jakarta.annotation.PostConstruct;
 
 import java.io.IOException;
@@ -27,6 +29,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -58,10 +61,15 @@ public class AiUtils {
     @PostConstruct
     public void initRestTemplate() {
         this.restTemplate = buildRestTemplate(readTimeoutSeconds);
-        this.agentRestTemplate = buildRestTemplate(Math.min(readTimeoutSeconds, agentReadTimeoutSeconds));
+        this.agentRestTemplate = buildRestTemplate(agentReadTimeoutSeconds);
         this.resolvedRagFilePath = initializeRagFile();
-        log.info("AI HTTP client initialized, readTimeoutSeconds={}, agentReadTimeoutSeconds={}",
-                readTimeoutSeconds, Math.min(readTimeoutSeconds, agentReadTimeoutSeconds));
+        log.info("AI HTTP client initialized, baseUrl={}, readTimeoutSeconds={}, agentReadTimeoutSeconds={}, auditModel={}, chatModel={}, tokenConfigured={}",
+                normalizeBaseUrl(baseUrl),
+                Math.max(readTimeoutSeconds, 5),
+                Math.max(agentReadTimeoutSeconds, 5),
+                auditModelName,
+                chatModelName,
+                StringUtils.hasText(token));
         log.info("AI RAG file initialized at {}", resolvedRagFilePath.toAbsolutePath());
     }
 
@@ -502,32 +510,36 @@ public class AiUtils {
 
     private String callQianfanApi(String systemPrompt, String userPrompt, String targetModel) {
         long start = System.currentTimeMillis();
+        String requestId = UUID.randomUUID().toString().substring(0, 8);
+        String url = buildChatCompletionsUrl();
+        String sanitizedSystemPrompt = systemPrompt == null ? "" : systemPrompt;
+        String sanitizedUserPrompt = userPrompt == null ? "" : userPrompt;
+        List<Map<String, String>> messages = new ArrayList<>();
         try {
-            String url = baseUrl;
-            if (!url.endsWith("/")) {
-                url += "/";
-            }
-            url += "chat/completions";
-            log.info("AI request start, model={}, url={}", targetModel, url);
-
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("model", targetModel);
-
-            List<Map<String, String>> messages = new ArrayList<>();
 
             if (StringUtils.hasText(systemPrompt)) {
                 Map<String, String> systemMsg = new HashMap<>();
                 systemMsg.put("role", "system");
-                systemMsg.put("content", systemPrompt);
+                systemMsg.put("content", sanitizedSystemPrompt);
                 messages.add(systemMsg);
             }
 
             Map<String, String> userMsg = new HashMap<>();
             userMsg.put("role", "user");
-            userMsg.put("content", userPrompt == null ? "" : userPrompt);
+            userMsg.put("content", sanitizedUserPrompt);
             messages.add(userMsg);
 
             requestBody.put("messages", messages);
+            log.info("AI request start, requestId={}, model={}, url={}, messageCount={}, systemPromptLength={}, userPromptLength={}, promptPreview={}",
+                    requestId,
+                    targetModel,
+                    url,
+                    messages.size(),
+                    sanitizedSystemPrompt.length(),
+                    sanitizedUserPrompt.length(),
+                    summarizeMessages(messages));
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -535,6 +547,13 @@ public class AiUtils {
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
             ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
+            log.info("AI response received, requestId={}, model={}, status={}, elapsedMs={}, bodyLength={}, bodyPreview={}",
+                    requestId,
+                    targetModel,
+                    response.getStatusCode().value(),
+                    System.currentTimeMillis() - start,
+                    response.getBody() == null ? 0 : response.getBody().length(),
+                    summarizeText(response.getBody(), 500));
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 JsonNode root = objectMapper.readTree(response.getBody());
@@ -542,30 +561,72 @@ public class AiUtils {
                     JsonNode choice = root.get("choices").get(0);
                     String content = extractMessageContent(choice.path("message"));
                     if (StringUtils.hasText(content)) {
-                        log.info("AI request success, model={}, elapsedMs={}", targetModel, System.currentTimeMillis() - start);
+                        log.info("AI request success, requestId={}, model={}, elapsedMs={}, contentLength={}, contentPreview={}",
+                                requestId,
+                                targetModel,
+                                System.currentTimeMillis() - start,
+                                content.length(),
+                                summarizeText(content, 300));
                         return content;
                     }
-                    log.warn("AI request returned choice but no usable content, model={}, elapsedMs={}, body={}",
-                            targetModel, System.currentTimeMillis() - start, response.getBody());
+                    log.warn("AI request returned choice but no usable content, requestId={}, model={}, elapsedMs={}, bodyPreview={}",
+                            requestId, targetModel, System.currentTimeMillis() - start, summarizeText(response.getBody(), 500));
                 } else if (root.has("error")) {
-                    log.error("AI request failed, model={}, elapsedMs={}, error={}",
-                            targetModel, System.currentTimeMillis() - start, root.get("error"));
-                    log.error("AI API error: {}", root.get("error"));
+                    log.error("AI request failed, requestId={}, model={}, elapsedMs={}, error={}, requestPreview={}",
+                            requestId,
+                            targetModel,
+                            System.currentTimeMillis() - start,
+                            root.get("error"),
+                            summarizeMessages(messages));
                     return "AI 服务暂时不可用: " + root.get("error");
                 }
             }
         } catch (HttpClientErrorException e) {
-            log.error("AI request http error, model={}, status={}, elapsedMs={}, body={}",
-                    targetModel, e.getStatusCode(), System.currentTimeMillis() - start, e.getResponseBodyAsString(), e);
+            log.error("AI request http error, requestId={}, model={}, status={}, elapsedMs={}, responseBody={}, requestPreview={}",
+                    requestId,
+                    targetModel,
+                    e.getStatusCode(),
+                    System.currentTimeMillis() - start,
+                    summarizeText(e.getResponseBodyAsString(), 500),
+                    summarizeMessages(messages),
+                    e);
             if (e.getStatusCode().value() == 401) {
                 return "AI 鉴权失败，请检查 qianfan.v2.token 是否有效。";
             }
             return "调用 AI 服务时发生异常。";
+        } catch (RestClientResponseException e) {
+            log.error("AI request response exception, requestId={}, model={}, status={}, elapsedMs={}, responseBody={}, requestPreview={}",
+                    requestId,
+                    targetModel,
+                    e.getStatusCode(),
+                    System.currentTimeMillis() - start,
+                    summarizeText(e.getResponseBodyAsString(), 500),
+                    summarizeMessages(messages),
+                    e);
+            return "调用 AI 服务时发生异常。";
+        } catch (ResourceAccessException e) {
+            log.error("AI request access error, requestId={}, model={}, elapsedMs={}, errorType={}, message={}, requestPreview={}",
+                    requestId,
+                    targetModel,
+                    System.currentTimeMillis() - start,
+                    e.getClass().getSimpleName(),
+                    e.getMessage(),
+                    summarizeMessages(messages),
+                    e);
+            return "AI 服务连接中断或超时，请稍后重试。";
         } catch (Exception e) {
-            log.error("Call AI API exception, model={}, elapsedMs={}", targetModel, System.currentTimeMillis() - start, e);
+            log.error("Call AI API exception, requestId={}, model={}, elapsedMs={}, errorType={}, message={}, requestPreview={}",
+                    requestId,
+                    targetModel,
+                    System.currentTimeMillis() - start,
+                    e.getClass().getSimpleName(),
+                    e.getMessage(),
+                    summarizeMessages(messages),
+                    e);
             return "AI 服务连接中断或超时，请稍后重试。";
         }
-        log.warn("AI request finished without valid content, model={}, elapsedMs={}", targetModel, System.currentTimeMillis() - start);
+        log.warn("AI request finished without valid content, requestId={}, model={}, elapsedMs={}, requestPreview={}",
+                requestId, targetModel, System.currentTimeMillis() - start, summarizeMessages(messages));
         return "未能获取有效回答。";
     }
 
@@ -638,6 +699,7 @@ public class AiUtils {
     public Map<String, Object> callQianfanApiWithTools(List<Map<String, Object>> messages,
                                                        List<Map<String, Object>> tools) {
         long start = System.currentTimeMillis();
+        String requestId = UUID.randomUUID().toString().substring(0, 8);
         Map<String, Object> result = new HashMap<>();
         // 默认返回值，避免空指针
         result.put("assistantContent", "");
@@ -655,10 +717,12 @@ public class AiUtils {
             if (Thread.currentThread().isInterrupted()) {
                 Thread.currentThread().interrupt();
                 result.put("assistantContent", "任务已被强制停止。");
+                log.warn("AI tools request interrupted before sending, requestId={}, elapsedMs={}",
+                        requestId, System.currentTimeMillis() - start);
                 return result;
             }
             try {
-                return doCallQianfanApiWithTools(messages, tools, start);
+                return doCallQianfanApiWithTools(requestId, messages, tools, start);
             } catch (Exception e) {
                 lastException = e;
                 if (Thread.currentThread().isInterrupted()) {
@@ -666,8 +730,9 @@ public class AiUtils {
                     break;
                 }
                 attempt++;
-                log.warn("AI tools request failed (attempt {}/{}), elapsedMs={}, error={}", 
-                        attempt, maxRetries + 1, System.currentTimeMillis() - start, e.getMessage());
+                log.warn("AI tools request failed (attempt {}/{}), requestId={}, elapsedMs={}, errorType={}, error={}, messagePreview={}, toolPreview={}",
+                        attempt, maxRetries + 1, requestId, System.currentTimeMillis() - start,
+                        e.getClass().getSimpleName(), e.getMessage(), summarizeStructuredMessages(messages), summarizeTools(tools));
                 
                 if (attempt <= maxRetries) {
                     try {
@@ -680,25 +745,32 @@ public class AiUtils {
             }
         }
 
-        log.error("AI tools request failed after {} retries, elapsedMs={}", maxRetries + 1, System.currentTimeMillis() - start, lastException);
+        log.error("AI tools request failed after {} retries, requestId={}, elapsedMs={}, messagePreview={}, toolPreview={}",
+                maxRetries + 1, requestId, System.currentTimeMillis() - start,
+                summarizeStructuredMessages(messages), summarizeTools(tools), lastException);
         result.put("assistantContent", "AI 服务连接中断或超时，请稍后重试。");
         return result;
     }
 
-    private Map<String, Object> doCallQianfanApiWithTools(List<Map<String, Object>> messages,
+    private Map<String, Object> doCallQianfanApiWithTools(String requestId,
+                                                          List<Map<String, Object>> messages,
                                                           List<Map<String, Object>> tools,
                                                           long start) {
-        String url = baseUrl;
-        if (!url.endsWith("/")) {
-            url += "/";
-        }
-        url += "chat/completions";
+        String url = buildChatCompletionsUrl();
 
         // 这里显式组装 JSON：model + messages + tools
         Map<String, Object> requestBody = new LinkedHashMap<>();
         requestBody.put("model", chatModelName);
         requestBody.put("messages", messages == null ? Collections.emptyList() : messages);
         requestBody.put("tools", tools == null ? Collections.emptyList() : tools);
+        log.info("AI tools request start, requestId={}, model={}, url={}, messageCount={}, toolCount={}, messagePreview={}, toolPreview={}",
+                requestId,
+                chatModelName,
+                url,
+                messages == null ? 0 : messages.size(),
+                tools == null ? 0 : tools.size(),
+                summarizeStructuredMessages(messages),
+                summarizeTools(tools));
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -706,6 +778,12 @@ public class AiUtils {
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
         ResponseEntity<String> response = agentRestTemplate.postForEntity(url, entity, String.class);
+        log.info("AI tools response received, requestId={}, status={}, elapsedMs={}, bodyLength={}, bodyPreview={}",
+                requestId,
+                response.getStatusCode().value(),
+                System.currentTimeMillis() - start,
+                response.getBody() == null ? 0 : response.getBody().length(),
+                summarizeText(response.getBody(), 500));
         
         Map<String, Object> result = new HashMap<>();
         // 默认返回值
@@ -717,6 +795,11 @@ public class AiUtils {
         result.put("assistantMessage", defaultAssistantMessage);
 
         if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+            log.warn("AI tools response invalid, requestId={}, status={}, elapsedMs={}, bodyPreview={}",
+                    requestId,
+                    response.getStatusCode().value(),
+                    System.currentTimeMillis() - start,
+                    summarizeText(response.getBody(), 500));
             result.put("assistantContent", "AI 返回为空或状态异常。");
             return result;
         }
@@ -726,19 +809,22 @@ public class AiUtils {
             // 检查是否有错误字段
             if (root.has("error")) {
                 String errorMsg = root.get("error").toString();
-                log.error("AI API returned error: {}", errorMsg);
+                log.error("AI API returned error, requestId={}, elapsedMs={}, error={}, bodyPreview={}",
+                        requestId, System.currentTimeMillis() - start, errorMsg, summarizeText(response.getBody(), 500));
                 throw new RuntimeException("AI API error: " + errorMsg);
             }
 
             JsonNode choice = root.path("choices").isArray() && root.path("choices").size() > 0
                     ? root.path("choices").get(0) : null;
             if (choice == null) {
+                log.warn("AI tools response missing choices, requestId={}, elapsedMs={}, bodyPreview={}",
+                        requestId, System.currentTimeMillis() - start, summarizeText(response.getBody(), 500));
                 result.put("assistantContent", "AI 未返回可用 choices。");
                 return result;
             }
 
             JsonNode msgNode = choice.path("message");
-            String content = msgNode.path("content").asText("");
+            String content = extractMessageContent(msgNode);
             result.put("assistantContent", content);
 
             Map<String, Object> assistantMessage = new LinkedHashMap<>();
@@ -778,11 +864,14 @@ public class AiUtils {
 
             result.put("toolCalls", toolCalls);
             result.put("assistantMessage", assistantMessage);
-            log.info("AI tools request success, model={}, toolCalls={}, elapsedMs={}",
-                    chatModelName, toolCalls.size(), System.currentTimeMillis() - start);
+            log.info("AI tools request success, requestId={}, model={}, toolCalls={}, elapsedMs={}, contentLength={}, contentPreview={}",
+                    requestId, chatModelName, toolCalls.size(), System.currentTimeMillis() - start,
+                    content == null ? 0 : content.length(), summarizeText(content, 300));
             return result;
         } catch (Exception e) {
-             throw new RuntimeException("Parse AI response failed", e);
+            log.error("Parse AI response failed, requestId={}, elapsedMs={}, bodyPreview={}",
+                    requestId, System.currentTimeMillis() - start, summarizeText(response.getBody(), 500), e);
+            throw new RuntimeException("Parse AI response failed", e);
         }
     }
 
@@ -791,5 +880,79 @@ public class AiUtils {
         factory.setConnectTimeout(10000);
         factory.setReadTimeout(Math.max(timeoutSeconds, 5) * 1000);
         return new RestTemplate(factory);
+    }
+
+    private String buildChatCompletionsUrl() {
+        String normalizedBaseUrl = normalizeBaseUrl(baseUrl);
+        if (!StringUtils.hasText(normalizedBaseUrl)) {
+            return "chat/completions";
+        }
+        return normalizedBaseUrl + "/chat/completions";
+    }
+
+    private String normalizeBaseUrl(String rawBaseUrl) {
+        if (!StringUtils.hasText(rawBaseUrl)) {
+            return "";
+        }
+        return rawBaseUrl.endsWith("/") ? rawBaseUrl.substring(0, rawBaseUrl.length() - 1) : rawBaseUrl;
+    }
+
+    private String summarizeMessages(List<Map<String, String>> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return "[]";
+        }
+        List<String> parts = new ArrayList<>();
+        for (Map<String, String> message : messages) {
+            if (message == null) {
+                continue;
+            }
+            parts.add(message.getOrDefault("role", "unknown") + ":" + summarizeText(message.get("content"), 160));
+        }
+        return parts.toString();
+    }
+
+    private String summarizeStructuredMessages(List<Map<String, Object>> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return "[]";
+        }
+        List<String> parts = new ArrayList<>();
+        for (Map<String, Object> message : messages) {
+            if (message == null) {
+                continue;
+            }
+            parts.add(String.valueOf(message.getOrDefault("role", "unknown")) + ":"
+                    + summarizeText(String.valueOf(message.getOrDefault("content", "")), 160));
+        }
+        return parts.toString();
+    }
+
+    private String summarizeTools(List<Map<String, Object>> tools) {
+        if (tools == null || tools.isEmpty()) {
+            return "[]";
+        }
+        List<String> toolNames = new ArrayList<>();
+        for (Map<String, Object> tool : tools) {
+            if (tool == null) {
+                continue;
+            }
+            Object function = tool.get("function");
+            if (function instanceof Map<?, ?> functionMap) {
+                toolNames.add(String.valueOf(functionMap.get("name")));
+            } else {
+                toolNames.add(summarizeText(String.valueOf(tool), 80));
+            }
+        }
+        return toolNames.toString();
+    }
+
+    private String summarizeText(String text, int maxLength) {
+        if (!StringUtils.hasText(text)) {
+            return "";
+        }
+        String normalized = text.replaceAll("\\s+", " ").trim();
+        if (normalized.length() <= maxLength) {
+            return normalized;
+        }
+        return normalized.substring(0, maxLength) + "...";
     }
 }
