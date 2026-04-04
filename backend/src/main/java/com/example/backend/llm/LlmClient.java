@@ -260,8 +260,10 @@ public class LlmClient {
                 parts.add(summarizeText(String.valueOf(item), 120));
                 continue;
             }
-            parts.add(String.valueOf(messageMap.getOrDefault("role", "unknown")) + ":"
-                    + summarizeText(String.valueOf(messageMap.getOrDefault("content", "")), 160));
+            Object role = messageMap.get("role");
+            Object content = messageMap.get("content");
+            parts.add(String.valueOf(role != null ? role : "unknown") + ":"
+                    + summarizeText(String.valueOf(content != null ? content : ""), 160));
         }
         return parts.toString();
     }
