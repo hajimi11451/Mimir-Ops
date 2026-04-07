@@ -177,7 +177,7 @@ public class DiagnosisService {
             Map<String, Object> fetchFailureResult = new HashMap<>();
             fetchFailureResult.put("rawLog", InfoNormalizationUtils.normalizeText(normalizedRawLog, "无"));
             fetchFailureResult.put("analysis", "");
-            fetchFailureResult.put("summary", SSH_FETCH_FAILURE_SUMMARY);
+            fetchFailureResult.put("summary", buildFetchFailureSummary(normalizedRawLog, logPath));
             fetchFailureResult.put("riskLevel", "高");
             fetchFailureResult.put("noLogData", false);
             fetchFailureResult.put("fetchFailure", true);
@@ -228,6 +228,36 @@ public class DiagnosisService {
                 || value.contains("Connection timed out")
                 || value.contains("Connection refused")
                 || value.contains("Auth fail");
+    }
+
+    private String buildFetchFailureSummary(String rawLog, String logPath) {
+        String value = String.valueOf(rawLog == null ? "" : rawLog).trim();
+
+        if (value.contains("Permission denied")) {
+            if (StringUtils.hasText(logPath)) {
+                return "日志路径权限不足：" + logPath;
+            }
+            return "日志路径权限不足";
+        }
+        if (value.contains("No such file")) {
+            if (StringUtils.hasText(logPath)) {
+                return "日志文件不存在：" + logPath;
+            }
+            return "日志文件不存在";
+        }
+        if (value.contains("is not in the sudoers file")) {
+            return "日志提权失败：当前用户没有 sudo 权限";
+        }
+        if (value.contains("a password is required") || value.contains("incorrect password attempt")) {
+            return "日志提权失败：sudo 密码校验失败";
+        }
+        if (value.startsWith("SSH Error:") || value.contains("Auth fail")) {
+            return "SSH 连接失败";
+        }
+        if (value.contains("Connection timed out") || value.contains("Connection refused")) {
+            return "SSH 连接超时或被拒绝";
+        }
+        return SSH_FETCH_FAILURE_SUMMARY;
     }
 
     private String extractPathFromCommand(String command) {

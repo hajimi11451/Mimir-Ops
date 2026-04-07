@@ -30,6 +30,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -51,7 +52,7 @@ public class MonitorService {
     private static final String AVAILABLE_MEM_CMD = "free -h | awk '/Mem:/ {print $7}'";
     private static final String NET_COUNTER_CMD = "awk 'NR>2 {gsub(/:/,\"\",$1); iface=$1; if (iface != \"lo\" && iface !~ /^(docker|veth|br-|virbr|vmnet|zt|tailscale|tun|tap)/) {rx+=$2; tx+=$10}} END {printf \"%.0f %.0f\", rx+0, tx+0}' /proc/net/dev";
     private static final String DISK_COUNTER_CMD = "awk '$3 ~ /^(sd[a-z]+|vd[a-z]+|xvd[a-z]+|nvme[0-9]+n[0-9]+)$/ {read+=$6*512; write+=$10*512} END {printf \"%.0f %.0f\", read+0, write+0}' /proc/diskstats";
-    private static final int MAX_HISTORY_POINTS = 2160;
+    private static final int MAX_HISTORY_POINTS = 1440;
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
@@ -74,6 +75,7 @@ public class MonitorService {
 
     // IP -> 上一轮原始计数器，用于计算网卡/磁盘速率
     private final Map<String, RawCounterSnapshot> counterSnapshotMap = new ConcurrentHashMap<>();
+    private final ReentrantLock collectLock = new ReentrantLock();
 
     /**
      * 定时任务：每隔一段时间执行一次 (由 monitor.schedule.fixed-rate 配置，默认 60000ms)
@@ -84,6 +86,18 @@ public class MonitorService {
             fixedRateString = "${monitor.schedule.fixed-rate:60000}"
     )
     public void collectMetrics() {
+        if (!collectLock.tryLock()) {
+            log.debug("上一次采集仍在执行，跳过本轮");
+            return;
+        }
+        try {
+            doCollectMetrics();
+        } finally {
+            collectLock.unlock();
+        }
+    }
+
+    private void doCollectMetrics() {
         List<ComponentConfig> configs = componentConfigMapper.selectList(new QueryWrapper<ComponentConfig>()
                 .eq("config_key", SYSTEM_MONITOR_CONFIG_KEY)
                 .eq("is_enabled", 1)
@@ -99,6 +113,8 @@ public class MonitorService {
             uniqueServers.put(serverIp, config);
         }
 
+        evictStaleServerCaches(uniqueServers.keySet());
+
         if (uniqueServers.isEmpty()) {
             System.out.println("没有配置需要监控的服务器");
             return;
@@ -107,6 +123,16 @@ public class MonitorService {
         for (ComponentConfig server : uniqueServers.values()) {
             collectServerMetrics(server);
         }
+    }
+
+    private void evictStaleServerCaches(Set<String> activeIps) {
+        evictFromMapIf(historyMap, activeIps);
+        evictFromMapIf(currentInfoMap, activeIps);
+        evictFromMapIf(counterSnapshotMap, activeIps);
+    }
+
+    private static <V> void evictFromMapIf(Map<String, V> map, Set<String> activeIps) {
+        map.keySet().removeIf(ip -> !activeIps.contains(ip));
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -150,9 +176,10 @@ public class MonitorService {
     }
 
     private MetricSnapshot collectMetricSnapshot(String host, String user, String password, MonitorSettings settings) throws Exception {
-        Session session = openSession(host, user, password);
-        long collectedAtMs = System.currentTimeMillis();
+        Session session = null;
         try {
+            session = openSession(host, user, password);
+            long collectedAtMs = System.currentTimeMillis();
             String upTime = safeTrim(sshExec(session, UPTIME_CMD));
             String os = safeTrim(sshExec(session, OS_CMD));
             String totalMem = safeTrim(sshExec(session, TOTAL_MEM_CMD));
@@ -188,8 +215,11 @@ public class MonitorService {
                     settings
             );
         } finally {
-            if (session != null && session.isConnected()) {
-                session.disconnect();
+            if (session != null) {
+                try {
+                    session.disconnect();
+                } catch (Exception ignored) {
+                }
             }
         }
     }
@@ -323,14 +353,22 @@ public class MonitorService {
     }
 
     private Session openSession(String host, String user, String password) throws Exception {
-        JSch jsch = new JSch();
-        HostAndPort hostAndPort = parseHostAndPort(host);
-        Session session = jsch.getSession(user, hostAndPort.host(), hostAndPort.port());
-        session.setPassword(password);
-        session.setConfig("StrictHostKeyChecking", "no");
-        session.connect(SSH_CONNECT_TIMEOUT_MS);
-        session.setTimeout(SSH_SOCKET_TIMEOUT_MS);
-        return session;
+        Session session = null;
+        try {
+            JSch jsch = new JSch();
+            HostAndPort hostAndPort = parseHostAndPort(host);
+            session = jsch.getSession(user, hostAndPort.host(), hostAndPort.port());
+            session.setPassword(password);
+            session.setConfig("StrictHostKeyChecking", "no");
+            session.connect(SSH_CONNECT_TIMEOUT_MS);
+            session.setTimeout(SSH_SOCKET_TIMEOUT_MS);
+            return session;
+        } catch (Exception e) {
+            if (session != null) {
+                try { session.disconnect(); } catch (Exception ignored) {}
+            }
+            throw e;
+        }
     }
 
     private String sshExec(Session session, String command) throws Exception {

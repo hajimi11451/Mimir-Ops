@@ -64,6 +64,9 @@ public class HealthAlertTask {
     @Value("${alert.recheck.lookback-minutes:20}")
     private long lookbackMinutes;
 
+    @Value("${alert.cleanup.retention-days:15}")
+    private long retentionDays;
+
     @Scheduled(fixedRateString = "${alert.schedule.fixed-rate:120000}")
     public void checkAndSendAlerts() {
         LocalDateTime now = LocalDateTime.now();
@@ -261,6 +264,25 @@ public class HealthAlertTask {
         LocalDateTime processedExpireAt = now.minusMinutes(Math.max(lookbackMinutes, cooldownMinutes) + 10);
         processedAlertMap.entrySet().removeIf(entry -> entry.getValue() == null || entry.getValue().isBefore(processedExpireAt));
         sentFingerprintMap.entrySet().removeIf(entry -> entry.getValue() == null || entry.getValue().plusMinutes(cooldownMinutes).isBefore(now));
+    }
+
+    /**
+     * 每周日凌晨 3 点清理超过保留期限的告警数据
+     */
+    @Scheduled(cron = "0 0 3 ? * SUN")
+    public void cleanupExpiredAlerts() {
+        try {
+            LocalDateTime expireBefore = LocalDateTime.now().minusDays(retentionDays);
+            LambdaQueryWrapper<Information> wrapper = new LambdaQueryWrapper<Information>()
+                    .lt(Information::getCreatedAt, expireBefore);
+            Long count = informationMapper.selectCount(wrapper);
+            if (count != null && count > 0) {
+                informationMapper.delete(wrapper);
+                log.info("已清理 {} 条超过 {} 天的告警记录", count, retentionDays);
+            }
+        } catch (Exception e) {
+            log.error("告警数据清理失败", e);
+        }
     }
 
     private String safeText(String value) {

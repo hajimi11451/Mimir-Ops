@@ -26,15 +26,21 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 @Component
 public class ServerWebSocketHandler extends TextWebSocketHandler {
 
+    private static final int MAX_SESSIONS = 1000;
+    private static final long SESSION_EXPIRE_MINUTES = 30;
+    private static final long CLEANUP_INTERVAL_MINUTES = 5;
+
     private static final ConcurrentHashMap<String, WebSocketSession> SESSIONS = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, TaskState> AGENT_HISTORY = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, FutureTask<Void>> RUNNING_TASKS = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Long> SESSION_LAST_ACCESS = new ConcurrentHashMap<>();
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ExecutorService agentExecutor = Executors.newCachedThreadPool();
@@ -48,10 +54,91 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
     @Autowired
     private MonitorService monitorService;
 
+    private final java.util.concurrent.ScheduledExecutorService cleanupScheduler =
+            Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "ws-session-cleanup");
+                t.setDaemon(true);
+                return t;
+            });
+
+    @jakarta.annotation.PostConstruct
+    public void init() {
+        cleanupScheduler.scheduleAtFixedRate(
+                this::cleanupExpiredSessions,
+                CLEANUP_INTERVAL_MINUTES,
+                CLEANUP_INTERVAL_MINUTES,
+                TimeUnit.MINUTES
+        );
+    }
+
+    @jakarta.annotation.PreDestroy
+    public void destroy() {
+        cleanupScheduler.shutdownNow();
+        agentExecutor.shutdownNow();
+    }
+
+    private void cleanupExpiredSessions() {
+        try {
+            long now = System.currentTimeMillis();
+            long expireMs = SESSION_EXPIRE_MINUTES * 60 * 1000;
+            int removed = 0;
+
+            for (Map.Entry<String, Long> entry : SESSION_LAST_ACCESS.entrySet()) {
+                String sessionId = entry.getKey();
+                long lastAccess = entry.getValue();
+                if (now - lastAccess > expireMs) {
+                    WebSocketSession session = SESSIONS.get(sessionId);
+                    if (session != null && !session.isOpen()) {
+                        SESSIONS.remove(sessionId);
+                        AGENT_HISTORY.remove(sessionId);
+                        SESSION_LAST_ACCESS.remove(sessionId);
+                        FutureTask<Void> task = RUNNING_TASKS.remove(sessionId);
+                        if (task != null) {
+                            task.cancel(true);
+                        }
+                        removed++;
+                    }
+                }
+            }
+
+            if (SESSIONS.size() > MAX_SESSIONS) {
+                List<Map.Entry<String, Long>> sorted = new ArrayList<>(SESSION_LAST_ACCESS.entrySet());
+                sorted.sort(Map.Entry.comparingByValue());
+                int toRemove = SESSIONS.size() - MAX_SESSIONS;
+                for (int i = 0; i < Math.min(toRemove, sorted.size()); i++) {
+                    String sessionId = sorted.get(i).getKey();
+                    WebSocketSession session = SESSIONS.get(sessionId);
+                    if (session != null) {
+                        try { session.close(); } catch (Exception ignored) {}
+                    }
+                    SESSIONS.remove(sessionId);
+                    AGENT_HISTORY.remove(sessionId);
+                    SESSION_LAST_ACCESS.remove(sessionId);
+                    FutureTask<Void> task = RUNNING_TASKS.remove(sessionId);
+                    if (task != null) {
+                        task.cancel(true);
+                    }
+                    removed++;
+                }
+            }
+
+            if (removed > 0) {
+                log.info("Cleaned up {} expired/idle sessions, active={}", removed, SESSIONS.size());
+            }
+        } catch (Exception e) {
+            log.error("Session cleanup failed", e);
+        }
+    }
+
+    private void touchSession(String sessionId) {
+        SESSION_LAST_ACCESS.put(sessionId, System.currentTimeMillis());
+    }
+
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         log.info("WebSocket connected: {}", session.getId());
         SESSIONS.put(session.getId(), session);
+        touchSession(session.getId());
 
         Map<String, Object> msg = new HashMap<>();
         msg.put("type", "welcome");
@@ -63,6 +150,7 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String payload = message.getPayload();
         log.info("WS recv [{}]: {}", session.getId(), payload);
+        touchSession(session.getId());
 
         if ("ping".equalsIgnoreCase(payload)) {
             sendText(session, "pong");
@@ -939,6 +1027,7 @@ public class ServerWebSocketHandler extends TextWebSocketHandler {
         log.info("WebSocket closed: {}", session.getId());
         SESSIONS.remove(session.getId());
         AGENT_HISTORY.remove(session.getId());
+        SESSION_LAST_ACCESS.remove(session.getId());
         opsAgentService.stopAgent(session.getId());
         FutureTask<Void> runningTask = RUNNING_TASKS.remove(session.getId());
         if (runningTask != null) {

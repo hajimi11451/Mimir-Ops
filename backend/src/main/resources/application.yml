@@ -43,7 +43,10 @@ qianfan:
     # Agent/工具调用链路读取超时时间（单位：秒）
     agent-read-timeout-seconds: 30
 onds: 120
-# 监控采集频率，单位毫秒，默认 60000 (1分钟)
+# 监控采集频率，单位毫秒，默认 30000 (30秒)
+monitor:
+  schedule:
+    fixed-rate: 30000
 
 alert:
   schedule:

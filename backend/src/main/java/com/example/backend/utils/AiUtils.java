@@ -35,6 +35,10 @@ import java.util.UUID;
 @Component
 public class AiUtils {
 
+    private static final int MAX_SYSTEM_PROMPT_CHARS = 6_000;
+    private static final int MAX_USER_PROMPT_CHARS = 16_000;
+    private static final int AI_REQUEST_MAX_RETRIES = 2;
+
     @Value("${qianfan.v2.base-url}")
     private String baseUrl;
 
@@ -167,7 +171,7 @@ public class AiUtils {
         result.put("chartTimeRange", "1h");
         result.put("chartTemplate", "health_overview");
 
-        String systemPrompt = "你是运维分析助手。请判断当前对话结果是否适合用图表展示。"
+        String systemPrompt = "你是专业的运维分析助手。请判断当前对话结果是否适合用图表展示。"
                 + "仅返回 JSON：{\"chartSuggest\":true/false,\"chartReason\":\"...\",\"chartTimeRange\":\"30m|1h|2h\",\"chartTemplate\":\"health_overview|cpu_mem_trend|anomaly_timeline|health_score_radar\"}。"
                 + "如果涉及 CPU/内存/负载/趋势/波动/峰值/监控，优先建议 chartSuggest=true。";
         String userPrompt = "用户问题: " + (userQuery == null ? "" : userQuery)
@@ -214,7 +218,7 @@ public class AiUtils {
     }
 
     public Map<String, Object> planServerCommandByGlm47(String userQuery) {
-        String systemPrompt = "你是 Linux 运维助手。请根据用户需求生成可直接执行的一条命令并返回 JSON，不要输出 Markdown 和额外文本。"
+        String systemPrompt = "你是专业的 Linux 运维助手。请根据用户需求生成可直接执行的一条命令并返回 JSON，不要输出 Markdown 和额外文本。"
                 + "JSON 字段固定为：reply,hasCommand,command,riskLevel,needConfirm。"
                 + "其中 hasCommand 和 needConfirm 必须是布尔值；riskLevel 只能是 low/medium/high。"
                 + "如果无需执行命令，hasCommand=false 且 command 为空字符串。";
@@ -390,13 +394,27 @@ public class AiUtils {
 
         boolean strongExecute = containsAny(normalized,
                 "请执行", "帮我执行", "直接执行", "现在执行", "立刻执行", "到服务器", "上服务器",
-                "登录服务器", "当前服务器", "这台服务器", "这台机器", "机器上", "执行一下");
+                "登录服务器", "当前服务器", "这台服务器", "这台机器", "机器上", "执行一下",
+                "我的服务器", "让我去", "帮我去", "去检查", "去查看", "去排查", "去分析");
         boolean questionLike = containsAny(normalized,
                 "什么", "为什么", "如何", "怎么", "介绍", "解释", "区别", "原理", "含义",
                 "建议", "方案", "思路", "怎么写", "如何写", "命令怎么", "命令如何");
         boolean ambiguous = containsAny(normalized,
                 "帮我看看", "帮我看下", "帮我看一下", "看看", "看下", "查下", "查一下", "分析一下");
         boolean operatorVerbStart = normalized.matches("^(检查|查看|排查|重启|重载|安装|卸载|启动|停止|修复|处理|清理|执行|部署|更新|回滚|拉取|诊断|登录).*");
+        boolean targetServer = containsAny(normalized,
+                "我的服务器", "服务器上", "服务器上的", "当前服务器", "这台服务器", "这台机器", "机器上", "主机上");
+        boolean operatorVerb = containsAny(normalized,
+                "检查", "查看", "排查", "分析", "诊断", "确认", "检索", "查询", "看看", "查下", "查一下");
+
+        if (targetServer && operatorVerb) {
+            result.put("intent", "execute");
+            result.put("reason", hasConnection
+                    ? "用户明确让助手到目标服务器上检查或排查，更像执行请求。"
+                    : "用户明确要求到服务器上检查，但当前未提供完整服务器连接。");
+            result.put("confidence", "high");
+            return result;
+        }
 
         if (strongExecute) {
             result.put("intent", "execute");
@@ -512,122 +530,180 @@ public class AiUtils {
         long start = System.currentTimeMillis();
         String requestId = UUID.randomUUID().toString().substring(0, 8);
         String url = buildChatCompletionsUrl();
-        String sanitizedSystemPrompt = systemPrompt == null ? "" : systemPrompt;
-        String sanitizedUserPrompt = userPrompt == null ? "" : userPrompt;
-        List<Map<String, String>> messages = new ArrayList<>();
-        try {
-            Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("model", targetModel);
+        String sanitizedSystemPrompt = capPrompt(systemPrompt, MAX_SYSTEM_PROMPT_CHARS, "systemPrompt");
+        String sanitizedUserPrompt = capPrompt(userPrompt, MAX_USER_PROMPT_CHARS, "userPrompt");
 
-            if (StringUtils.hasText(systemPrompt)) {
-                Map<String, String> systemMsg = new HashMap<>();
-                systemMsg.put("role", "system");
-                systemMsg.put("content", sanitizedSystemPrompt);
-                messages.add(systemMsg);
-            }
+        for (int attempt = 0; attempt <= AI_REQUEST_MAX_RETRIES; attempt++) {
+            List<Map<String, String>> messages = new ArrayList<>();
+            try {
+                Map<String, Object> requestBody = new HashMap<>();
+                requestBody.put("model", targetModel);
 
-            Map<String, String> userMsg = new HashMap<>();
-            userMsg.put("role", "user");
-            userMsg.put("content", sanitizedUserPrompt);
-            messages.add(userMsg);
+                if (StringUtils.hasText(sanitizedSystemPrompt)) {
+                    Map<String, String> systemMsg = new HashMap<>();
+                    systemMsg.put("role", "system");
+                    systemMsg.put("content", sanitizedSystemPrompt);
+                    messages.add(systemMsg);
+                }
 
-            requestBody.put("messages", messages);
-            log.info("AI request start, requestId={}, model={}, url={}, messageCount={}, systemPromptLength={}, userPromptLength={}, promptPreview={}",
-                    requestId,
-                    targetModel,
-                    url,
-                    messages.size(),
-                    sanitizedSystemPrompt.length(),
-                    sanitizedUserPrompt.length(),
-                    summarizeMessages(messages));
+                Map<String, String> userMsg = new HashMap<>();
+                userMsg.put("role", "user");
+                userMsg.put("content", sanitizedUserPrompt);
+                messages.add(userMsg);
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("Authorization", "Bearer " + token);
+                requestBody.put("messages", messages);
+                log.info("AI request start, requestId={}, model={}, attempt={}/{}, url={}, messageCount={}, systemPromptLength={}, userPromptLength={}, promptPreview={}",
+                        requestId,
+                        targetModel,
+                        attempt + 1,
+                        AI_REQUEST_MAX_RETRIES + 1,
+                        url,
+                        messages.size(),
+                        sanitizedSystemPrompt.length(),
+                        sanitizedUserPrompt.length(),
+                        summarizeMessages(messages));
 
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-            ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
-            log.info("AI response received, requestId={}, model={}, status={}, elapsedMs={}, bodyLength={}, bodyPreview={}",
-                    requestId,
-                    targetModel,
-                    response.getStatusCode().value(),
-                    System.currentTimeMillis() - start,
-                    response.getBody() == null ? 0 : response.getBody().length(),
-                    summarizeText(response.getBody(), 500));
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                headers.set("Authorization", "Bearer " + token);
+                headers.set("Connection", "close");
 
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                JsonNode root = objectMapper.readTree(response.getBody());
-                if (root.has("choices") && root.get("choices").isArray() && root.get("choices").size() > 0) {
-                    JsonNode choice = root.get("choices").get(0);
-                    String content = extractMessageContent(choice.path("message"));
-                    if (StringUtils.hasText(content)) {
-                        log.info("AI request success, requestId={}, model={}, elapsedMs={}, contentLength={}, contentPreview={}",
+                HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+                ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
+                log.info("AI response received, requestId={}, model={}, attempt={}/{}, status={}, elapsedMs={}, bodyLength={}, bodyPreview={}",
+                        requestId,
+                        targetModel,
+                        attempt + 1,
+                        AI_REQUEST_MAX_RETRIES + 1,
+                        response.getStatusCode().value(),
+                        System.currentTimeMillis() - start,
+                        response.getBody() == null ? 0 : response.getBody().length(),
+                        summarizeText(response.getBody(), 500));
+
+                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                    JsonNode root = objectMapper.readTree(response.getBody());
+                    if (root.has("choices") && root.get("choices").isArray() && root.get("choices").size() > 0) {
+                        JsonNode choice = root.get("choices").get(0);
+                        String content = extractMessageContent(choice.path("message"));
+                        if (StringUtils.hasText(content)) {
+                            log.info("AI request success, requestId={}, model={}, attempt={}/{}, elapsedMs={}, contentLength={}, contentPreview={}",
+                                    requestId,
+                                    targetModel,
+                                    attempt + 1,
+                                    AI_REQUEST_MAX_RETRIES + 1,
+                                    System.currentTimeMillis() - start,
+                                    content.length(),
+                                    summarizeText(content, 300));
+                            return content;
+                        }
+                        log.warn("AI request returned choice but no usable content, requestId={}, model={}, attempt={}/{}, elapsedMs={}, bodyPreview={}",
+                                requestId, targetModel, attempt + 1, AI_REQUEST_MAX_RETRIES + 1,
+                                System.currentTimeMillis() - start, summarizeText(response.getBody(), 500));
+                    } else if (root.has("error")) {
+                        log.error("AI request failed, requestId={}, model={}, elapsedMs={}, error={}, requestPreview={}",
                                 requestId,
                                 targetModel,
                                 System.currentTimeMillis() - start,
-                                content.length(),
-                                summarizeText(content, 300));
-                        return content;
+                                root.get("error"),
+                                summarizeMessages(messages));
+                        return "AI 服务暂时不可用: " + root.get("error");
                     }
-                    log.warn("AI request returned choice but no usable content, requestId={}, model={}, elapsedMs={}, bodyPreview={}",
-                            requestId, targetModel, System.currentTimeMillis() - start, summarizeText(response.getBody(), 500));
-                } else if (root.has("error")) {
-                    log.error("AI request failed, requestId={}, model={}, elapsedMs={}, error={}, requestPreview={}",
-                            requestId,
-                            targetModel,
-                            System.currentTimeMillis() - start,
-                            root.get("error"),
-                            summarizeMessages(messages));
-                    return "AI 服务暂时不可用: " + root.get("error");
                 }
+            } catch (HttpClientErrorException e) {
+                log.error("AI request http error, requestId={}, model={}, attempt={}/{}, status={}, elapsedMs={}, responseBody={}, requestPreview={}",
+                        requestId,
+                        targetModel,
+                        attempt + 1,
+                        AI_REQUEST_MAX_RETRIES + 1,
+                        e.getStatusCode(),
+                        System.currentTimeMillis() - start,
+                        summarizeText(e.getResponseBodyAsString(), 500),
+                        summarizeMessages(messages),
+                        e);
+                if (e.getStatusCode().value() == 401) {
+                    return "AI 鉴权失败，请检查 qianfan.v2.token 是否有效。";
+                }
+                return "调用 AI 服务时发生异常。";
+            } catch (RestClientResponseException e) {
+                log.error("AI request response exception, requestId={}, model={}, attempt={}/{}, status={}, elapsedMs={}, responseBody={}, requestPreview={}",
+                        requestId,
+                        targetModel,
+                        attempt + 1,
+                        AI_REQUEST_MAX_RETRIES + 1,
+                        e.getStatusCode(),
+                        System.currentTimeMillis() - start,
+                        summarizeText(e.getResponseBodyAsString(), 500),
+                        summarizeMessages(messages),
+                        e);
+                return "调用 AI 服务时发生异常。";
+            } catch (ResourceAccessException e) {
+                boolean retryable = isRetryableAccessException(e);
+                log.error("AI request access error, requestId={}, model={}, attempt={}/{}, elapsedMs={}, retryable={}, errorType={}, message={}, requestPreview={}",
+                        requestId,
+                        targetModel,
+                        attempt + 1,
+                        AI_REQUEST_MAX_RETRIES + 1,
+                        System.currentTimeMillis() - start,
+                        retryable,
+                        e.getClass().getSimpleName(),
+                        e.getMessage(),
+                        summarizeMessages(messages),
+                        e);
+                if (retryable && attempt < AI_REQUEST_MAX_RETRIES) {
+                    sleepBeforeRetry(attempt);
+                    continue;
+                }
+                return "AI 服务连接中断或超时，请稍后重试。";
+            } catch (Exception e) {
+                log.error("Call AI API exception, requestId={}, model={}, attempt={}/{}, elapsedMs={}, errorType={}, message={}, requestPreview={}",
+                        requestId,
+                        targetModel,
+                        attempt + 1,
+                        AI_REQUEST_MAX_RETRIES + 1,
+                        System.currentTimeMillis() - start,
+                        e.getClass().getSimpleName(),
+                        e.getMessage(),
+                        summarizeMessages(messages),
+                        e);
+                return "AI 服务连接中断或超时，请稍后重试。";
             }
-        } catch (HttpClientErrorException e) {
-            log.error("AI request http error, requestId={}, model={}, status={}, elapsedMs={}, responseBody={}, requestPreview={}",
-                    requestId,
-                    targetModel,
-                    e.getStatusCode(),
-                    System.currentTimeMillis() - start,
-                    summarizeText(e.getResponseBodyAsString(), 500),
-                    summarizeMessages(messages),
-                    e);
-            if (e.getStatusCode().value() == 401) {
-                return "AI 鉴权失败，请检查 qianfan.v2.token 是否有效。";
-            }
-            return "调用 AI 服务时发生异常。";
-        } catch (RestClientResponseException e) {
-            log.error("AI request response exception, requestId={}, model={}, status={}, elapsedMs={}, responseBody={}, requestPreview={}",
-                    requestId,
-                    targetModel,
-                    e.getStatusCode(),
-                    System.currentTimeMillis() - start,
-                    summarizeText(e.getResponseBodyAsString(), 500),
-                    summarizeMessages(messages),
-                    e);
-            return "调用 AI 服务时发生异常。";
-        } catch (ResourceAccessException e) {
-            log.error("AI request access error, requestId={}, model={}, elapsedMs={}, errorType={}, message={}, requestPreview={}",
-                    requestId,
-                    targetModel,
-                    System.currentTimeMillis() - start,
-                    e.getClass().getSimpleName(),
-                    e.getMessage(),
-                    summarizeMessages(messages),
-                    e);
-            return "AI 服务连接中断或超时，请稍后重试。";
-        } catch (Exception e) {
-            log.error("Call AI API exception, requestId={}, model={}, elapsedMs={}, errorType={}, message={}, requestPreview={}",
-                    requestId,
-                    targetModel,
-                    System.currentTimeMillis() - start,
-                    e.getClass().getSimpleName(),
-                    e.getMessage(),
-                    summarizeMessages(messages),
-                    e);
-            return "AI 服务连接中断或超时，请稍后重试。";
         }
         log.warn("AI request finished without valid content, requestId={}, model={}, elapsedMs={}, requestPreview={}",
-                requestId, targetModel, System.currentTimeMillis() - start, summarizeMessages(messages));
+                requestId, targetModel, System.currentTimeMillis() - start, summarizeText(sanitizedUserPrompt, 300));
         return "未能获取有效回答。";
+    }
+
+    private String capPrompt(String text, int maxChars, String fieldName) {
+        String normalized = text == null ? "" : text.trim();
+        if (normalized.length() <= maxChars) {
+            return normalized;
+        }
+
+        int reserved = 160;
+        int keepEachSide = Math.max((maxChars - reserved) / 2, 512);
+        String clipped = normalized.substring(0, keepEachSide)
+                + "\n\n[内容过长，已自动截断中间部分]\n\n"
+                + normalized.substring(normalized.length() - keepEachSide);
+        log.warn("AI prompt truncated, field={}, originalLength={}, truncatedLength={}",
+                fieldName, normalized.length(), clipped.length());
+        return clipped;
+    }
+
+    private boolean isRetryableAccessException(ResourceAccessException e) {
+        String message = e == null ? "" : String.valueOf(e.getMessage()).toLowerCase();
+        return message.contains("unexpected end of file")
+                || message.contains("connection reset")
+                || message.contains("read timed out")
+                || message.contains("connect timed out")
+                || message.contains("connection timed out");
+    }
+
+    private void sleepBeforeRetry(int attempt) {
+        try {
+            Thread.sleep(1000L * (attempt + 1));
+        } catch (InterruptedException interruptedException) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private String extractMessageContent(JsonNode messageNode) {
