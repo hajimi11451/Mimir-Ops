@@ -2,8 +2,8 @@
   <div class="flex h-full min-h-0 flex-col overflow-hidden">
     <div class="flex flex-1 min-h-0 flex-col gap-4 xl:flex-row">
       <el-card
-        class="glass-card flex-1 min-h-0 rounded-[30px]"
-        :body-style="{ padding: '20px', height: '100%' }"
+        class="glass-card flex-1 min-h-0 rounded-[1.875rem]"
+        :body-style="{ padding: '1.25rem', height: '100%' }"
       >
         <div class="flex h-full min-h-0 flex-col">
           <div class="mb-3 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -14,7 +14,7 @@
               </p>
             </div>
 
-            <div class="flex flex-wrap gap-1.5 lg:max-w-[420px] lg:justify-end">
+            <div class="flex flex-wrap gap-1.5 lg:max-w-[26.25rem] lg:justify-end">
              <span class="glass-chip px-2.5 py-0.5 text-xs font-medium" :class="healthTone.chip">
                   健康度 {{ healthState.score }}%
                 </span>
@@ -51,7 +51,7 @@
           </div>
 
           <div class="glass-subcard flex-1 min-h-0 overflow-hidden p-2.5 lg:p-3" @wheel.prevent="handleTrendSliderWheel">
-            <div class="flex h-full min-h-[280px] flex-col gap-3 lg:min-h-[300px]">
+            <div class="flex h-full min-h-[16rem] flex-col gap-3 lg:min-h-[18.75rem] xl:min-h-[18.75rem]">
               <div class="relative min-h-0 flex-1 w-full">
                 <canvas v-if="hasChartData" ref="monitorChartRef" class="h-full w-full"></canvas>
                 <div v-else class="flex h-full items-center justify-center text-sm text-ui-subtext">
@@ -61,7 +61,7 @@
 
               <div
                 v-if="showTrendSlider"
-                class="rounded-[18px] border border-white/18 bg-white/8 px-3 py-2.5"
+                class="rounded-[1.125rem] border border-white/18 bg-white/8 px-3 py-2.5"
               >
                 
                 <div class="mb-2 flex items-center justify-between text-xs text-ui-subtext">
@@ -83,8 +83,8 @@
       </el-card>
 
       <el-card
-        class="glass-card w-full min-h-0 rounded-[30px] xl:basis-[32%] xl:max-w-[32%]"
-        :body-style="{ padding: '24px', height: '100%' }"
+        class="glass-card w-full min-h-0 rounded-[1.875rem] xl:basis-[32%] xl:max-w-[32%]"
+        :body-style="{ padding: '1.5rem', height: '100%' }"
       >
         <div class="flex h-full min-h-0 flex-col">
           <div class="mb-4 flex items-center justify-between gap-3">
@@ -107,23 +107,23 @@
                 v-else
                 v-for="(info, index) in infoList"
                 :key="info.id || index"
-                class="glass-soft flex items-start gap-2.5 px-3 py-2.5"
+                class="glass-soft flex items-start gap-2.5 px-3 py-2"
                 :class="getAlertClass(info.riskLevel)"
               >
                 <span class="mt-1 inline-flex h-2 w-2 shrink-0 rounded-full" :class="getAlertDotClass(info.riskLevel)"></span>
                 <div class="min-w-0 flex-1">
                   <div class="flex items-center justify-between gap-3">
-                    <h4 class="truncate text-[13px] font-semibold text-ui-text">
+                    <h4 class="truncate text-xs font-semibold text-ui-text lg:text-[0.8125rem]">
                       {{ getCompactAlertTitle(info) }}
                     </h4>
-                    <span class="glass-chip shrink-0 px-2 py-0.5 text-[11px] font-medium" :class="getAlertChipClass(info.riskLevel)">
+                    <span class="glass-chip shrink-0 px-2 py-0.5 text-[0.6875rem] font-medium" :class="getAlertChipClass(info.riskLevel)">
                       {{ normalizeRiskLevel(info.riskLevel) }}
                     </span>
                   </div>
                   <p class="mt-1 truncate text-xs leading-5 text-ui-subtext">
                     {{ getCompactAlertSummary(info.errorSummary) }}
                   </p>
-                  <div class="mt-1 flex items-center justify-between gap-2 text-[11px] text-ui-subtext/75">
+                  <div class="mt-1 flex items-center justify-between gap-2 text-[0.6875rem] text-ui-subtext/75">
                     <span class="truncate">服务器: {{ info.serverIp || '未知' }}</span>
                     <span class="shrink-0">{{ formatDate(info.createdAt) }}</span>
                   </div>
@@ -678,7 +678,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+  width: 0.375rem;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -687,35 +687,35 @@ onBeforeUnmount(() => {
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background-color: #cbd5e0;
-  border-radius: 3px;
+  border-radius: 0.1875rem;
 }
 
 .trend-slider {
   appearance: none;
-  height: 6px;
-  border-radius: 999px;
-  background: rgba(37, 99, 235, 0.15); /* More subtle blue */
+  height: 0.375rem;
+  border-radius: 62.4375rem;
+  background: rgba(37, 99, 235, 0.15);
   outline: none;
 }
 
 .trend-slider::-webkit-slider-thumb {
   appearance: none;
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.7); /* Slightly less opaque border */
-  border-radius: 999px;
-  background: rgba(37, 99, 235, 0.7); /* More translucent blue */
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2); /* Softer shadow */
+  width: 1rem;
+  height: 1rem;
+  border: 0.125rem solid rgba(255, 255, 255, 0.7);
+  border-radius: 62.4375rem;
+  background: rgba(37, 99, 235, 0.7);
+  box-shadow: 0 0.125rem 0.5rem rgba(37, 99, 235, 0.2);
   cursor: ew-resize;
 }
 
 .trend-slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.7);
-  border-radius: 999px;
+  width: 1rem;
+  height: 1rem;
+  border: 0.125rem solid rgba(255, 255, 255, 0.7);
+  border-radius: 62.4375rem;
   background: rgba(37, 99, 235, 0.7);
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 0.125rem 0.5rem rgba(37, 99, 235, 0.2);
   cursor: ew-resize;
 }
 </style>

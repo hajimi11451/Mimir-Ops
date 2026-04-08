@@ -1,8 +1,8 @@
 <template>
   <div class="workspace-cool-glass mx-auto max-w-7xl space-y-6">
     <el-card
-      class="diagnosis-shell-card glass-card rounded-[34px]"
-      :body-style="{ padding: '24px' }"
+      class="diagnosis-shell-card glass-card rounded-[2.125rem]"
+      :body-style="{ padding: '1.5rem' }"
     >
       <h2 class="text-lg font-bold mb-4 text-ui-text flex items-center">
         <svg
@@ -86,7 +86,7 @@
           </el-form-item>
 
           <el-form-item class="mb-0" label="日志提权">
-            <div class="glass-subcard flex min-h-[40px] items-center justify-between px-4 py-3 w-full">
+            <div class="glass-subcard flex min-h-[2.5rem] items-center justify-between px-4 py-3 w-full">
               <div>
                 <div class="text-sm font-medium text-ui-text">使用 sudo 读取日志</div>
                 <div class="text-xs text-ui-subtext">当前 SSH 用户需要具备 sudo 权限</div>
@@ -157,8 +157,8 @@
     </el-card>
 
     <el-card
-      class="diagnosis-shell-card glass-card rounded-[34px]"
-      :body-style="{ padding: '24px' }"
+      class="diagnosis-shell-card glass-card rounded-[2.125rem]"
+      :body-style="{ padding: '1.5rem' }"
     >
       <h2 class="text-lg font-bold mb-4 text-ui-text flex items-center">
         <svg
@@ -452,7 +452,7 @@ onMounted(() => {
 <style scoped>
 /* 已经移除了所有会导致画面发脏的覆盖背景，一切由全局 glass-card/glass-subcard 接管 */
 .diagnosis-shell-card {
-  border-radius: 34px !important;
+  border-radius: 2.125rem !important;
 }
 
 .diagnosis-shell-card :deep(.el-card__body) {
@@ -461,16 +461,28 @@ onMounted(() => {
 
 .diagnosis-table-wrap {
   overflow: hidden;
-  border-radius: 28px;
+  border-radius: 1.75rem;
 }
 
 .diagnosis-table-wrap :deep(.el-table) {
-  border-radius: 28px;
+  border-radius: 1.75rem;
 }
 
 .diagnosis-table-wrap :deep(.el-table__inner-wrapper) {
   border-radius: inherit;
   overflow: hidden;
+}
+
+@media (max-width: 1280px) {
+  .diagnosis-shell-card {
+    border-radius: 1.75rem !important;
+  }
+  .diagnosis-table-wrap {
+    border-radius: 1.5rem;
+  }
+  .diagnosis-table-wrap :deep(.el-table) {
+    border-radius: 1.5rem;
+  }
 }
 </style>
 

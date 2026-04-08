@@ -12,27 +12,27 @@
         <div class="dashboard-page-shell h-full" :style="getPageMotionStyle(0)">
           <div class="flex h-full min-h-0 flex-col overflow-y-auto p-6 lg:p-8 custom-scrollbar">
             <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <div class="glass-card p-5">
+              <div class="glass-card p-4 lg:p-5">
                 <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">已接入</div>
-                <div class="mt-3 text-3xl font-bold text-ui-text">{{ dashboardStats.total }}</div>
+                <div class="mt-3 text-2xl font-bold text-ui-text lg:text-3xl">{{ dashboardStats.total }}</div>
                 <p class="mt-2 text-sm text-ui-subtext">服务器监控数量</p>
               </div>
 
-              <div class="glass-card p-5">
+              <div class="glass-card p-4 lg:p-5">
                 <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">健康</div>
-                <div class="mt-3 text-3xl font-bold text-ui-text">{{ dashboardStats.success }}</div>
+                <div class="mt-3 text-2xl font-bold text-ui-text lg:text-3xl">{{ dashboardStats.success }}</div>
                 <p class="mt-2 text-sm text-ui-subtext">核心资源稳定</p>
               </div>
 
-              <div class="glass-card p-5">
+              <div class="glass-card p-4 lg:p-5">
                 <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">关注</div>
-                <div class="mt-3 text-3xl font-bold text-ui-text">{{ dashboardStats.warning }}</div>
+                <div class="mt-3 text-2xl font-bold text-ui-text lg:text-3xl">{{ dashboardStats.warning }}</div>
                 <p class="mt-2 text-sm text-ui-subtext">资源波动需关注</p>
               </div>
 
-              <div class="glass-card p-5">
+              <div class="glass-card p-4 lg:p-5">
                 <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">健康均值</div>
-                <div class="mt-3 text-3xl font-bold text-brand">{{ dashboardStats.averageScore }}%</div>
+                <div class="mt-3 text-2xl font-bold text-brand lg:text-3xl">{{ dashboardStats.averageScore }}%</div>
                 <p class="mt-2 text-sm text-ui-subtext">更新：{{ lastUpdatedLabel }}</p>
               </div>
             </div>
@@ -92,14 +92,14 @@
                     :tabindex="0"
                   >
                     <template v-if="item.type === 'add'">
-                      <div class="glass-card flex h-full flex-col items-center justify-center border-dashed p-8 text-center">
-                        <div class="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-brand/10 text-brand">
-                          <svg class="h-10 w-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div class="glass-card flex h-full flex-col items-center justify-center border-dashed p-6 text-center lg:p-8">
+                        <div class="flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-fullbg-brand/10 text-brand">
+                          <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6" />
                           </svg>
                         </div>
-                        <h4 class="mt-6 text-2xl font-bold text-ui-text">新增服务器</h4>
-                        <p class="mt-3 max-w-[260px] text-sm leading-6 text-ui-subtext">
+                        <h4 class="mt-6 text-xl font-bold text-ui-text lg:text-2xl">新增服务器</h4>
+                        <p class="mt-3 max-w-[16.25rem] text-sm leading-6 text-ui-subtext">
                           接入后默认开始采集服务器监控数据。
                         </p>
                         <div class="mt-6 inline-flex items-center rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm">
@@ -134,8 +134,8 @@
                               <div class="sphere-shadow"></div>
                               
                               <div class="server-health-value-sphere">
-                                <div class="text-[26px] font-bold">{{ item.health.score }}%</div>
-                                <div class="mt-1 text-[11px] font-medium ">系统健康度</div>
+                                <div class="text-2xl font-bold lg:text-[1.625rem]">{{ item.health.score }}%</div>
+                                <div class="mt-1 text-xs font-medium lg:text-[0.6875rem]">系统健康度</div>
                               </div>
                             </div>
                           </div>
@@ -147,8 +147,8 @@
                             :key="metric.key"
                             class="server-metric-card glass-soft px-2.5 py-2"
                           >
-                            <div class="text-[10px] uppercase tracking-[0.16em] text-ui-subtext">{{ metric.label }}</div>
-                            <div class="server-metric-value mt-1 text-[13px] font-semibold leading-tight" :class="metric.valueClass">
+                            <div class="text-[0.625rem] uppercase tracking-[0.16em] text-ui-subtext">{{ metric.label }}</div>
+                            <div class="server-metric-value mt-1 text-xs font-semibold leading-tight" :class="metric.valueClass">
                               {{ metric.value }}
                             </div>
                           </div>
@@ -230,7 +230,7 @@
     <el-dialog
       v-model="addMonitorDialogVisible"
       title="新增服务器"
-      width="86vw"
+      width="clamp(40rem, 60vw, 53.75rem)"
       class="add-server-dialog"
       modal-class="keep-bright-overlay"
       append-to-body
@@ -259,7 +259,7 @@
 
         <div class="glass-subcard px-4 py-3  ">
         <p class="text-base">注意</p>
-        <div style="margin-left:10px " class="mt-3 text-sm text-ui-subtext">
+        <div style="margin-left:0.625rem" class="mt-3 text-sm text-ui-subtext">
         <p>采集内容包括:系统型号、运行时间、节点、内存、网卡IO、磁盘IO;</p>
         <p>如需检测其他组件，可以在诊断-新增列表中添加</p>
         </div>
@@ -652,7 +652,7 @@ const setSlideRef = (el, index) => {
 }
 
 const getSlideStyle = index => slideMotionStyles.value[index] || {
-  transform: 'perspective(1400px) translate3d(0, 10px, 0) scale(0.94)',
+  transform: 'perspective(87.5rem) translate3d(0, 0.625rem, 0) scale(0.94)',
   opacity: '0.62',
 }
 
@@ -677,11 +677,11 @@ const updateCarouselMotion = () => {
     const scale = 1 - ratio * 0.06
     const opacity = 1 - ratio * 0.42
     const rotateY = signedRatio * -8
-    const translateY = ratio * 10
-    const translateZ = (1 - ratio) * 22
+    const translateY = ratio * 0.625
+    const translateZ = (1 - ratio) * 1.375
 
     styles[index] = {
-      transform: `perspective(1400px) translate3d(0, ${translateY.toFixed(1)}px, ${translateZ.toFixed(1)}px) rotateY(${rotateY.toFixed(2)}deg) scale(${scale.toFixed(3)})`,
+      transform: `perspective(87.5rem) translate3d(0, ${translateY.toFixed(2)}rem, ${translateZ.toFixed(2)}rem) rotateY(${rotateY.toFixed(2)}deg) scale(${scale.toFixed(3)})`,
       opacity: opacity.toFixed(3),
     }
 
@@ -1059,17 +1059,17 @@ onUnmounted(() => {
 
 .server-carousel {
   display: flex;
-  gap: clamp(16px, 2.4vw, 24px);
+  gap: clamp(1rem, 2.4vw, 1.5rem);
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
-  scroll-padding-inline: 8px;
+  scroll-padding-inline: 0.5rem;
   scrollbar-width: none;
   -ms-overflow-style: none;
   touch-action: pan-x pinch-zoom;
   overscroll-behavior-x: contain;
-  padding: 4px 2px 6px;
-  perspective: 1800px;
+  padding: 0.25rem 0.125rem 0.375rem;
+  perspective: 112.5rem;
   perspective-origin: center center;
 }
 
@@ -1079,8 +1079,8 @@ onUnmounted(() => {
 
 .server-slide {
   flex: 0 0 auto;
-  width: clamp(280px, 30vw, 340px);
-  min-height: 390px;
+  width: clamp(17.5rem, 30vw, 21.25rem);
+  min-height: 24.375rem;
   scroll-snap-align: center;
   scroll-snap-stop: always;
   transition: transform 260ms ease, opacity 260ms ease, box-shadow 260ms ease;
@@ -1094,7 +1094,7 @@ onUnmounted(() => {
 }
 
 .server-slide-add {
-  width: clamp(280px, 30vw, 340px);
+  width: clamp(17.5rem, 30vw, 21.25rem);
 }
 
 .dashboard-detail-panel :deep(.el-select) {
@@ -1117,14 +1117,14 @@ onUnmounted(() => {
   border-color: rgba(255, 255, 255, 0.22);
   background: rgba(242, 248, 255, 0.18);
   color: #5f6f87;
-  box-shadow: 0 12px 22px -24px rgba(88, 110, 148, 0.16);
-  backdrop-filter: blur(14px);
+  box-shadow: 0 0.75rem 1.375rem -1.5rem rgba(88, 110, 148, 0.16);
+  backdrop-filter: blur(0.875rem);
 }
 
 .server-health-stage {
   position: relative;
   display: flex;
-  min-height: 166px;
+  min-height: 10.375rem;
   align-items: center;
   justify-content: center;
   z-index: 2;
@@ -1136,8 +1136,8 @@ onUnmounted(() => {
 
 .liquid-sphere-wrapper {
   position: relative;
-  width: 140px;
-  height: 140px;
+  width: 8.75rem;
+  height: 8.75rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1146,7 +1146,7 @@ onUnmounted(() => {
 .liquid-sphere-wrapper::before {
   content: '';
   position: absolute;
-  inset: -12px;
+  inset: -0.75rem;
   border-radius: 50%;
   background: radial-gradient(
     circle at 50% 52%,
@@ -1156,14 +1156,14 @@ onUnmounted(() => {
   );
   opacity: 0.78;
   z-index: 0;
-  filter: blur(16px);
+  filter: blur(1rem);
   animation: liquid-sphere-pulse 3.2s ease-in-out infinite;
 }
 
 .liquid-sphere {
   position: relative;
-  width: 132px;
-  height: 132px;
+  width: 8.25rem;
+  height: 8.25rem;
   border-radius: 50%;
   background: linear-gradient(
     160deg,
@@ -1171,27 +1171,27 @@ onUnmounted(() => {
     var(--sphere-shell-mid, rgba(186, 247, 213, 0.34)) 48%,
     var(--sphere-shell-bottom, rgba(118, 233, 181, 0.22)) 100%
   );
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(0.75rem);
+  -webkit-backdrop-filter: blur(0.75rem);
   border: 1px solid var(--sphere-ring, rgba(20, 199, 103, 0.54));
   box-shadow:
-    inset 0 0 24px var(--sphere-highlight, rgba(239, 255, 246, 0.88)),
-    inset 0 -18px 32px rgba(15, 23, 42, 0.14),
-    0 10px 28px var(--sphere-glow-soft, rgba(90, 242, 159, 0.32)),
+    inset 0 0 1.5rem var(--sphere-highlight, rgba(239, 255, 246, 0.88)),
+    inset 0 -1.125rem 2rem rgba(15, 23, 42, 0.14),
+    0 0.625rem 1.75rem var(--sphere-glow-soft, rgba(90, 242, 159, 0.32)),
     0 0 0 1px rgba(255, 255, 255, 0.18);
   overflow: hidden;
   z-index: 1;
   isolation: isolate;
-  transform: translateZ(8px);
+  transform: translateZ(0.5rem);
   filter: saturate(1.12);
 }
 
 .liquid-level {
   position: absolute;
-  width: 280px;  
-  height: 280px;
+  width: 17.5rem;
+  height: 17.5rem;
   left: 50%;
-  top: calc(100% - var(--fill-level) + 12px);
+  top: calc(100% - var(--fill-level) + 0.75rem);
   transform: translateX(-50%);
   transition: top 1s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 1;
@@ -1220,8 +1220,8 @@ onUnmounted(() => {
   animation: liquid-spin 4.5s linear infinite;
   border-radius: 43%;
   box-shadow:
-    inset 0 10px 20px rgba(255, 255, 255, 0.16),
-    0 0 22px var(--sphere-liquid-shadow, rgba(20, 199, 103, 0.3));
+    inset 0 0.625rem 1.25rem rgba(255, 255, 255, 0.16),
+    0 0 1.375rem var(--sphere-liquid-shadow, rgba(20, 199, 103, 0.3));
 }
 
 @keyframes liquid-spin {
@@ -1244,7 +1244,7 @@ onUnmounted(() => {
 
 .sphere-glare {
   position: absolute;
-  top: 4px;
+  top: 0.25rem;
   left: 10%;
   width: 80%;
   height: 35%;
@@ -1259,7 +1259,7 @@ onUnmounted(() => {
   inset: 0;
   border-radius: 50%;
   box-shadow:
-    inset 0 -15px 25px rgba(15, 23, 42, 0.15),
+    inset 0 -0.9375rem 1.5625rem rgba(15, 23, 42, 0.15),
     inset 0 1px 0 rgba(219, 234, 254, 0.34);
   z-index: 2;
   pointer-events: none;
@@ -1276,8 +1276,8 @@ onUnmounted(() => {
   pointer-events: none;
   color: var(--sphere-text, #ffffff);
   text-shadow:
-    0 8px 18px rgba(15, 23, 42, 0.32),
-    0 0 16px rgba(255, 255, 255, 0.18);
+    0 0.5rem 1.125rem rgba(15, 23, 42, 0.32),
+    0 0 1rem rgba(255, 255, 255, 0.18);
 }
 
 /* 清理了硬编码渐变，由 glass-soft 接管 */
@@ -1285,7 +1285,7 @@ onUnmounted(() => {
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  transform: translateZ(8px);
+  transform: translateZ(0.5rem);
 }
 
 .server-metric-grid {
@@ -1298,9 +1298,9 @@ onUnmounted(() => {
 }
 
 .server-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 62.4375rem;
   background: rgba(113, 128, 150, 0.3);
   transform: scale(0.92);
   transition: transform 240ms ease, background-color 240ms ease;
@@ -1312,7 +1312,7 @@ onUnmounted(() => {
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+  width: 0.375rem;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -1321,12 +1321,12 @@ onUnmounted(() => {
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background-color: #cbd5e0;
-  border-radius: 3px;
+  border-radius: 0.1875rem;
 }
 
 :deep(.add-server-dialog) {
-  width: min(1380px, calc(100vw - 96px)) !important;
-  max-width: calc(100vw - 96px) !important;
+  width: min(86.25rem, calc(100vw - 6rem)) !important;
+  max-width: calc(100vw - 6rem) !important;
   height: 60vh;
   max-height: 60vh;
   margin: 20vh auto 0 !important;
@@ -1334,13 +1334,13 @@ onUnmounted(() => {
   flex-direction: column;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.44) !important;
-  -webkit-backdrop-filter: blur(28px) saturate(135%);
-  backdrop-filter: blur(28px) saturate(135%);
+  -webkit-backdrop-filter: blur(1.75rem) saturate(135%);
+  backdrop-filter: blur(1.75rem) saturate(135%);
 }
 
 :deep(.add-server-dialog .el-dialog__header) {
   border-bottom: 1px solid rgba(255, 255, 255, 0.34);
-  padding: 22px 28px 18px;
+  padding: 1.375rem 1.75rem 1.125rem;
 }
 
 :deep(.add-server-dialog .el-dialog__title) {
@@ -1350,21 +1350,21 @@ onUnmounted(() => {
 }
 
 :deep(.add-server-dialog .el-dialog__headerbtn) {
-  top: 14px;
-  right: 16px;
+  top: 0.875rem;
+  right: 1rem;
 }
 
 :deep(.add-server-dialog .el-dialog__body) {
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
-  padding: 24px 28px;
+  padding: 1.5rem 1.75rem;
   background: transparent;
 }
 
 :deep(.add-server-dialog .el-dialog__footer) {
   border-top: 1px solid rgba(255, 255, 255, 0.34);
-  padding: 18px 28px 22px;
+  padding: 1.125rem 1.75rem 1.375rem;
   background: transparent;
 }
 
@@ -1374,26 +1374,26 @@ onUnmounted(() => {
 
 @media (max-width: 768px) {
   .server-health-stage {
-    min-height: 154px;
+    min-height: 9.625rem;
   }
 
   :deep(.add-server-dialog) {
-    width: calc(100vw - 24px) !important;
-    max-width: calc(100vw - 24px) !important;
-    max-height: calc(100vh - 24px);
-    margin: 12px auto 0 !important;
+    width: calc(100vw - 1.5rem) !important;
+    max-width: calc(100vw - 1.5rem) !important;
+    max-height: calc(100vh - 1.5rem);
+    margin: 0.75rem auto 0 !important;
   }
 
   :deep(.add-server-dialog .el-dialog__header) {
-    padding: 18px 20px 14px;
+    padding: 1.125rem 1.25rem 0.875rem;
   }
 
   :deep(.add-server-dialog .el-dialog__body) {
-    padding: 18px 20px;
+    padding: 1.125rem 1.25rem;
   }
 
   :deep(.add-server-dialog .el-dialog__footer) {
-    padding: 14px 20px 18px;
+    padding: 0.875rem 1.25rem 1.125rem;
   }
 }
 </style>

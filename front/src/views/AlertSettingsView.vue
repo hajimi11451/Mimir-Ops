@@ -18,7 +18,7 @@
     
 
     <div class="notification-body-grid mt-6 min-h-0 flex-1">
-      <section class="notification-form-panel glass-subcard h-full min-h-0 rounded-[30px] p-6">
+      <section class="notification-form-panel glass-subcard h-full min-h-0 rounded-[1.875rem] p-6">
         <el-form
           ref="formRef"
           :model="form"
@@ -72,9 +72,9 @@
           </el-form-item>
         </el-form>
         
-        <div style="margin: 20px 0 0 10px">
+        <div style="margin: 1.25rem 0 0 0.625rem">
         <p class="text-xl">注意：</p>
-        <div style="margin-left:10px " class="mt-3 text-base text-ui-subtext">
+        <div style="margin-left:0.625rem" class="mt-3 text-base text-ui-subtext">
         <p>同一问题连续两次高风险才会发送邮件，冷却 30 分钟。</p>
         <p>用户收到信息后请尽快检查服务器，本项目不能完美解决高风险问题</p>
         <p>如遇到难解决的问题，联系管理员解决</p>
@@ -83,7 +83,7 @@
         </div>
       </section>
 
-      <section class="status-panel glass-subcard h-full min-h-0 rounded-[30px] p-5">
+      <section class="status-panel glass-subcard h-full min-h-0 rounded-[1.875rem] p-5">
         <div class="mb-4 font-semibold text-ui-text">当前状态</div>
 
         <el-descriptions class="status-plain-descriptions" :column="1">
@@ -294,9 +294,9 @@ onMounted(() => {
   display: grid;
   flex: 1;
   min-height: 0;
-  gap: 20px;
+  gap: 1.25rem;
   align-items: stretch;
-  grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.95fr);
+  grid-template-columns: minmax(0, 1.55fr) minmax(18.75rem, 0.95fr);
 }
 
 .notification-form-panel {
@@ -315,7 +315,7 @@ onMounted(() => {
 
 .status-plain-descriptions :deep(.el-descriptions__body) {
   background: transparent;
-  padding: 10px 10px 10px 20px;
+  padding: 0.625rem 0.625rem 0.625rem 1.25rem;
 }
 
 .status-plain-descriptions :deep(.el-descriptions__table) {
@@ -326,11 +326,11 @@ onMounted(() => {
   background: transparent !important;
   border: 0 !important;
   box-shadow: none !important;
-  padding: 8px 0;
+  padding: 0.5rem 0;
 }
 
 .status-plain-descriptions :deep(.el-descriptions__label) {
-  width: 88px;
+  width: 5.5rem;
   color: #5f6f87;
   font-weight: 500;
 }
@@ -346,12 +346,12 @@ onMounted(() => {
 .mail-action-button {
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.18),
-    0 14px 26px -18px rgba(88, 110, 148, 0.22),
+    0 0.875rem 1.625rem -1.125rem rgba(88, 110, 148, 0.22),
     0 0 0 1px rgba(176, 197, 228, 0.16);
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+  width: 0.375rem;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -360,12 +360,19 @@ onMounted(() => {
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background-color: #c7d6ea;
-  border-radius: 999px;
+  border-radius: 62.4375rem;
 }
 
 @media (max-width: 1023px) {
   .notification-body-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1280px) {
+  .notification-form-panel,
+  .status-panel {
+    border-radius: 1.5rem;
   }
 }
 </style>

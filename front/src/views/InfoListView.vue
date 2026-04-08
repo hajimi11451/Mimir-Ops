@@ -19,10 +19,10 @@
     </div>
 
     <el-card
-      class="alert-shell-card glass-card rounded-[34px]"
-      :body-style="{ padding: '20px' }"
+      class="alert-shell-card glass-card rounded-[2.125rem]"
+      :body-style="{ padding: '1.25rem' }"
     >
-      <div class="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,320px)_auto] md:items-center">
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,20rem)_auto] md:items-center">
         <div>
           <!-- <div class="mb-2 text-sm font-medium text-ui-text">服务器 IP 筛选</div> -->
           <el-select
@@ -66,10 +66,10 @@
     </el-card>
 
     <el-card
-      class="alert-shell-card glass-card rounded-[34px]"
+      class="alert-shell-card glass-card rounded-[2.125rem]"
       :body-style="{ padding: '0' }"
     >
-      <div class="alert-table-wrap overflow-hidden rounded-[30px]">
+      <div class="alert-table-wrap overflow-hidden rounded-[1.875rem]">
         <el-table
           :data="paginatedList"
           style="width: 100%"
@@ -420,7 +420,7 @@ onMounted(() => {
 
 <style scoped>
 .alert-shell-card {
-  border-radius: 34px !important;
+  border-radius: 2.125rem !important;
 }
 
 .alert-shell-card :deep(.el-card__body) {
@@ -428,15 +428,27 @@ onMounted(() => {
 }
 
 .alert-table-wrap {
-  border-radius: 30px;
+  border-radius: 1.875rem;
 }
 
 .alert-table-wrap :deep(.el-table) {
-  border-radius: 30px;
+  border-radius: 1.875rem;
 }
 
 .alert-table-wrap :deep(.el-table__inner-wrapper) {
   border-radius: inherit;
   overflow: hidden;
+}
+
+@media (max-width: 1280px) {
+  .alert-shell-card {
+    border-radius: 1.75rem !important;
+  }
+  .alert-table-wrap {
+    border-radius: 1.5rem;
+  }
+  .alert-table-wrap :deep(.el-table) {
+    border-radius: 1.5rem;
+  }
 }
 </style>

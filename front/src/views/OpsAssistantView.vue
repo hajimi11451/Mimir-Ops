@@ -1,6 +1,6 @@
 <template>
   <div class="workspace-cool-glass mx-auto max-w-7xl space-y-5">
-    <!-- <el-card class="glass-card rounded-[34px]" :body-style="{ padding: '20px' }">
+    <!-- <el-card class="glass-card rounded-[2.125rem]" :body-style="{ padding: '1.25rem' }">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 class="text-lg font-bold text-ui-text">灵枢运维助手</h2>
@@ -16,7 +16,7 @@
       </div>
     </el-card> -->
 
-    <el-card class="assistant-shell-card glass-card rounded-[34px]" :body-style="{ padding: '20px' }">
+    <el-card class="assistant-shell-card glass-card rounded-[1.875rem]" :body-style="{ padding: '1.25rem' }">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <el-select
           v-model="selectedSavedConnection"
@@ -42,11 +42,11 @@
       <p class="text-xs text-ui-subtext mt-3">已启用自动模式：即使填写了连接，也会先判断是咨询还是执行；只有明确是执行请求时才操作服务器。</p>
     </el-card>
 
-    <el-card class="assistant-shell-card glass-card rounded-[34px]" :body-style="{ padding: '20px' }">
-      <div ref="chatBox" class="glass-subcard custom-scrollbar h-[460px] min-h-0 overflow-y-auto overflow-x-hidden rounded-[30px] p-4 space-y-3">
+    <el-card class="assistant-shell-card glass-card rounded-[1.875rem]" :body-style="{ padding: '1.25rem' }">
+      <div ref="chatBox" class="glass-subcard custom-scrollbar h-[28.75rem] min-h-0 overflow-y-auto overflow-x-hidden rounded-[1.875rem] p-4 space-y-3 lg:h-[30rem]">
         <div v-for="(msg, idx) in messages" :key="idx" class="flex" :class="msg.role === 'user' ? 'justify-end' : 'justify-start'">
           <div
-            class="max-w-[85%] rounded-[24px] px-4 py-3 text-sm"
+            class="max-w-[85%] rounded-[1.5rem] px-4 py-3 text-sm"
             :class="[
               msg.role === 'user'
                 ? 'assistant-user-bubble text-white'
@@ -118,10 +118,10 @@
               <div class="space-y-3">
                 <div class="result-card-head">
                   <div class="min-w-0">
-                    <div v-if="msg.eyebrow" class="text-[11px] font-semibold tracking-[0.16em] uppercase text-ui-subtext/80">
+                    <div v-if="msg.eyebrow" class="text-[0.6875rem] font-semibold tracking-[0.16em] uppercase text-ui-subtext/80">
                       {{ msg.eyebrow }}
                     </div>
-                    <div class="text-[15px] font-semibold text-ui-text mt-1">{{ msg.title }}</div>
+                    <div class="text-[0.9375rem] font-semibold text-ui-text mt-1">{{ msg.title }}</div>
                     <div v-if="msg.subtitle" class="text-xs text-ui-subtext mt-1">{{ msg.subtitle }}</div>
                   </div>
                   <span :class="resultToneClass(msg.tone)">{{ resultToneLabel(msg.tone) }}</span>
@@ -1140,7 +1140,7 @@ onUnmounted(() => {
 
 <style scoped>
 .assistant-shell-card {
-  border-radius: 34px !important;
+  border-radius: 2.125rem !important;
 }
 
 .assistant-shell-card :deep(.el-card__body) {
@@ -1150,23 +1150,23 @@ onUnmounted(() => {
 /* 用户气泡使用品牌蓝纯色底色加亮，机器人回复交给 global glass-soft */
 .assistant-user-bubble {
   background: linear-gradient(135deg, rgba(37, 99, 235, 0.96), rgba(96, 165, 250, 0.94));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 8px 16px -6px rgba(37, 99, 235, 0.4);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 0.5rem 1rem -0.375rem rgba(37, 99, 235, 0.4);
 }
 
 .result-card-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  padding-bottom: 12px;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
   border-bottom: 1px solid rgba(148, 163, 184, 0.2);
 }
 
 .result-tone {
   flex-shrink: 0;
-  border-radius: 999px;
-  padding: 4px 10px;
-  font-size: 11px;
+  border-radius: 62.4375rem;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.6875rem;
   font-weight: 600;
   line-height: 1;
 }
@@ -1206,7 +1206,7 @@ onUnmounted(() => {
   overflow-x: auto;
   margin-bottom: 0.75em;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(18px);
+  backdrop-filter: blur(1.125rem);
 }
 :deep(.markdown-body code) {
   background: rgba(255, 255, 255, 0.2);
@@ -1227,7 +1227,7 @@ onUnmounted(() => {
 :deep(.markdown-body blockquote) {
   margin: 0 0 0.85em;
   padding: 0.8em 1em;
-  border-left: 3px solid rgba(59, 130, 246, 0.35);
+  border-left: 0.1875rem solid rgba(59, 130, 246, 0.35);
   background: rgba(255, 255, 255, 0.16);
   border-radius: 0.85rem;
 }
@@ -1242,7 +1242,7 @@ onUnmounted(() => {
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+  width: 0.375rem;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -1251,6 +1251,6 @@ onUnmounted(() => {
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background-color: rgba(148, 163, 184, 0.5);
-  border-radius: 999px;
+  border-radius: 62.4375rem;
 }
 </style>

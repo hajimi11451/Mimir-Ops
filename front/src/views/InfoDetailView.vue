@@ -17,7 +17,7 @@
     <el-skeleton v-if="loading" :rows="8" animated />
 
     <template v-else-if="info">
-      <el-card class="alert-detail-card glass-card rounded-[34px]" :body-style="{ padding: '20px' }">
+      <el-card class="alert-detail-card glass-card rounded-[2.125rem]" :body-style="{ padding: '1.25rem' }">
         <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div class="text-lg font-semibold text-ui-text">{{ info.errorSummary || '未命名告警' }}</div>
           <el-tag :type="getTagType(info.riskLevel)" effect="light">{{ formattedRiskLevel }}</el-tag>
@@ -33,14 +33,14 @@
         </el-descriptions>
       </el-card>
 
-      <el-card class="alert-detail-card glass-card rounded-[34px]" :body-style="{ padding: '20px' }">
+      <el-card class="alert-detail-card glass-card rounded-[2.125rem]" :body-style="{ padding: '1.25rem' }">
         <template #header>
           <div class="font-semibold text-ui-text">问题详情</div>
         </template>
         <pre class="glass-code-block detail-pre">{{ info.analysisResult || '-' }}</pre>
       </el-card>
 
-      <el-card class="alert-detail-card glass-card rounded-[34px]" :body-style="{ padding: '20px' }">
+      <el-card class="alert-detail-card glass-card rounded-[2.125rem]" :body-style="{ padding: '1.25rem' }">
         <template #header>
           <div class="font-semibold text-ui-text">处理建议</div>
         </template>
@@ -49,7 +49,7 @@
           <div
             v-for="(action, index) in actionList"
             :key="`${index}-${action}`"
-            class="alert-action-card glass-subcard flex flex-col gap-3 rounded-[24px] p-4 md:flex-row md:items-start md:justify-between"
+            class="alert-action-card glass-subcard flex flex-col gap-3 rounded-[1.5rem] p-4 md:flex-row md:items-start md:justify-between"
           >
             <div class="min-w-0 flex-1 whitespace-pre-wrap break-all text-sm leading-6 text-ui-text md:pr-4">
               <span class="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand/10 text-xs font-semibold text-brand">
@@ -70,7 +70,7 @@
         <el-empty v-else description="无处理建议" />
       </el-card>
 
-      <el-card class="alert-detail-card glass-card rounded-[34px]" :body-style="{ padding: '20px' }">
+      <el-card class="alert-detail-card glass-card rounded-[2.125rem]" :body-style="{ padding: '1.25rem' }">
         <template #header>
           <div class="font-semibold text-ui-text">原始日志</div>
         </template>
@@ -319,7 +319,7 @@ onMounted(() => {
 
 <style scoped>
 .alert-detail-card {
-  border-radius: 34px !important;
+  border-radius: 2.125rem !important;
 }
 
 .alert-detail-card :deep(.el-card__body),
@@ -331,7 +331,13 @@ onMounted(() => {
   background: linear-gradient(180deg, rgba(250, 253, 255, 0.36), rgba(238, 245, 253, 0.24));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    0 14px 24px -22px rgba(88, 110, 148, 0.14);
+    0 0.875rem 1.5rem -1.375rem rgba(88, 110, 148, 0.14);
+}
+
+@media (max-width: 1280px) {
+  .alert-detail-card {
+    border-radius: 1.75rem !important;
+  }
 }
 
 .alert-assistant-button {
@@ -339,7 +345,7 @@ onMounted(() => {
   background: linear-gradient(135deg, rgba(37, 99, 235, 0.96), rgba(96, 165, 250, 0.94)) !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 18px 32px -24px rgba(37, 99, 235, 0.52) !important;
+    0 1.125rem 2rem -1.5rem rgba(37, 99, 235, 0.52) !important;
   color: #ffffff !important;
 }
 
@@ -356,11 +362,11 @@ onMounted(() => {
 
 .detail-pre {
   max-width: 100%;
-  border-radius: 24px;
+  border-radius: 1.5rem;
 }
 
 .raw-log {
-  max-height: 360px;
+  max-height: 22.5rem;
   overflow: auto;
 }
 </style>

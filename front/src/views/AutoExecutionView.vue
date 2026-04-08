@@ -14,8 +14,8 @@
     </div>
 
     <el-card
-      class="disposal-shell-card glass-card mb-6 rounded-[34px]"
-      :body-style="{ padding: '20px' }"
+      class="disposal-shell-card glass-card mb-6 rounded-[2.125rem]"
+      :body-style="{ padding: '1.25rem' }"
     >
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <el-input
@@ -37,10 +37,10 @@
     </el-card>
 
     <el-card
-      class="disposal-shell-card glass-card rounded-[34px]"
+      class="disposal-shell-card glass-card rounded-[2.125rem]"
       :body-style="{ padding: '0' }"
     >
-      <div class="disposal-table-wrap overflow-hidden rounded-[30px]">
+      <div class="disposal-table-wrap overflow-hidden rounded-[1.875rem]">
         <el-table
           :data="paginatedList"
           style="width: 100% "
@@ -122,31 +122,31 @@
     >
       <div v-if="selectedProcess" class="disposal-detail-layout flex min-h-0 flex-col gap-6">
         <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div class="disposal-detail-chip glass-subcard rounded-[24px] px-4 py-3">
+          <div class="disposal-detail-chip glass-subcard rounded-[1.5rem] px-4 py-3">
             <div class="disposal-detail-label text-xs mb-1">时间</div>
             <div class="disposal-detail-value text-sm">{{ formatDate(selectedProcess.processTime) }}</div>
           </div>
-          <div class="disposal-detail-chip glass-subcard rounded-[24px] px-4 py-3">
+          <div class="disposal-detail-chip glass-subcard rounded-[1.5rem] px-4 py-3">
             <div class="disposal-detail-label text-xs mb-1">服务器 IP</div>
             <div class="disposal-detail-value text-sm">{{ selectedProcess.serverIp || '-' }}</div>
           </div>
-          <div class="disposal-detail-chip glass-subcard rounded-[24px] px-4 py-3">
+          <div class="disposal-detail-chip glass-subcard rounded-[1.5rem] px-4 py-3">
             <div class="disposal-detail-label text-xs mb-1">组件</div>
             <div class="disposal-detail-value text-sm">{{ selectedProcess.component || '-' }}</div>
           </div>
         </div>
 
         <div class="disposal-detail-content grid min-h-0 flex-1 grid-cols-1 gap-6 xl:grid-cols-2">
-          <section class="disposal-detail-section glass-subcard flex min-h-0 flex-col rounded-[28px] p-5">
+          <section class="disposal-detail-section glass-subcard flex min-h-0 flex-col rounded-[1.75rem] p-5">
             <div class="text-sm font-semibold text-ui-text mb-3">问题日志</div>
-            <div class="disposal-detail-block glass-code-block min-h-0 flex-1 overflow-y-auto rounded-[24px] px-4 py-3 text-sm leading-6 text-ui-text">
+            <div class="disposal-detail-block glass-code-block min-h-0 flex-1 overflow-y-auto rounded-[1.5rem] px-4 py-3 text-sm leading-6 text-ui-text">
               {{ selectedProcess.problemLog || '-' }}
             </div>
           </section>
 
-          <section class="disposal-detail-section glass-subcard flex min-h-0 flex-col rounded-[28px] p-5">
+          <section class="disposal-detail-section glass-subcard flex min-h-0 flex-col rounded-[1.75rem] p-5">
             <div class="text-sm font-semibold text-ui-text mb-3">处置</div>
-            <div class="disposal-detail-block glass-code-block min-h-0 flex-1 overflow-y-auto rounded-[24px] px-4 py-3 text-sm leading-6 text-ui-text">
+            <div class="disposal-detail-block glass-code-block min-h-0 flex-1 overflow-y-auto rounded-[1.5rem] px-4 py-3 text-sm leading-6 text-ui-text">
               {{ selectedProcess.processMethod || '-' }}
             </div>
           </section>
@@ -286,7 +286,7 @@ onMounted(() => {
 
 <style scoped>
 .disposal-shell-card {
-  border-radius: 34px !important;
+  border-radius: 2.125rem !important;
 }
 
 .disposal-shell-card :deep(.el-card__body) {
@@ -294,12 +294,12 @@ onMounted(() => {
 }
 
 .disposal-table-wrap {
-  border-radius: 30px;
-  
+  border-radius: 1.875rem;
+
 }
 
 .disposal-table-wrap :deep(.el-table) {
-  border-radius: 30px;
+  border-radius: 1.875rem;
 }
 
 .disposal-table-wrap :deep(.el-table__inner-wrapper) {
@@ -331,9 +331,21 @@ onMounted(() => {
   border-color: rgba(255, 255, 255, 0.34) !important;
 }
 
+@media (max-width: 1280px) {
+  .disposal-shell-card {
+    border-radius: 1.75rem !important;
+  }
+  .disposal-table-wrap {
+    border-radius: 1.5rem;
+  }
+  .disposal-table-wrap :deep(.el-table) {
+    border-radius: 1.5rem;
+  }
+}
+
 :deep(.disposal-detail-dialog) {
-  width: min(1380px, calc(100vw - 96px)) !important;
-  max-width: calc(100vw - 96px);
+  width: min(86.25rem, calc(100vw - 6rem)) !important;
+  max-width: calc(100vw - 6rem);
   height: 60vh;
   max-height: 60vh;
   margin: 20vh auto 0 !important;
@@ -341,18 +353,18 @@ onMounted(() => {
   flex-direction: column;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.44) !important;
-  -webkit-backdrop-filter: blur(28px) saturate(135%);
-  backdrop-filter: blur(28px) saturate(135%);
+  -webkit-backdrop-filter: blur(1.75rem) saturate(135%);
+  backdrop-filter: blur(1.75rem) saturate(135%);
 }
 
 :deep(.disposal-detail-dialog .el-dialog__headerbtn) {
-  top: 10px;
-  right: 10px;
+  top: 0.625rem;
+  right: 0.625rem;
 }
 
 :deep(.disposal-detail-dialog .el-dialog__header) {
   border-bottom: 1px solid rgba(255, 255, 255, 0.34);
-  padding: 22px 28px 18px;
+  padding: 1.375rem 1.75rem 1.125rem;
 }
 
 :deep(.disposal-detail-dialog .el-dialog__title) {
@@ -366,16 +378,16 @@ onMounted(() => {
   min-height: 0;
   flex: 1 1 auto;
   overflow: hidden;
-  padding: 0 28px 28px;
+  padding: 0 1.75rem 1.75rem;
   background: transparent;
 }
 
 @media (max-width: 768px) {
   :deep(.disposal-detail-dialog) {
-    width: calc(100vw - 24px) !important;
-    max-width: calc(100vw - 24px);
-    max-height: calc(100vh - 24px);
-    margin: 12px auto 0 !important;
+    width: calc(100vw - 1.5rem) !important;
+    max-width: calc(100vw - 1.5rem);
+    max-height: calc(100vh - 1.5rem);
+    margin: 0.75rem auto 0 !important;
   }
 }
 </style>
