@@ -11,33 +11,34 @@
       <section class="dashboard-page">
         <div class="dashboard-page-shell h-full" :style="getPageMotionStyle(0)">
           <div class="flex h-full min-h-0 flex-col overflow-y-auto p-6 lg:p-8 custom-scrollbar">
-            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <div class="glass-card p-4 lg:p-5">
-                <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">已接入</div>
-                <div class="mt-3 text-2xl font-bold text-ui-text lg:text-3xl">{{ dashboardStats.total }}</div>
-                <p class="mt-2 text-sm text-ui-subtext">服务器监控数量</p>
+            <div class="flex flex-col min-h-[50rem] h-full">
+              <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4" style="flex: 2; min-height: 120px;">
+                <div class="glass-card flex flex-col justify-center p-3 lg:p-4 h-full min-h-0">
+                  <div class="text-[0.625rem] lg:text-xs uppercase tracking-[0.22em] text-ui-subtext">已接入</div>
+                  <div class="mt-1 lg:mt-2 text-xl font-bold text-ui-text lg:text-2xl">{{ dashboardStats.total }}</div>
+                  <p class="mt-1 text-[0.625rem] lg:text-xs text-ui-subtext">服务器监控数量</p>
+                </div>
+
+                <div class="glass-card flex flex-col justify-center p-3 lg:p-4 h-full min-h-0">
+                  <div class="text-[0.625rem] lg:text-xs uppercase tracking-[0.22em] text-ui-subtext">健康</div>
+                  <div class="mt-1 lg:mt-2 text-xl font-bold text-ui-text lg:text-2xl">{{ dashboardStats.success }}</div>
+                  <p class="mt-1 text-[0.625rem] lg:text-xs text-ui-subtext">核心资源稳定</p>
+                </div>
+
+                <div class="glass-card flex flex-col justify-center p-3 lg:p-4 h-full min-h-0">
+                  <div class="text-[0.625rem] lg:text-xs uppercase tracking-[0.22em] text-ui-subtext">关注</div>
+                  <div class="mt-1 lg:mt-2 text-xl font-bold text-ui-text lg:text-2xl">{{ dashboardStats.warning }}</div>
+                  <p class="mt-1 text-[0.625rem] lg:text-xs text-ui-subtext">资源波动需关注</p>
+                </div>
+
+                <div class="glass-card flex flex-col justify-center p-3 lg:p-4 h-full min-h-0">
+                  <div class="text-[0.625rem] lg:text-xs uppercase tracking-[0.22em] text-ui-subtext">健康均值</div>
+                  <div class="mt-1 lg:mt-2 text-xl font-bold text-brand lg:text-2xl">{{ dashboardStats.averageScore }}%</div>
+                  <p class="mt-1 text-[0.625rem] lg:text-xs text-ui-subtext truncate">更新：{{ lastUpdatedLabel }}</p>
+                </div>
               </div>
 
-              <div class="glass-card p-4 lg:p-5">
-                <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">健康</div>
-                <div class="mt-3 text-2xl font-bold text-ui-text lg:text-3xl">{{ dashboardStats.success }}</div>
-                <p class="mt-2 text-sm text-ui-subtext">核心资源稳定</p>
-              </div>
-
-              <div class="glass-card p-4 lg:p-5">
-                <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">关注</div>
-                <div class="mt-3 text-2xl font-bold text-ui-text lg:text-3xl">{{ dashboardStats.warning }}</div>
-                <p class="mt-2 text-sm text-ui-subtext">资源波动需关注</p>
-              </div>
-
-              <div class="glass-card p-4 lg:p-5">
-                <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">健康均值</div>
-                <div class="mt-3 text-2xl font-bold text-brand lg:text-3xl">{{ dashboardStats.averageScore }}%</div>
-                <p class="mt-2 text-sm text-ui-subtext">更新：{{ lastUpdatedLabel }}</p>
-              </div>
-            </div>
-
-            <div class="glass-card mt-4 flex flex-1 min-h-0 flex-col p-4 lg:p-5">
+              <div class="glass-card mt-4 flex flex-col p-4 lg:p-5" style="flex: 8; min-height: 480px;">
               <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <h3 class="text-lg font-bold text-ui-text">服务器态势</h3>
@@ -134,8 +135,8 @@
                               <div class="sphere-shadow"></div>
                               
                               <div class="server-health-value-sphere">
-                                <div class="text-2xl font-bold lg:text-[1.625rem]">{{ item.health.score }}%</div>
-                                <div class="mt-1 text-xs font-medium lg:text-[0.6875rem]">系统健康度</div>
+                                <div class="font-bold" style="font-size: clamp(1rem, 9.28cqi, 1.625rem);">{{ item.health.score }}%</div>
+                                <div class="mt-1 font-medium" style="font-size: clamp(0.5rem, 3.92cqi, 0.6875rem);">系统健康度</div>
                               </div>
                             </div>
                           </div>
@@ -177,6 +178,7 @@
                 <div v-if="!serverCards.length" class="glass-soft pt-4 px-4 py-5 text-center text-sm text-ui-subtext">
                   暂无服务器监控，可先添加一台。
                 </div>
+              </div>
               </div>
             </div>
           </div>
@@ -281,8 +283,8 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { addServerMonitor, resumeServerMonitor, stopServerMonitor } from '../api/diagnosis'
 import { selectAllInfo } from '../api/info'
 import { getSystemDashboard } from '../api/monitor'
@@ -1079,14 +1081,16 @@ onUnmounted(() => {
 
 .server-slide {
   flex: 0 0 auto;
-  width: clamp(17.5rem, 30vw, 21.25rem);
-  min-height: 24.375rem;
+  height: 100%;
+  max-width: 100%;
+  aspect-ratio: 280 / 390;
   scroll-snap-align: center;
   scroll-snap-stop: always;
   transition: transform 260ms ease, opacity 260ms ease, box-shadow 260ms ease;
   will-change: transform, opacity;
   cursor: pointer;
   transform-style: preserve-3d;
+  container-type: inline-size;
 }
 
 .server-slide.is-active {
@@ -1094,7 +1098,9 @@ onUnmounted(() => {
 }
 
 .server-slide-add {
-  width: clamp(17.5rem, 30vw, 21.25rem);
+  height: 100%;
+  max-width: 100%;
+  aspect-ratio: 280 / 390;
 }
 
 .dashboard-detail-panel :deep(.el-select) {
@@ -1124,7 +1130,8 @@ onUnmounted(() => {
 .server-health-stage {
   position: relative;
   display: flex;
-  min-height: 10.375rem;
+  flex: 1;
+  min-height: 0;
   align-items: center;
   justify-content: center;
   z-index: 2;
@@ -1136,8 +1143,9 @@ onUnmounted(() => {
 
 .liquid-sphere-wrapper {
   position: relative;
-  width: 8.75rem;
-  height: 8.75rem;
+  width: 56.45%;
+  max-height: 100%;
+  aspect-ratio: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1146,7 +1154,7 @@ onUnmounted(() => {
 .liquid-sphere-wrapper::before {
   content: '';
   position: absolute;
-  inset: -0.75rem;
+  inset: -8.5%;
   border-radius: 50%;
   background: radial-gradient(
     circle at 50% 52%,
@@ -1162,8 +1170,8 @@ onUnmounted(() => {
 
 .liquid-sphere {
   position: relative;
-  width: 8.25rem;
-  height: 8.25rem;
+  width: 94.28%;
+  height: 94.28%;
   border-radius: 50%;
   background: linear-gradient(
     160deg,
@@ -1188,10 +1196,10 @@ onUnmounted(() => {
 
 .liquid-level {
   position: absolute;
-  width: 17.5rem;
-  height: 17.5rem;
+  width: 212.12%;
+  height: 212.12%;
   left: 50%;
-  top: calc(100% - var(--fill-level) + 0.75rem);
+  top: calc(100% - var(--fill-level) + 9.09%);
   transform: translateX(-50%);
   transition: top 1s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 1;
@@ -1244,7 +1252,7 @@ onUnmounted(() => {
 
 .sphere-glare {
   position: absolute;
-  top: 0.25rem;
+  top: 3.03%;
   left: 10%;
   width: 80%;
   height: 35%;
@@ -1374,7 +1382,7 @@ onUnmounted(() => {
 
 @media (max-width: 768px) {
   .server-health-stage {
-    min-height: 9.625rem;
+    min-height: 0;
   }
 
   :deep(.add-server-dialog) {
