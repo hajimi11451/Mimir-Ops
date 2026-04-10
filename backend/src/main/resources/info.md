@@ -1,6 +1,12 @@
 # 运维日志分析知识库
 
 ## 风险分级补充规则
-- SSH/sshd 日志中如果仅出现 Failed password、Invalid user、authentication failure、Connection closed、断连、重试等暴力破解尝试迹象，但没有成功登录、提权成功、后门落地、关键文件被篡改等“已攻破”证据时，最高判定为“中”风险。
-- 只有明确出现登录成功（如 Accepted password、Accepted publickey、session opened）、提权成功、持久化、后门落地、敏感配置或数据被改动等“已攻破”证据时，才判定为“高”风险。（要是某一ip多次成功登录则忽略这个ip，默认这个ip为正常用户，如果是某一ip多次密码输入错误后才成功登录才判断为已攻破“）
-
+SSH检查：
+    中风险：
+        SSH/sshd 日志中仅出现 Failed password、Invalid user、authentication failure、Connection closed 或断连重试等暴力破解 迹象，但无任何登录成功、提权、持久化、后门落地或敏感篡改证据时，最高判定为“中”风险。
+    高风险：
+        仅当明确出现以下“已攻破”证据之一时，判定为“高”风险：
+            登录成功（如 Accepted password、Accepted publickey、session opened），且成功前 5 分钟内同 IP 失败次数 ≥ 3次；
+            提权成功、持久化植入、后门落地；
+            敏感配置文件或数据被篡改。
+    例外排除：同一 IP 在监测周期内仅出现多次成功登录且无任何失败记录的，视为正常运维行为，忽略其告警。

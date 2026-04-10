@@ -48,7 +48,7 @@
           stripe
           v-loading="loading"
         >
-          <el-table-column prop="processTime" label="时间" min-width="180"  >
+          <el-table-column prop="processTime" label="时间" min-width="160"  >
             <template #default="{ row }">
               {{ formatDate(row.processTime) }}
             </template>
@@ -80,7 +80,7 @@
           <el-table-column
             prop="processMethod"
             label="处置"
-            min-width="300"
+            min-width="250"
             show-overflow-tooltip
           >
             <template #default="{ row }">

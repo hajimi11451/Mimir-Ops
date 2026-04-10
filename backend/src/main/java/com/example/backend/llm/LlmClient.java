@@ -12,6 +12,7 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientResponseException;
 
@@ -26,6 +27,7 @@ import java.util.UUID;
 @Component
 @RequiredArgsConstructor
 public class LlmClient {
+    private static final int REQUEST_MAX_RETRIES = 2;
 
     private final ObjectMapper objectMapper;
 
@@ -140,78 +142,147 @@ public class LlmClient {
 
     private JsonNode post(String requestId, String requestType, Map<String, Object> requestBody) {
         long start = System.currentTimeMillis();
+        String messagePreview = summarizeMessages(requestBody.get("messages"));
+        String toolPreview = summarizeTools(requestBody.get("tools"));
+
+        for (int attempt = 0; attempt <= REQUEST_MAX_RETRIES; attempt++) {
+            try {
+                log.info("LLM request start, requestId={}, type={}, attempt={}/{}, model={}, url={}, messageCount={}, toolCount={}, responseFormat={}, messagePreview={}, toolPreview={}",
+                        requestId,
+                        requestType,
+                        attempt + 1,
+                        REQUEST_MAX_RETRIES + 1,
+                        requestBody.get("model"),
+                        normalizeBaseUrl(baseUrl) + "/chat/completions",
+                        countItems(requestBody.get("messages")),
+                        countItems(requestBody.get("tools")),
+                        summarizeText(String.valueOf(requestBody.get("response_format")), 120),
+                        messagePreview,
+                        toolPreview);
+                String responseBody = restClient.post()
+                        .uri("/chat/completions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .body(requestBody)
+                        .retrieve()
+                        .body(String.class);
+
+                log.info("LLM response received, requestId={}, type={}, attempt={}/{}, elapsedMs={}, bodyLength={}, bodyPreview={}",
+                        requestId,
+                        requestType,
+                        attempt + 1,
+                        REQUEST_MAX_RETRIES + 1,
+                        System.currentTimeMillis() - start,
+                        responseBody == null ? 0 : responseBody.length(),
+                        summarizeText(responseBody, 500));
+
+                if (!StringUtils.hasText(responseBody)) {
+                    log.error("LLM response empty, requestId={}, type={}, attempt={}/{}, elapsedMs={}",
+                            requestId, requestType, attempt + 1, REQUEST_MAX_RETRIES + 1, System.currentTimeMillis() - start);
+                    throw new IllegalStateException("LLM 返回为空。");
+                }
+
+                JsonNode root = objectMapper.readTree(responseBody);
+                if (root.has("error")) {
+                    log.error("LLM response contained error, requestId={}, type={}, attempt={}/{}, elapsedMs={}, error={}",
+                            requestId, requestType, attempt + 1, REQUEST_MAX_RETRIES + 1, System.currentTimeMillis() - start, root.path("error"));
+                    throw new IllegalStateException("LLM API error: " + root.path("error"));
+                }
+                return root;
+            } catch (RestClientResponseException e) {
+                log.error("LLM request response exception, requestId={}, type={}, attempt={}/{}, status={}, elapsedMs={}, responseBody={}, messagePreview={}, toolPreview={}",
+                        requestId,
+                        requestType,
+                        attempt + 1,
+                        REQUEST_MAX_RETRIES + 1,
+                        e.getStatusCode(),
+                        System.currentTimeMillis() - start,
+                        summarizeText(e.getResponseBodyAsString(), 500),
+                        messagePreview,
+                        toolPreview,
+                        e);
+                throw new IllegalStateException("调用 LLM 失败: " + e.getMessage(), e);
+            } catch (ResourceAccessException e) {
+                boolean retryable = isRetryableException(e);
+                if (retryable && attempt < REQUEST_MAX_RETRIES) {
+                    log.warn("LLM request transient access exception, requestId={}, type={}, attempt={}/{}, elapsedMs={}, message={}, willRetry=true",
+                            requestId, requestType, attempt + 1, REQUEST_MAX_RETRIES + 1, System.currentTimeMillis() - start, e.getMessage());
+                    sleepBeforeRetry(attempt);
+                    continue;
+                }
+                log.error("LLM request access exception, requestId={}, type={}, attempt={}/{}, elapsedMs={}, errorType={}, message={}, messagePreview={}, toolPreview={}",
+                        requestId,
+                        requestType,
+                        attempt + 1,
+                        REQUEST_MAX_RETRIES + 1,
+                        System.currentTimeMillis() - start,
+                        e.getClass().getSimpleName(),
+                        e.getMessage(),
+                        messagePreview,
+                        toolPreview,
+                        e);
+                throw new IllegalStateException("调用 LLM 失败: " + e.getMessage(), e);
+            } catch (RestClientException e) {
+                boolean retryable = isRetryableException(e);
+                if (retryable && attempt < REQUEST_MAX_RETRIES) {
+                    log.warn("LLM request transient client exception, requestId={}, type={}, attempt={}/{}, elapsedMs={}, message={}, willRetry=true",
+                            requestId, requestType, attempt + 1, REQUEST_MAX_RETRIES + 1, System.currentTimeMillis() - start, e.getMessage());
+                    sleepBeforeRetry(attempt);
+                    continue;
+                }
+                log.error("LLM request failed, requestId={}, type={}, attempt={}/{}, elapsedMs={}, errorType={}, message={}, messagePreview={}, toolPreview={}",
+                        requestId,
+                        requestType,
+                        attempt + 1,
+                        REQUEST_MAX_RETRIES + 1,
+                        System.currentTimeMillis() - start,
+                        e.getClass().getSimpleName(),
+                        e.getMessage(),
+                        messagePreview,
+                        toolPreview,
+                        e);
+                throw new IllegalStateException("调用 LLM 失败: " + e.getMessage(), e);
+            } catch (Exception e) {
+                boolean retryable = isRetryableException(e);
+                if (retryable && attempt < REQUEST_MAX_RETRIES) {
+                    log.warn("LLM request transient exception, requestId={}, type={}, attempt={}/{}, elapsedMs={}, errorType={}, message={}, willRetry=true",
+                            requestId, requestType, attempt + 1, REQUEST_MAX_RETRIES + 1, System.currentTimeMillis() - start, e.getClass().getSimpleName(), e.getMessage());
+                    sleepBeforeRetry(attempt);
+                    continue;
+                }
+                log.error("LLM request failed, requestId={}, type={}, attempt={}/{}, elapsedMs={}, errorType={}, message={}, messagePreview={}, toolPreview={}",
+                        requestId,
+                        requestType,
+                        attempt + 1,
+                        REQUEST_MAX_RETRIES + 1,
+                        System.currentTimeMillis() - start,
+                        e.getClass().getSimpleName(),
+                        e.getMessage(),
+                        messagePreview,
+                        toolPreview,
+                        e);
+                throw new IllegalStateException("调用 LLM 失败: " + e.getMessage(), e);
+            }
+        }
+
+        throw new IllegalStateException("调用 LLM 失败: 未获取有效响应。");
+    }
+
+    private boolean isRetryableException(Exception e) {
+        String message = e == null ? "" : String.valueOf(e.getMessage()).toLowerCase();
+        return message.contains("read timed out")
+                || message.contains("connect timed out")
+                || message.contains("connection reset")
+                || message.contains("unexpected end of file")
+                || message.contains("broken pipe")
+                || message.contains("timed out");
+    }
+
+    private void sleepBeforeRetry(int attempt) {
         try {
-            log.info("LLM request start, requestId={}, type={}, model={}, url={}, messageCount={}, toolCount={}, responseFormat={}, messagePreview={}, toolPreview={}",
-                    requestId,
-                    requestType,
-                    requestBody.get("model"),
-                    normalizeBaseUrl(baseUrl) + "/chat/completions",
-                    countItems(requestBody.get("messages")),
-                    countItems(requestBody.get("tools")),
-                    summarizeText(String.valueOf(requestBody.get("response_format")), 120),
-                    summarizeMessages(requestBody.get("messages")),
-                    summarizeTools(requestBody.get("tools")));
-            String responseBody = restClient.post()
-                    .uri("/chat/completions")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-                    .body(requestBody)
-                    .retrieve()
-                    .body(String.class);
-
-            log.info("LLM response received, requestId={}, type={}, elapsedMs={}, bodyLength={}, bodyPreview={}",
-                    requestId,
-                    requestType,
-                    System.currentTimeMillis() - start,
-                    responseBody == null ? 0 : responseBody.length(),
-                    summarizeText(responseBody, 500));
-
-            if (!StringUtils.hasText(responseBody)) {
-                log.error("LLM response empty, requestId={}, type={}, elapsedMs={}",
-                        requestId, requestType, System.currentTimeMillis() - start);
-                throw new IllegalStateException("LLM 返回为空。");
-            }
-
-            JsonNode root = objectMapper.readTree(responseBody);
-            if (root.has("error")) {
-                log.error("LLM response contained error, requestId={}, type={}, elapsedMs={}, error={}",
-                        requestId, requestType, System.currentTimeMillis() - start, root.path("error"));
-                throw new IllegalStateException("LLM API error: " + root.path("error"));
-            }
-            return root;
-        } catch (RestClientResponseException e) {
-            log.error("LLM request response exception, requestId={}, type={}, status={}, elapsedMs={}, responseBody={}, messagePreview={}, toolPreview={}",
-                    requestId,
-                    requestType,
-                    e.getStatusCode(),
-                    System.currentTimeMillis() - start,
-                    summarizeText(e.getResponseBodyAsString(), 500),
-                    summarizeMessages(requestBody.get("messages")),
-                    summarizeTools(requestBody.get("tools")),
-                    e);
-            throw new IllegalStateException("调用 LLM 失败: " + e.getMessage(), e);
-        } catch (ResourceAccessException e) {
-            log.error("LLM request access exception, requestId={}, type={}, elapsedMs={}, errorType={}, message={}, messagePreview={}, toolPreview={}",
-                    requestId,
-                    requestType,
-                    System.currentTimeMillis() - start,
-                    e.getClass().getSimpleName(),
-                    e.getMessage(),
-                    summarizeMessages(requestBody.get("messages")),
-                    summarizeTools(requestBody.get("tools")),
-                    e);
-            throw new IllegalStateException("调用 LLM 失败: " + e.getMessage(), e);
-        } catch (Exception e) {
-            log.error("LLM request failed, requestId={}, type={}, elapsedMs={}, errorType={}, message={}, messagePreview={}, toolPreview={}",
-                    requestId,
-                    requestType,
-                    System.currentTimeMillis() - start,
-                    e.getClass().getSimpleName(),
-                    e.getMessage(),
-                    summarizeMessages(requestBody.get("messages")),
-                    summarizeTools(requestBody.get("tools")),
-                    e);
-            throw new IllegalStateException("调用 LLM 失败: " + e.getMessage(), e);
+            Thread.sleep(1000L * (attempt + 1));
+        } catch (InterruptedException interruptedException) {
+            Thread.currentThread().interrupt();
         }
     }
 

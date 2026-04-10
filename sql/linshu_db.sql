@@ -11,7 +11,7 @@
  Target Server Version : 80017 (8.0.17)
  File Encoding         : 65001
 
- Date: 02/04/2026 14:42:20
+ Date: 10/04/2026 09:26:18
 */
 
 SET NAMES utf8mb4;
@@ -35,7 +35,7 @@ CREATE TABLE `componentconfig`  (
   `is_enabled` tinyint(1) NOT NULL DEFAULT 1 COMMENT '是否启用检测',
   `updated_at` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 26 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '组件配置表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 29 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '组件配置表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for information
@@ -53,7 +53,7 @@ CREATE TABLE `information`  (
   `risk_level` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '风险等级',
   `created_at` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '发生时间',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1328 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '巡检记录表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1819 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '巡检记录表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for userlogin
@@ -67,7 +67,7 @@ CREATE TABLE `userlogin`  (
   `created_at` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `username`(`username` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 9 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for userprocess

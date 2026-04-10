@@ -77,7 +77,7 @@
           stripe
           v-loading="loading"
         >
-          <el-table-column prop="createdAt" label="时间" min-width="180" >
+          <el-table-column prop="createdAt" label="时间" min-width="150" >
             <template #default="{ row }">
               {{ formatDate(row.createdAt) }}
             </template>
@@ -97,7 +97,7 @@
           <el-table-column
             prop="errorSummary"
             label="问题摘要"
-            min-width="160"
+            min-width="140"
             show-overflow-tooltip
           >
             <template #default="{ row }">
@@ -110,7 +110,7 @@
           <el-table-column
             prop="analysisResult"
             label="问题详情"
-            min-width="200"
+            min-width="150"
             show-overflow-tooltip
           >
             <template #default="{ row }">
@@ -123,7 +123,7 @@
           <el-table-column
             prop="suggestedActions"
             label="处理建议"
-            min-width="200"
+            min-width="150"
             show-overflow-tooltip
           >
             <template #default="{ row }">
