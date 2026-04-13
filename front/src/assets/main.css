@@ -1,459 +1,459 @@
-@import "tailwindcss";
+  @import "tailwindcss";
 
-@theme {
-  --color-brand: #2563eb;
-  --color-brand-hover: #1d4ed8;
-  --color-brand-dark: #0f172a;
-  --color-brand-light: #7dd3fc;
+  @theme {
+    --color-brand: #2563eb;
+    --color-brand-hover: #1d4ed8;
+    --color-brand-dark: #0f172a;
+    --color-brand-light: #7dd3fc;
 
-  --color-sidebar: rgba(255, 255, 255, 0.18);
+    --color-sidebar: rgba(255, 255, 255, 0.18);
 
-  --color-ui-bg: transparent; /* 改为透明，让底层的光效透出来 */
-  --color-ui-panel: rgba(255, 255, 255, 0.24);
-  --color-ui-card: rgba(255, 255, 255, 0.28);
-  --color-ui-border: rgba(255, 255, 255, 0.38);
-  --color-ui-text: #0f172a;
-  --color-ui-subtext: #5f6f87;
-  --color-ui-success: #16a34a;
-  --color-ui-warning: #f59e0b;
-  --color-ui-error: #ef4444;
+    --color-ui-bg: transparent; /* 改为透明，让底层的光效透出来 */
+    --color-ui-panel: rgba(255, 255, 255, 0.24);
+    --color-ui-card: rgba(255, 255, 255, 0.28);
+    --color-ui-border: rgba(255, 255, 255, 0.38);
+    --color-ui-text: #0f172a;
+    --color-ui-subtext: #5f6f87;
+    --color-ui-success: #16a34a;
+    --color-ui-warning: #f59e0b;
+    --color-ui-error: #ef4444;
 
-  --font-sans: "MiSans", "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
-}
+    --font-sans: "MiSans", "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+  }
 
-:root {
-  color-scheme: light;
-  
-  /* 核心毛玻璃参数：极度清透、去除发灰感 */
-  --glass-surface: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 100%);
-  --glass-surface-soft: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 100%);
-  --glass-surface-strong: linear-gradient(135deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.2) 100%);
-  
-  /* 极细微的边框，勾勒轮廓 */
-  --glass-border: rgba(255, 255, 255, 0.2);
-  --glass-border-soft: rgba(255, 255, 255, 0.1);
-  
-  /* 干净的底部深色投影 */
-  --glass-shadow: 0 0.5rem 2rem 0 rgba(31, 38, 135, 0.07);
-  --glass-shadow-soft: 0 0.25rem 1rem 0 rgba(31, 38, 135, 0.05);
-  
-  /* 内部高光，模拟玻璃厚度反光 */
-  --glass-inset-highlight: inset 1px 1px 1px rgba(255, 255, 255, 0.5), inset -1px -1px 1px rgba(255, 255, 255, 0.1);
-  
-  /* 最佳模糊度 */
-  --glass-blur: 1rem;
-  
-  /* Element Plus 变量保留 */
-  --el-color-primary: #2563eb;
-  --el-color-primary-light-3: #60a5fa;
-  --el-border-radius-base: 1rem;
-  --el-border-radius-small: 0.875rem;
-  --el-border-color: rgba(255, 255, 255, 0.34);
-  --el-border-color-light: rgba(255, 255, 255, 0.22);
-  --el-fill-color-light: rgba(255, 255, 255, 0.2);
-  --el-fill-color-blank: rgba(255, 255, 255, 0.08);
-  --el-bg-color: rgba(255, 255, 255, 0.08);
-  --el-bg-color-page: transparent;
-  --el-text-color-primary: #0f172a;
-  --el-text-color-regular: #334155;
-  --el-text-color-secondary: #64748b;
-  --el-box-shadow-light: 0 1.5rem 3rem -2.25rem rgba(15, 23, 42, 0.28);
-  --el-mask-color: rgba(148, 163, 184, 0.22);
-}
+  :root {
+    color-scheme: light;
+    
+    /* 核心毛玻璃参数：极度清透、去除发灰感 */
+    --glass-surface: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 100%);
+    --glass-surface-soft: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.05) 100%);
+    --glass-surface-strong: linear-gradient(135deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.2) 100%);
+    
+    /* 极细微的边框，勾勒轮廓 */
+    --glass-border: rgba(255, 255, 255, 0.2);
+    --glass-border-soft: rgba(255, 255, 255, 0.1);
+    
+    /* 干净的底部深色投影 */
+    --glass-shadow: 0 0.5rem 2rem 0 rgba(31, 38, 135, 0.07);
+    --glass-shadow-soft: 0 0.25rem 1rem 0 rgba(31, 38, 135, 0.05);
+    
+    /* 内部高光，模拟玻璃厚度反光 */
+    --glass-inset-highlight: inset 1px 1px 1px rgba(255, 255, 255, 0.5), inset -1px -1px 1px rgba(255, 255, 255, 0.1);
+    
+    /* 最佳模糊度 */
+    --glass-blur: 1rem;
+    
+    /* Element Plus 变量保留 */
+    --el-color-primary: #2563eb;
+    --el-color-primary-light-3: #60a5fa;
+    --el-border-radius-base: 1rem;
+    --el-border-radius-small: 0.875rem;
+    --el-border-color: rgba(255, 255, 255, 0.34);
+    --el-border-color-light: rgba(255, 255, 255, 0.22);
+    --el-fill-color-light: rgba(255, 255, 255, 0.2);
+    --el-fill-color-blank: rgba(255, 255, 255, 0.08);
+    --el-bg-color: rgba(255, 255, 255, 0.08);
+    --el-bg-color-page: transparent;
+    --el-text-color-primary: #0f172a;
+    --el-text-color-regular: #334155;
+    --el-text-color-secondary: #64748b;
+    --el-box-shadow-light: 0 1.5rem 3rem -2.25rem rgba(15, 23, 42, 0.28);
+    --el-mask-color: rgba(148, 163, 184, 0.22);
+  }
 
-html {
-  /* 基于视口宽度的流式缩放：2560px 时 16px，1280px 时 14px，中间平滑过渡 */
-  font-size: clamp(14px, 0.625vw + 0px, 16px);
-}
+  html {
+    /* 基于视口宽度的流式缩放：2560px 时 16px，1280px 时 14px，中间平滑过渡 */
+    font-size: clamp(14px, 0.625vw + 0px, 16px);
+  }
 
-html,
-body,
-#app {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-}
+  html,
+  body,
+  #app {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+  }
 
-body {
-  position: relative;
-  min-height: 100%;
-  color: var(--color-ui-text);
-  /* 去掉原来复杂的渐变背景，全靠 MainLayout 里的光晕提供质感 */
-  background: transparent;
-  font-family: var(--font-sans);
-}
+  body {
+    position: relative;
+    min-height: 100%;
+    color: var(--color-ui-text);
+    /* 去掉原来复杂的渐变背景，全靠 MainLayout 里的光晕提供质感 */
+    background: transparent;
+    font-family: var(--font-sans);
+  }
 
-* {
-  box-sizing: border-box;
-}
+  * {
+    box-sizing: border-box;
+  }
 
-::selection {
-  background: rgba(37, 99, 235, 0.18);
-  color: #0f172a;
-}
+  ::selection {
+    background: rgba(37, 99, 235, 0.18);
+    color: #0f172a;
+  }
 
-.btn-hover:active {
-  transform: scale(0.98);
-}
+  .btn-hover:active {
+    transform: scale(0.98);
+  }
 
-.input-focus:focus {
-  box-shadow: 0 0 0 0.1875rem rgba(37, 99, 235, 0.12);
-}
+  .input-focus:focus {
+    box-shadow: 0 0 0 0.1875rem rgba(37, 99, 235, 0.12);
+  }
 
-/* ==============================================
-   核心玻璃材质定义
-============================================== */
-.glass-card,
-.el-card,
-.el-dialog,
-.el-drawer__content,
-.el-table,
-.el-descriptions,
-.el-alert,
-.el-message-box,
-.el-popover.el-popper,
-.el-select__wrapper,
-.el-input__wrapper,
-.el-textarea__inner,
-.el-input-number,
-.el-input-number__decrease,
-.el-input-number__increase,
-.el-checkbox__inner,
-.el-pagination .btn-prev,
-.el-pagination .btn-next,
-.el-pagination .el-pager li {
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  backdrop-filter: blur(var(--glass-blur));
-}
+  /* ==============================================
+    核心玻璃材质定义
+  ============================================== */
+  .glass-card,
+  .el-card,
+  .el-dialog,
+  .el-drawer__content,
+  .el-table,
+  .el-descriptions,
+  .el-alert,
+  .el-message-box,
+  .el-popover.el-popper,
+  .el-select__wrapper,
+  .el-input__wrapper,
+  .el-textarea__inner,
+  .el-input-number,
+  .el-input-number__decrease,
+  .el-input-number__increase,
+  .el-checkbox__inner,
+  .el-pagination .btn-prev,
+  .el-pagination .btn-next,
+  .el-pagination .el-pager li {
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    backdrop-filter: blur(var(--glass-blur));
+  }
 
-.glass-card,
-.el-card,
-.el-dialog,
-.el-message-box,
-.el-popover.el-popper {
-  position: relative;
-  isolation: isolate;
-  background: var(--glass-surface) !important;
-  border: 1px solid var(--glass-border) !important;
-  box-shadow: var(--glass-shadow), var(--glass-inset-highlight) !important;
-  border-radius: 1.5rem;
-}
+  .glass-card,
+  .el-card,
+  .el-dialog,
+  .el-message-box,
+  .el-popover.el-popper {
+    position: relative;
+    isolation: isolate;
+    background: var(--glass-surface) !important;
+    border: 1px solid var(--glass-border) !important;
+    box-shadow: var(--glass-shadow), var(--glass-inset-highlight) !important;
+    border-radius: 1.5rem;
+  }
 
-.glass-panel {
-  position: relative;
-  isolation: isolate;
-  background: var(--glass-surface-strong) !important;
-  border: 1px solid var(--glass-border) !important;
-  box-shadow: var(--glass-shadow), var(--glass-inset-highlight) !important;
-  border-radius: 1.5rem;
-}
+  .glass-panel {
+    position: relative;
+    isolation: isolate;
+    background: var(--glass-surface-strong) !important;
+    border: 1px solid var(--glass-border) !important;
+    box-shadow: var(--glass-shadow), var(--glass-inset-highlight) !important;
+    border-radius: 1.5rem;
+  }
 
-.glass-soft,
-.glass-toolbar,
-.glass-subcard,
-.glass-code-block,
-.glass-table-footer {
-  position: relative;
-  isolation: isolate;
-  background: var(--glass-surface-soft) !important;
-  border: 1px solid var(--glass-border-soft) !important;
-  box-shadow: var(--glass-shadow-soft), var(--glass-inset-highlight) !important;
-  border-radius: 1.25rem;
-}
+  .glass-soft,
+  .glass-toolbar,
+  .glass-subcard,
+  .glass-code-block,
+  .glass-table-footer {
+    position: relative;
+    isolation: isolate;
+    background: var(--glass-surface-soft) !important;
+    border: 1px solid var(--glass-border-soft) !important;
+    box-shadow: var(--glass-shadow-soft), var(--glass-inset-highlight) !important;
+    border-radius: 1.25rem;
+  }
 
-.glass-toolbar,
-.glass-table-footer {
-  border-radius: 1.5rem;
-}
+  .glass-toolbar,
+  .glass-table-footer {
+    border-radius: 1.5rem;
+  }
 
-/* 强制隐藏原作者写的那些导致画面变灰、变脏的阴影和高光伪元素 */
-.glass-card::before, .glass-card::after,
-.glass-panel::before, .glass-panel::after,
-.glass-soft::before, .glass-soft::after,
-.glass-toolbar::before, .glass-toolbar::after,
-.glass-subcard::before, .glass-subcard::after,
-.glass-code-block::before, .glass-code-block::after,
-.glass-table-footer::before, .glass-table-footer::after,
-.el-card::before, .el-card::after,
-.el-dialog::before, .el-dialog::after,
-.el-message-box::before, .el-message-box::after,
-.el-popover.el-popper::before, .el-popover.el-popper::after,
-.dashboard-detail-shell::before, .dashboard-detail-shell::after,
-.workspace-cool-glass::before, .workspace-cool-glass::after,
-.app-shell-lighting::before, .app-shell-lighting::after,
-.shell-surface::after, .app-shell-lighting > header::after {
-  display: none !important;
-}
+  /* 强制隐藏原作者写的那些导致画面变灰、变脏的阴影和高光伪元素 */
+  .glass-card::before, .glass-card::after,
+  .glass-panel::before, .glass-panel::after,
+  .glass-soft::before, .glass-soft::after,
+  .glass-toolbar::before, .glass-toolbar::after,
+  .glass-subcard::before, .glass-subcard::after,
+  .glass-code-block::before, .glass-code-block::after,
+  .glass-table-footer::before, .glass-table-footer::after,
+  .el-card::before, .el-card::after,
+  .el-dialog::before, .el-dialog::after,
+  .el-message-box::before, .el-message-box::after,
+  .el-popover.el-popper::before, .el-popover.el-popper::after,
+  .dashboard-detail-shell::before, .dashboard-detail-shell::after,
+  .workspace-cool-glass::before, .workspace-cool-glass::after,
+  .app-shell-lighting::before, .app-shell-lighting::after,
+  .shell-surface::after, .app-shell-lighting > header::after {
+    display: none !important;
+  }
 
-/* 保证卡片内部元素的层级 */
-.glass-card > *,
-.glass-panel > *,
-.glass-soft > *,
-.glass-toolbar > *,
-.glass-subcard > *,
-.glass-code-block > *,
-.glass-table-footer > *,
-.el-popover.el-popper > * {
-  position: relative;
-  z-index: 1;
-}
+  /* 保证卡片内部元素的层级 */
+  .glass-card > *,
+  .glass-panel > *,
+  .glass-soft > *,
+  .glass-toolbar > *,
+  .glass-subcard > *,
+  .glass-code-block > *,
+  .glass-table-footer > *,
+  .el-popover.el-popper > * {
+    position: relative;
+    z-index: 1;
+  }
 
-.glass-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  border-radius: 62.4375rem;
-  border: 1px solid var(--glass-border-soft);
-  background: var(--glass-surface-soft);
-  box-shadow: var(--glass-shadow-soft);
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  backdrop-filter: blur(var(--glass-blur));
-}
+  .glass-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: 62.4375rem;
+    border: 1px solid var(--glass-border-soft);
+    background: var(--glass-surface-soft);
+    box-shadow: var(--glass-shadow-soft);
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    backdrop-filter: blur(var(--glass-blur));
+  }
 
-.glass-icon-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 1.125rem;
-  border: 1px solid var(--glass-border-soft);
-  background: var(--glass-surface-soft);
-  box-shadow: var(--glass-shadow-soft);
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  backdrop-filter: blur(var(--glass-blur));
-}
+  .glass-icon-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 1.125rem;
+    border: 1px solid var(--glass-border-soft);
+    background: var(--glass-surface-soft);
+    box-shadow: var(--glass-shadow-soft);
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    backdrop-filter: blur(var(--glass-blur));
+  }
 
-.glass-code-block {
-  white-space: pre-wrap;
-  word-break: break-word;
-  line-height: 1.75;
-  color: #1f2937;
-  padding: 1rem 1.125rem;
-  margin: 0;
-}
+  .glass-code-block {
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.75;
+    color: #1f2937;
+    padding: 1rem 1.125rem;
+    margin: 0;
+  }
 
-/* 覆盖之前硬编码在 workspace 里的混浊色调 */
-.dashboard-detail-shell,
-.workspace-cool-glass {
-  position: relative;
-  isolation: isolate;
-}
+  /* 覆盖之前硬编码在 workspace 里的混浊色调 */
+  .dashboard-detail-shell,
+  .workspace-cool-glass {
+    position: relative;
+    isolation: isolate;
+  }
 
-.dashboard-detail-shell > *,
-.workspace-cool-glass > * {
-  position: relative;
-  z-index: 1;
-}
+  .dashboard-detail-shell > *,
+  .workspace-cool-glass > * {
+    position: relative;
+    z-index: 1;
+  }
 
-.el-card {
-  border-radius: 1.5rem;
-  overflow: hidden;
-}
+  .el-card {
+    border-radius: 1.5rem;
+    overflow: hidden;
+  }
 
-.el-card__body,
-.el-card__header,
-.el-dialog__header,
-.el-dialog__body,
-.el-dialog__footer,
-.el-message-box__header,
-.el-message-box__content,
-.el-message-box__btns {
-  position: relative;
-  z-index: 1;
-  background: transparent;
-}
+  .el-card__body,
+  .el-card__header,
+  .el-dialog__header,
+  .el-dialog__body,
+  .el-dialog__footer,
+  .el-message-box__header,
+  .el-message-box__content,
+  .el-message-box__btns {
+    position: relative;
+    z-index: 1;
+    background: transparent;
+  }
 
-.el-card__header {
-  border-bottom-color: rgba(255, 255, 255, 0.18);
-}
+  .el-card__header {
+    border-bottom-color: rgba(255, 255, 255, 0.18);
+  }
 
-.el-dialog,
-.el-message-box {
-  border-radius: 1.75rem !important;
-}
+  .el-dialog,
+  .el-message-box {
+    border-radius: 1.75rem !important;
+  }
 
-.el-dialog {
-  overflow: hidden;
-}
+  .el-dialog {
+    overflow: hidden;
+  }
 
-.el-overlay-dialog,
-.el-overlay-message-box {
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  backdrop-filter: blur(var(--glass-blur));
-}
+  .el-overlay-dialog,
+  .el-overlay-message-box {
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    backdrop-filter: blur(var(--glass-blur));
+  }
 
-.keep-bright-overlay,
-.el-overlay.keep-bright-overlay {
-  background: rgba(255, 255, 255, 0.02) !important;
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(125%) !important;
-  backdrop-filter: blur(var(--glass-blur)) saturate(125%) !important;
-}
+  .keep-bright-overlay,
+  .el-overlay.keep-bright-overlay {
+    background: rgba(255, 255, 255, 0.02) !important;
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(125%) !important;
+    backdrop-filter: blur(var(--glass-blur)) saturate(125%) !important;
+  }
 
-.keep-bright-overlay .el-overlay-dialog,
-.keep-bright-overlay .el-overlay-message-box,
-.el-overlay.keep-bright-overlay .el-overlay-dialog,
-.el-overlay.keep-bright-overlay .el-overlay-message-box {
-  background: transparent !important;
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(125%) !important;
-  backdrop-filter: blur(var(--glass-blur)) saturate(125%) !important;
-}
+  .keep-bright-overlay .el-overlay-dialog,
+  .keep-bright-overlay .el-overlay-message-box,
+  .el-overlay.keep-bright-overlay .el-overlay-dialog,
+  .el-overlay.keep-bright-overlay .el-overlay-message-box {
+    background: transparent !important;
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(125%) !important;
+    backdrop-filter: blur(var(--glass-blur)) saturate(125%) !important;
+  }
 
-/* 优化 Element Plus 表格 */
-.el-table {
-  overflow: hidden;
-  border-radius: 1.25rem;
-  background: var(--glass-surface-soft) !important;
-  --el-table-border-color: rgba(255, 255, 255, 0.2);
-  --el-table-header-bg-color: transparent;
-  --el-table-tr-bg-color: transparent;
-  --el-table-current-row-bg-color: rgba(244, 248, 255, 0.14);
-  --el-table-row-hover-bg-color: rgba(244, 248, 255, 0.18);
-}
+  /* 优化 Element Plus 表格 */
+  .el-table {
+    overflow: hidden;
+    border-radius: 1.25rem;
+    background: var(--glass-surface-soft) !important;
+    --el-table-border-color: rgba(255, 255, 255, 0.2);
+    --el-table-header-bg-color: transparent;
+    --el-table-tr-bg-color: transparent;
+    --el-table-current-row-bg-color: rgba(244, 248, 255, 0.14);
+    --el-table-row-hover-bg-color: rgba(244, 248, 255, 0.18);
+  }
 
-.el-table::before,
-.el-table__inner-wrapper::before {
-  display: none;
-}
+  .el-table::before,
+  .el-table__inner-wrapper::before {
+    display: none;
+  }
 
-.el-table th.el-table__cell,
-.el-table tr,
-.el-table td.el-table__cell,
-.el-table__body-wrapper,
-.el-table__header-wrapper,
-.el-table__fixed,
-.el-table__fixed-right,
-.el-table__fixed-body-wrapper,
-.el-table__fixed-header-wrapper {
-  background: transparent !important;
-}
+  .el-table th.el-table__cell,
+  .el-table tr,
+  .el-table td.el-table__cell,
+  .el-table__body-wrapper,
+  .el-table__header-wrapper,
+  .el-table__fixed,
+  .el-table__fixed-right,
+  .el-table__fixed-body-wrapper,
+  .el-table__fixed-header-wrapper {
+    background: transparent !important;
+  }
 
-.el-table th.el-table__cell {
-  color: #52627a;
-  font-weight: 600;
-}
+  .el-table th.el-table__cell {
+    color: #52627a;
+    font-weight: 600;
+  }
 
-.el-table td.el-table__cell,
-.el-table th.el-table__cell {
-  border-bottom-color: rgba(255, 255, 255, 0.16);
-}
+  .el-table td.el-table__cell,
+  .el-table th.el-table__cell {
+    border-bottom-color: rgba(255, 255, 255, 0.16);
+  }
 
-/* 优化 Descriptions */
-.el-descriptions {
-  overflow: hidden;
-  border-radius: 1.25rem;
-  --el-descriptions-table-border: rgba(255, 255, 255, 0.18);
-  --el-descriptions-item-bordered-label-background: rgba(255, 255, 255, 0.14);
-  --el-descriptions-item-bordered-content-background: rgba(255, 255, 255, 0.08);
-}
+  /* 优化 Descriptions */
+  .el-descriptions {
+    overflow: hidden;
+    border-radius: 1.25rem;
+    --el-descriptions-table-border: rgba(255, 255, 255, 0.18);
+    --el-descriptions-item-bordered-label-background: rgba(255, 255, 255, 0.14);
+    --el-descriptions-item-bordered-content-background: rgba(255, 255, 255, 0.08);
+  }
 
-/* 优化表单控件 */
-.el-input__wrapper,
-.el-select__wrapper,
-.el-textarea__inner,
-.el-input-number {
-  background: var(--glass-surface-soft) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42), 0 0.5rem 1rem -0.625rem rgba(15, 23, 42, 0.08) !important;
-  border: 1px solid var(--glass-border) !important;
-}
+  /* 优化表单控件 */
+  .el-input__wrapper,
+  .el-select__wrapper,
+  .el-textarea__inner,
+  .el-input-number {
+    background: var(--glass-surface-soft) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42), 0 0.5rem 1rem -0.625rem rgba(15, 23, 42, 0.08) !important;
+    border: 1px solid var(--glass-border) !important;
+  }
 
-.el-input__wrapper.is-focus,
-.el-select__wrapper.is-focused,
-.el-textarea__inner:focus,
-.el-input-number:focus-within {
-  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.34), 0 0.625rem 1.25rem -0.625rem rgba(37, 99, 235, 0.2) !important;
-}
+  .el-input__wrapper.is-focus,
+  .el-select__wrapper.is-focused,
+  .el-textarea__inner:focus,
+  .el-input-number:focus-within {
+    box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.34), 0 0.625rem 1.25rem -0.625rem rgba(37, 99, 235, 0.2) !important;
+  }
 
-.el-textarea__inner {
-  min-height: 6rem;
-}
+  .el-textarea__inner {
+    min-height: 6rem;
+  }
 
-/* 按钮样式优化 */
-.el-button {
-  border-radius: 1rem;
-  transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease, border-color 180ms ease;
-}
+  /* 按钮样式优化 */
+  .el-button {
+    border-radius: 1rem;
+    transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease, border-color 180ms ease;
+  }
 
-.el-button:hover {
-  transform: translateY(-1px);
-}
+  .el-button:hover {
+    transform: translateY(-1px);
+  }
 
-.el-button:not(.el-button--primary):not(.is-link) {
-  background: var(--glass-surface-soft);
-  border-color: var(--glass-border);
-  box-shadow: var(--glass-shadow-soft);
-  color: #203047;
-}
+  .el-button:not(.el-button--primary):not(.is-link) {
+    background: var(--glass-surface-soft);
+    border-color: var(--glass-border);
+    box-shadow: var(--glass-shadow-soft);
+    color: #203047;
+  }
 
-.el-button--primary {
-  border-color: rgba(96, 165, 250, 0.24) !important;
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.92), rgba(96, 165, 250, 0.92)) !important;
-  box-shadow: 0 0.75rem 1.5rem -0.75rem rgba(37, 99, 235, 0.5);
-}
+  .el-button--primary {
+    border-color: rgba(96, 165, 250, 0.24) !important;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.92), rgba(96, 165, 250, 0.92)) !important;
+    box-shadow: 0 0.75rem 1.5rem -0.75rem rgba(37, 99, 235, 0.5);
+  }
 
-.el-button--danger.is-plain,
-.el-button--warning.is-plain,
-.el-button--success.is-plain {
-  background: rgba(255, 255, 255, 0.2);
-}
+  .el-button--danger.is-plain,
+  .el-button--warning.is-plain,
+  .el-button--success.is-plain {
+    background: rgba(255, 255, 255, 0.2);
+  }
 
-.el-button.is-link,
-.glass-link-button {
-  box-shadow: none !important;
-  background: transparent !important;
-  border-color: transparent !important;
-}
+  .el-button.is-link,
+  .glass-link-button {
+    box-shadow: none !important;
+    background: transparent !important;
+    border-color: transparent !important;
+  }
 
-.workspace-cool-glass .el-button--primary.is-link,
-.glass-link-button.el-button--primary {
-  color: #2563eb !important;
-}
+  .workspace-cool-glass .el-button--primary.is-link,
+  .glass-link-button.el-button--primary {
+    color: #2563eb !important;
+  }
 
-.workspace-cool-glass .el-button--primary.is-link:hover,
-.glass-link-button.el-button--primary:hover {
-  color: #1d4ed8 !important;
-}
+  .workspace-cool-glass .el-button--primary.is-link:hover,
+  .glass-link-button.el-button--primary:hover {
+    color: #1d4ed8 !important;
+  }
 
-.el-tag,
-.el-alert {
-  border-color: rgba(255, 255, 255, 0.22) !important;
-  background: rgba(255, 255, 255, 0.2) !important;
-}
+  .el-tag,
+  .el-alert {
+    border-color: rgba(255, 255, 255, 0.22) !important;
+    background: rgba(255, 255, 255, 0.2) !important;
+  }
 
-.el-pagination .btn-prev,
-.el-pagination .btn-next,
-.el-pagination .el-pager li {
-  background: var(--glass-surface-soft) !important;
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow-soft);
-}
+  .el-pagination .btn-prev,
+  .el-pagination .btn-next,
+  .el-pagination .el-pager li {
+    background: var(--glass-surface-soft) !important;
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow-soft);
+  }
 
-.el-pagination .el-pager li.is-active {
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.9), rgba(96, 165, 250, 0.9)) !important;
-  border-color: rgba(96, 165, 250, 0.36);
-  color: white !important;
-}
+  .el-pagination .el-pager li.is-active {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.9), rgba(96, 165, 250, 0.9)) !important;
+    border-color: rgba(96, 165, 250, 0.36);
+    color: white !important;
+  }
 
-.el-checkbox__inner,
-.el-radio__inner {
-  background: var(--glass-surface-soft) !important;
-  border-color: rgba(255, 255, 255, 0.26) !important;
-}
+  .el-checkbox__inner,
+  .el-radio__inner {
+    background: var(--glass-surface-soft) !important;
+    border-color: rgba(255, 255, 255, 0.26) !important;
+  }
 
-.el-checkbox__input.is-checked .el-checkbox__inner,
-.el-checkbox__input.is-indeterminate .el-checkbox__inner {
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.96), rgba(96, 165, 250, 0.96)) !important;
-  border-color: rgba(37, 99, 235, 0.92) !important;
-}
+  .el-checkbox__input.is-checked .el-checkbox__inner,
+  .el-checkbox__input.is-indeterminate .el-checkbox__inner {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.96), rgba(96, 165, 250, 0.96)) !important;
+    border-color: rgba(37, 99, 235, 0.92) !important;
+  }
 
-.el-radio__input.is-checked .el-radio__inner {
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.96), rgba(96, 165, 250, 0.96)) !important;
-  border-color: rgba(37, 99, 235, 0.92) !important;
-}
+  .el-radio__input.is-checked .el-radio__inner {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.96), rgba(96, 165, 250, 0.96)) !important;
+    border-color: rgba(37, 99, 235, 0.92) !important;
+  }
 
-.el-skeleton__item {
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.12));
-}
+  .el-skeleton__item {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.12));
+  }
 
-.el-empty,
-.el-empty__description {
-  color: #6b7a91;
-}
+  .el-empty,
+  .el-empty__description {
+    color: #6b7a91;
+  }

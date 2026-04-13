@@ -12,9 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * 诊断与 AI 接口
- */
+
 @Slf4j
 @RestController
 @RequestMapping("/diagnosis")
@@ -29,9 +27,7 @@ public class DiagnosisController {
     @Autowired
     private ServerService serverService;
 
-    /**
-     * 1. 获取日志路径 (用于路径发现)
-     */
+    
     @GetMapping("/logPath")
     public ResponseEntity<?> getLogPath(@RequestParam String serverIp, 
                                       @RequestParam String component,
@@ -65,10 +61,7 @@ public class DiagnosisController {
         }
     }
 
-    /**
-     * 5. 添加监控配置
-     * 会先验证SSH连接，若失败则创建Information记录并返回错误信息
-     */
+    
     @PostMapping("/config/add")
     public ResponseEntity<?> addConfig(@RequestBody com.example.backend.entity.ComponentConfig config) {
         try {
@@ -80,7 +73,6 @@ public class DiagnosisController {
             
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
-            // SSH连接失败等异常，返回错误信息给前端
             Map<String, Object> response = new HashMap<>();
             response.put("code", 400);
             response.put("msg", e.getMessage());
@@ -186,9 +178,6 @@ public class DiagnosisController {
         }
     }
 
-    /**
-     * 6. 获取监控配置列表
-     */
     @GetMapping("/config/list")
     public ResponseEntity<?> listConfigs(@RequestParam(required = false) String username) {
         List<com.example.backend.entity.ComponentConfig> list = diagnosisService.listConfigs(username);
@@ -200,9 +189,7 @@ public class DiagnosisController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * 7. 删除监控配置
-     */
+
     @PostMapping("/config/delete")
     public ResponseEntity<?> deleteConfig(@RequestBody Map<String, Object> request) {
         Long id = request.get("id") == null ? null : Long.valueOf(String.valueOf(request.get("id")));
@@ -250,9 +237,7 @@ public class DiagnosisController {
         }
     }
 
-    /**
-     * 2. 执行诊断
-     */
+
     @PostMapping("/execute")
     public ResponseEntity<?> executeDiagnosis(@RequestBody Map<String, Object> request) {
         try {
@@ -285,9 +270,7 @@ public class DiagnosisController {
         }
     }
 
-    /**
-     * 3. AI 智能问答 (RAG Chat)
-     */
+
     @PostMapping("/ai/chat")
     public ResponseEntity<?> chat(@RequestBody Map<String, String> request) {
         String query = request.get("query");
@@ -300,10 +283,7 @@ public class DiagnosisController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * 仅测试 AI 日志分析（不依赖 SSH），用于验证千帆接口与 AI 判断是否正常。
-     * 请求体: { "logContent": "一段日志文本" }
-     */
+
     @PostMapping("/ai/analyze")
     public ResponseEntity<?> analyzeLogOnly(@RequestBody Map<String, String> request) {
         String logContent = request.get("logContent");
@@ -317,9 +297,7 @@ public class DiagnosisController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * 4. 连接服务器 (资源管理)
-     */
+
     @PostMapping("/server/connect")
     public ResponseEntity<?> connectServer(@RequestBody Map<String, String> request) {
         String ip = request.get("ip");

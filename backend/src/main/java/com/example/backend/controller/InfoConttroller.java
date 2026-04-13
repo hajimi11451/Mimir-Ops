@@ -77,7 +77,7 @@ public class InfoConttroller {
         response.put("data", information);
         return ResponseEntity.ok(response);
     }
-
+    //删除所有信息
     @PostMapping("/deleteAllInfo")
     public ResponseEntity<?> deleteAllInfo(@RequestBody Map<String, String> request) {
         int deleted = infoService.deleteAllInfo(request);
@@ -87,7 +87,7 @@ public class InfoConttroller {
         response.put("data", deleted);
         return ResponseEntity.ok(response);
     }
-
+    //删除信息
     @PostMapping("/deleteInfo")
     public ResponseEntity<?> deleteInfo(@RequestBody Map<String, String> request) {
         int deleted = infoService.deleteInfo(request);
@@ -97,7 +97,7 @@ public class InfoConttroller {
         response.put("data", deleted);
         return ResponseEntity.ok(response);
     }
-
+    //通过IP删除信息
     @PostMapping("/deleteInfoByServerIp")
     public ResponseEntity<?> deleteInfoByServerIp(@RequestBody Map<String, String> request) {
         int deleted = infoService.deleteInfoByServerIp(request);
