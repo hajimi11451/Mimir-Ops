@@ -1,91 +1,74 @@
 <template>
-  <div class="workspace-cool-glass mx-auto max-w-7xl space-y-6">
-    <div class="flex items-center justify-between mb-6">
-      <div class="flex items-center gap-3">
-        <h2 class="text-xl font-bold text-ui-text">告警记录</h2>
-        <span class="text-sm text-ui-subtext">{{ recordSummaryText }}</span>
+  <div class="app-page alert-page">
+    <section class="page-hero alert-hero">
+      <div>
+        <div class="section-eyebrow">Alert center</div>
+        <h2>告警中心</h2>
+        <p>集中查看诊断结果、风险等级和建议方案，并将需要处理的问题交给灵枢助手。</p>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="hero-actions">
+        <span class="status-pill" :class="overallTotal ? 'status-pill--warning' : 'status-pill--success'">{{ recordSummaryText }}</span>
         <el-button @click="goDashboard">回到总览</el-button>
-        <el-button
-          type="danger"
-          :loading="clearing"
-          :disabled="loading || overallTotal === 0 || clearing"
-          @click="handleClearAll"
-        >
-          清空记录
-        </el-button>
+        <el-button type="primary" :loading="loading || configLoading" @click="refreshPage">刷新告警</el-button>
       </div>
-    </div>
+    </section>
 
-    <el-card
-      class="alert-shell-card glass-card rounded-[2.125rem]"
-      :body-style="{ padding: '1.25rem' }"
-    >
-      <div class="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,20rem)_auto] md:items-center">
+    <section class="alert-summary-grid">
+      <div class="summary-card summary-card--danger"><span>高风险</span><strong>{{ riskCount.high }}</strong><small>需要优先处理</small></div>
+      <div class="summary-card summary-card--warning"><span>中风险</span><strong>{{ riskCount.medium }}</strong><small>建议持续关注</small></div>
+      <div class="summary-card summary-card--info"><span>低风险</span><strong>{{ riskCount.low }}</strong><small>可计划处理</small></div>
+      <div class="summary-card summary-card--safe"><span>全部记录</span><strong>{{ overallTotal }}</strong><small>历史诊断结果</small></div>
+    </section>
+
+    <section class="section-card filter-card">
+      <div class="filter-grid">
+        <el-select v-model="filters.serverIp" clearable filterable :loading="configLoading" placeholder="全部服务器" no-data-text="暂无可选服务器">
+          <el-option v-for="serverIp in serverIpOptions" :key="serverIp" :label="serverIp" :value="serverIp" />
+        </el-select>
+        <el-select v-model="filters.riskLevel" clearable placeholder="全部风险等级">
+          <el-option label="高风险" value="高" /><el-option label="中风险" value="中" /><el-option label="低风险" value="低" /><el-option label="无风险" value="无" />
+        </el-select>
+        <el-input v-model="filters.keyword" clearable placeholder="搜索组件、摘要或建议" />
+        <el-button :disabled="!hasActiveFilters" @click="resetFilters">重置筛选</el-button>
+      </div>
+    </section>
+
+    <section class="section-card alert-list-card">
+      <div class="section-header">
         <div>
-          <!-- <div class="mb-2 text-sm font-medium text-ui-text">服务器 IP 筛选</div> -->
-          <el-select
-            v-model="filters.serverIp"
-            class="w-full"
-            clearable
-            filterable
-            :loading="configLoading"
-            placeholder="选择服务器 IP"
-            no-data-text="当前用户暂无可选服务器 IP"
-          >
-            <el-option
-              v-for="serverIp in serverIpOptions"
-              :key="serverIp"
-              :label="serverIp"
-              :value="serverIp"
-            />
-          </el-select>
-          <!-- <div class="mt-2 text-xs text-ui-subtext">
-            可选项来自当前用户在 componentconfig 中配置的服务器。
-          </div> -->
+          <div class="section-eyebrow">Diagnosis results</div>
+          <h3>告警记录</h3>
+          <p>{{ recordSummaryText }}，点击记录进入完整分析与处置建议。</p>
         </div>
-
-      <div class="flex items-center gap-2 md:justify-end">
-        <el-button :disabled="!filters.serverIp" @click="resetFilters">
-          重置筛选
-        </el-button>
         <el-button
-          type="warning"
+          v-if="filters.serverIp"
+          plain
+          type="danger"
           :loading="deletingServerIp"
-          :disabled="!filters.serverIp || deletingServerIp || loading || clearing"
+          :disabled="deletingServerIp || loading || clearing"
           @click="handleDeleteServerIp"
         >
-          删除该 IP 告警
-        </el-button>
-        <el-button type="primary" :loading="loading || configLoading" @click="refreshPage">
-          刷新
+          清理当前服务器记录
         </el-button>
       </div>
-      </div>
-    </el-card>
 
-    <el-card
-      class="alert-shell-card glass-card rounded-[2.125rem]"
-      :body-style="{ padding: '0' }"
-    >
-      <div class="alert-table-wrap overflow-hidden rounded-[1.875rem]">
+      <div class="alert-table-wrap">
         <el-table
           :data="paginatedList"
           style="width: 100%"
-          border
-          stripe
           v-loading="loading"
+          row-class-name="clickable-row"
+          @row-click="goDetail"
         >
-          <el-table-column prop="createdAt" label="时间" min-width="150" >
+          <el-table-column prop="createdAt" label="时间" min-width="175">
             <template #default="{ row }">
-              {{ formatDate(row.createdAt) }}
+              <div class="time-cell"><span class="time-dot"></span>{{ formatDate(row.createdAt) }}</div>
             </template>
           </el-table-column>
-
-          <el-table-column prop="serverIp" label="服务器 IP" min-width="140" />
+          <el-table-column prop="serverIp" label="服务器 IP" min-width="155">
+            <template #default="{ row }"><span class="mono-text">{{ row.serverIp || '-' }}</span></template>
+          </el-table-column>
           <el-table-column prop="component" label="组件" min-width="120" />
-
           <el-table-column prop="riskLevel" label="风险等级" min-width="120">
             <template #default="{ row }">
               <el-tag :type="getTagType(row.riskLevel)" effect="light" size="small">
@@ -94,67 +77,44 @@
             </template>
           </el-table-column>
 
-          <el-table-column
-            prop="errorSummary"
-            label="问题摘要"
-            min-width="140"
-            show-overflow-tooltip
-          >
+          <el-table-column prop="errorSummary" label="问题摘要" min-width="240" show-overflow-tooltip>
             <template #default="{ row }">
-              <div class="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-ui-text">
-                {{ compactAlertText(row.errorSummary, 24) }}
-              </div>
+              <div class="alert-summary-cell">{{ compactAlertText(row.errorSummary, 42) }}</div>
             </template>
           </el-table-column>
-
-          <el-table-column
-            prop="analysisResult"
-            label="问题详情"
-            min-width="150"
-            show-overflow-tooltip
-          >
+          <el-table-column prop="suggestedActions" label="建议摘要" min-width="230" show-overflow-tooltip>
             <template #default="{ row }">
-              <div class="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-ui-text">
-                {{ compactAlertText(row.analysisResult, 36) }}
-              </div>
+              <div class="suggestion-cell">{{ compactAlertText(formatSuggestedActions(row.suggestedActions), 42) }}</div>
             </template>
           </el-table-column>
-
-          <el-table-column
-            prop="suggestedActions"
-            label="处理建议"
-            min-width="150"
-            show-overflow-tooltip
-          >
-            <template #default="{ row }">
-              <div class="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-ui-text">
-                {{ compactAlertText(formatSuggestedActions(row.suggestedActions), 32) }}
-              </div>
-            </template>
-          </el-table-column>
-
           <el-table-column label="操作" min-width="140" fixed="right">
             <template #default="{ row }">
-              <el-button type="primary" link class="glass-link-button text-sm font-medium" @click="goDetail(row)">
-                查看详情
-              </el-button>
+              <el-button type="primary" link @click.stop="goDetail(row)">分析与处置</el-button>
             </template>
           </el-table-column>
         </el-table>
       </div>
 
-      
-
-      <div v-if="total > 0" class="glass-table-footer flex justify-end rounded-none border-x-0 border-b-0 px-4 py-4">
+      <div v-if="total > 0" class="table-footer">
         <el-pagination
           v-model:current-page="currentPage"
           :page-size="pageSize"
           :total="total"
+          :pager-count="5"
           layout="total, prev, pager, next"
           background
         />
       </div>
-    </el-card>
+      <div v-else-if="!loading" class="empty-state">
+        <div class="empty-state__icon">✓</div><h4>当前没有匹配告警</h4><p>系统将持续诊断已配置的组件，新告警会自动出现在这里。</p>
+      </div>
+    </section>
+
+    <section v-if="overallTotal" class="maintenance-row">
+      <span>数据维护</span>
+      <p>清空操作不可恢复，仅在确认不再需要历史诊断时使用。</p>
+      <el-button type="danger" link :loading="clearing" :disabled="loading || clearing" @click="handleClearAll">清空全部告警记录</el-button>
+    </section>
   </div>
 </template>
 
@@ -176,6 +136,8 @@ const currentPage = ref(1)
 const componentConfigs = ref([])
 const filters = ref({
   serverIp: '',
+  riskLevel: '',
+  keyword: '',
 })
 
 const sortedList = computed(() => {
@@ -198,19 +160,32 @@ const serverIpOptions = computed(() => {
 
 const filteredList = computed(() => {
   const selectedServerIp = String(filters.value.serverIp || '').trim()
-  if (!selectedServerIp) {
-    return sortedList.value
-  }
+  const selectedRiskLevel = String(filters.value.riskLevel || '').trim()
+  const keyword = String(filters.value.keyword || '').trim().toLowerCase()
 
-  return sortedList.value.filter(item => String(item?.serverIp || '').trim() === selectedServerIp)
+  return sortedList.value.filter(item => {
+    const matchesServer = !selectedServerIp || String(item?.serverIp || '').trim() === selectedServerIp
+    const matchesRisk = !selectedRiskLevel || formatRiskLevel(item?.riskLevel) === selectedRiskLevel
+    const haystack = [item?.serverIp, item?.component, item?.errorSummary, item?.analysisResult, formatSuggestedActions(item?.suggestedActions)].join(' ').toLowerCase()
+    const matchesKeyword = !keyword || haystack.includes(keyword)
+    return matchesServer && matchesRisk && matchesKeyword
+  })
 })
 
 const total = computed(() => filteredList.value.length)
 
 const overallTotal = computed(() => sortedList.value.length)
+const hasActiveFilters = computed(() => Boolean(filters.value.serverIp || filters.value.riskLevel || filters.value.keyword))
+const riskCount = computed(() => sortedList.value.reduce((acc, item) => {
+  const level = formatRiskLevel(item?.riskLevel)
+  if (level === '高') acc.high += 1
+  else if (level === '中') acc.medium += 1
+  else if (level === '低') acc.low += 1
+  return acc
+}, { high: 0, medium: 0, low: 0 }))
 
 const recordSummaryText = computed(() => (
-  filters.value.serverIp
+  hasActiveFilters.value
     ? `筛选后 ${total.value} / ${overallTotal.value} 条记录`
     : `共 ${overallTotal.value} 条记录`
 ))
@@ -322,6 +297,8 @@ async function refreshPage() {
 
 function resetFilters() {
   filters.value.serverIp = ''
+  filters.value.riskLevel = ''
+  filters.value.keyword = ''
   currentPage.value = 1
 }
 
@@ -401,7 +378,7 @@ async function handleDeleteServerIp() {
 }
 
 watch(
-  () => filters.value.serverIp,
+  [() => filters.value.serverIp, () => filters.value.riskLevel, () => filters.value.keyword],
   () => {
     currentPage.value = 1
   }
@@ -419,36 +396,11 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.alert-shell-card {
-  border-radius: 2.125rem !important;
-}
-
-.alert-shell-card :deep(.el-card__body) {
-  border-radius: inherit;
-}
-
-.alert-table-wrap {
-  border-radius: 1.875rem;
-}
-
-.alert-table-wrap :deep(.el-table) {
-  border-radius: 1.875rem;
-}
-
-.alert-table-wrap :deep(.el-table__inner-wrapper) {
-  border-radius: inherit;
-  overflow: hidden;
-}
-
-@media (max-width: 1280px) {
-  .alert-shell-card {
-    border-radius: 1.75rem !important;
-  }
-  .alert-table-wrap {
-    border-radius: 1.5rem;
-  }
-  .alert-table-wrap :deep(.el-table) {
-    border-radius: 1.5rem;
-  }
-}
+.alert-page { display: grid; gap: 1.25rem; }.alert-hero { background: linear-gradient(135deg, #fffdf6 0%, #fff1dc 100%); }.hero-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .7rem; }
+.alert-summary-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 1rem; }.summary-card { display: grid; gap: .3rem; padding: 1rem 1.15rem; border: 1px solid var(--color-ui-border); border-radius: 20px; }.summary-card--danger { background:#fdebea; }.summary-card--warning{background:#fff4d6}.summary-card--info{background:#edf3fb}.summary-card--safe{background:#edf7e7}.summary-card span{color:var(--color-ui-subtext);font-size:.73rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.summary-card strong{color:var(--color-ui-text);font-size:1.7rem}.summary-card small{color:var(--color-ui-subtext);font-size:.74rem}
+.filter-card { padding-block: 1rem; }.filter-grid { display: grid; grid-template-columns: minmax(12rem,1fr) minmax(10rem,.75fr) minmax(14rem,1.25fr) auto; gap: .8rem; }.alert-list-card{min-width:0}.alert-table-wrap{overflow-x:auto;border:1px solid var(--color-ui-border);border-radius:18px}.time-cell{display:flex;align-items:center;gap:.55rem}.time-dot{width:.48rem;height:.48rem;flex:0 0 auto;border-radius:50%;background:#e6ab20;box-shadow:0 0 0 4px rgba(230,171,32,.13)}.alert-summary-cell{font-weight:650;color:var(--color-ui-text)}.suggestion-cell{color:var(--color-ui-subtext)}.table-footer{display:flex;justify-content:flex-end;padding:1rem 0 0}.alert-table-wrap :deep(.clickable-row){cursor:pointer}.alert-table-wrap :deep(.clickable-row:hover td.el-table__cell){background:#f5f8ec!important}
+.empty-state{display:grid;justify-items:center;gap:.6rem;padding:3rem 1rem;text-align:center;color:var(--color-ui-subtext)}.empty-state__icon{display:grid;width:3.5rem;height:3.5rem;place-items:center;border-radius:18px;background:#edf7e7;color:#69ad38;font-size:1.35rem;font-weight:900}.empty-state h4,.empty-state p{margin:0}.empty-state h4{color:var(--color-ui-text)}
+.maintenance-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:.8rem;padding:.75rem 1rem;border:1px dashed #dfc7c2;border-radius:16px;background:#fff9f7}.maintenance-row span{color:#b84b4b;font-size:.76rem;font-weight:800;text-transform:uppercase}.maintenance-row p{margin:0;color:var(--color-ui-subtext);font-size:.78rem}
+@media(max-width:1000px){.alert-summary-grid{grid-template-columns:1fr 1fr}.filter-grid{grid-template-columns:1fr 1fr}.maintenance-row{grid-template-columns:1fr}}
+@media(max-width:640px){.hero-actions{justify-content:flex-start}.alert-summary-grid,.filter-grid{grid-template-columns:1fr}.table-footer{justify-content:center}.table-footer :deep(.el-pagination__total){display:none}}
 </style>

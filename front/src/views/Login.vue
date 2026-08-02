@@ -1,106 +1,108 @@
 <template>
-  <div class="relative flex min-h-screen flex-col text-ui-text">
-    <div class="light-effects">
-      <div class="glow-1"></div>
-      <div class="glow-2"></div>
-      <div class="glow-3"></div>
-    </div>
+  <div class="auth-page">
+    <span class="auth-organic-shape auth-organic-shape--one" aria-hidden="true"></span>
+    <span class="auth-organic-shape auth-organic-shape--two" aria-hidden="true"></span>
 
     <AppShellHeader class="relative z-10" show-auth-links />
 
-    <main class="relative z-10 mx-auto grid w-full max-w-[80rem] flex-1 gap-5 px-4 py-5 sm:px-6 sm:py-6 lg:min-h-[calc(100vh-5.75rem)] lg:grid-cols-2 lg:items-stretch lg:px-8 lg:py-6">
-      <section class="glass-card relative overflow-hidden p-6 sm:p-8 lg:min-h-[calc(100vh-8.75rem)]">
-        <div class="relative z-10 flex h-full flex-col justify-center gap-8 lg:gap-10">
-          <div class="max-w-xl space-y-6">
-            <span class="inline-flex rounded-full border border-brand/20 bg-brand/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-brand">
-              欢迎回来
-            </span>
-            <div>
-              <h1 class="text-2xl font-semibold tracking-[-0.04em] text-ui-text sm:text-4xl lg:text-5xl">在同一个工作台里，继续你的智能运维节奏。</h1>
-              <p class="mt-4 max-w-lg text-sm leading-7 text-ui-subtext sm:text-base">
-                登录后即可返回灵枢智维控制台，查看服务器态势、告警事件与自动化处置进展。
-              </p>
-            </div>
-          </div>
+    <main class="auth-layout">
+      <section class="auth-story" aria-labelledby="login-story-title">
+        <div class="auth-story__content">
+          <span class="auth-badge">欢迎回来</span>
+          <h1 id="login-story-title" class="auth-title">继续掌握每一台服务器的运行节奏。</h1>
+          <p class="auth-description">
+            登录灵枢智维，在同一个温暖清晰的工作台里查看运行态势、分析告警，并让智能助手协同完成处置。
+          </p>
 
-          <div class="grid gap-4 sm:grid-cols-3">
-            <div class="glass-soft p-5">
-              <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">监控</div>
-              <div class="mt-3 text-xl font-semibold text-ui-text">全局总览</div>
-              <p class="mt-2 text-sm text-ui-subtext">实时掌握主机状态、性能趋势和异常波动。</p>
-            </div>
-            <div class="glass-soft p-5">
-              <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">告警</div>
-              <div class="mt-3 text-xl font-semibold text-ui-text">快速响应</div>
-              <p class="mt-2 text-sm text-ui-subtext">重点事件集中展示，缩短定位与处理路径。</p>
-            </div>
-            <div class="glass-soft p-5">
-              <div class="text-xs uppercase tracking-[0.22em] text-ui-subtext">自动化</div>
-              <div class="mt-3 text-xl font-semibold text-ui-text">持续处置</div>
-              <p class="mt-2 text-sm text-ui-subtext">保留诊断与执行链路，让操作过程清晰可追踪。</p>
-            </div>
+          <div class="auth-feature-list" aria-label="平台能力">
+            <article class="auth-feature">
+              <span class="auth-feature__icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M4 18V9m5 9V5m5 13v-6m5 6V8" stroke-width="1.8" stroke-linecap="round" />
+                </svg>
+              </span>
+              <div>
+                <div class="auth-feature__title">运行态势集中呈现</div>
+                <p class="auth-feature__text">快速查看服务器健康、资源趋势与最新异常。</p>
+              </div>
+            </article>
+            <article class="auth-feature">
+              <span class="auth-feature__icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M8 10h.01M12 10h.01M16 10h.01M9 16H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3h-4l-5 4v-4Z" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </span>
+              <div>
+                <div class="auth-feature__title">智能诊断与执行协同</div>
+                <p class="auth-feature__text">从咨询、规划到风险确认，保留清晰的操作上下文。</p>
+              </div>
+            </article>
+            <article class="auth-feature">
+              <span class="auth-feature__icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M12 3.5a6 6 0 0 0-6 6v3.25L4.5 16h15L18 12.75V9.5a6 6 0 0 0-6-6ZM9.75 19h4.5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </span>
+              <div>
+                <div class="auth-feature__title">告警与通知闭环</div>
+                <p class="auth-feature__text">筛选关键事件，缩短从发现问题到发起处置的路径。</p>
+              </div>
+            </article>
           </div>
         </div>
       </section>
 
-      <section class="glass-card p-6 sm:p-8 lg:min-h-[calc(100vh-8.75rem)]">
-        <div class="mx-auto flex h-full w-full max-w-md flex-col justify-center">
-          <div class="space-y-2">
-            <span class="inline-flex rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold tracking-[0.18em] text-brand">登录</span>
-            <h2 class="text-2xl font-semibold tracking-[-0.03em] text-ui-text">登录账号</h2>
-            <p class="text-sm text-ui-subtext">请输入账号信息以继续使用。</p>
-          </div>
+      <section class="auth-form-card" aria-labelledby="login-form-title">
+        <div class="auth-form-card__inner">
+          <div class="auth-form-kicker">Secure Sign In</div>
+          <h2 id="login-form-title" class="auth-form-title">登录账号</h2>
+          <p class="auth-form-description">请输入账号信息，继续进入智能运维工作台。</p>
 
-          <el-form :model="form" class="mt-8 space-y-5" label-position="top">
+          <el-form :model="form" label-position="top">
             <el-alert
               v-if="errorMessage"
               :title="errorMessage"
               type="error"
               show-icon
-              class="p-0"
               :closable="false"
             />
 
-            <el-form-item label="账号/邮箱" prop="username" class="space-y-1">
+            <el-form-item label="账号 / 邮箱" prop="username">
               <el-input
-                v-model="form.username"
                 id="email"
+                v-model="form.username"
                 type="text"
                 autocomplete="username"
                 placeholder="请输入用户名或邮箱"
                 clearable
-                class="input-focus block h-12 w-full appearance-none"
               />
             </el-form-item>
 
-            <el-form-item label="密码" prop="password" class="space-y-1">
+            <el-form-item label="密码" prop="password">
               <el-input
-                v-model="form.password"
                 id="password"
+                v-model="form.password"
                 type="password"
                 autocomplete="current-password"
                 placeholder="请输入密码"
                 show-password
-                class="input-focus block h-12 w-full appearance-none"
                 @keyup.enter="handleLogin"
               />
             </el-form-item>
 
             <el-button
               type="primary"
-              class="w-full !h-auto px-4 py-3 text-sm font-semibold text-white transition-all duration-150"
+              class="auth-submit"
               :loading="loading"
               :disabled="loading"
               @click="handleLogin"
             >
-              {{ loading ? '登录中...' : '登录' }}
+              {{ loading ? '登录中...' : '登录并进入工作台' }}
             </el-button>
 
-            <div class="pt-2 text-center text-sm text-ui-subtext">
+            <div class="auth-switch-link">
               还没有账号？
-              <router-link to="/register" class="font-medium text-brand hover:text-brand-hover">
-                立即注册
-              </router-link>
+              <router-link to="/register">立即注册</router-link>
             </div>
           </el-form>
         </div>
@@ -148,55 +150,3 @@ const handleLogin = async () => {
   }
 }
 </script>
-
-<style scoped>
-.light-effects {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-  background-color: #f0f4f9;
-}
-
-.glow-1 {
-  position: absolute;
-  top: -10%;
-  right: 5%;
-  width: 45vw;
-  height: 45vw;
-  background: radial-gradient(circle, rgba(37, 99, 235, 0.25) 0%, rgba(37, 99, 235, 0.08) 40%, transparent 70%);
-  border-radius: 50%;
-  animation: float 20s ease-in-out infinite alternate;
-}
-
-.glow-2 {
-  position: absolute;
-  bottom: -15%;
-  left: 5%;
-  width: 55vw;
-  height: 55vw;
-  background: radial-gradient(circle, rgba(79, 70, 229, 0.15) 0%, rgba(79, 70, 229, 0.05) 40%, transparent 70%);
-  border-radius: 50%;
-  animation: float 25s ease-in-out infinite alternate-reverse;
-}
-
-.glow-3 {
-  position: absolute;
-  top: 30%;
-  left: 35%;
-  width: 30vw;
-  height: 30vw;
-  background: radial-gradient(circle, rgba(6, 182, 212, 0.2) 0%, rgba(6, 182, 212, 0.06) 40%, transparent 70%);
-  border-radius: 50%;
-}
-
-@keyframes float {
-  0% {
-    transform: translate(0, 0);
-  }
-
-  100% {
-    transform: translate(3%, 5%);
-  }
-}
-</style>

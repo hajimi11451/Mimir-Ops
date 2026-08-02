@@ -1,154 +1,134 @@
 <template>
-  <div class="workspace-cool-glass mx-auto max-w-7xl space-y-6">
-    <div class="flex items-center justify-between mb-6">
-      <div class="flex items-center gap-3">
-        <h2 class="text-xl font-bold text-ui-text">处置记录</h2>
-        <span class="text-sm text-ui-subtext">共 {{ total }} 条记录</span>
+  <div class="app-page disposal-page">
+    <section class="page-hero disposal-hero">
+      <div>
+        <div class="section-eyebrow">Remediation journal</div>
+        <h2>处置方案记录</h2>
+        <p>记录从告警详情选择并交给助手的处理方案；这里代表已发起，不等同于完整执行审计。</p>
       </div>
-      <div class="flex items-center gap-2">
-        <el-button @click="resetFilters" :disabled="loading">重置</el-button>
-        <el-button type="primary" :loading="loading" @click="fetchAllProcess">
-          刷新
-        </el-button>
+      <div class="hero-actions">
+        <el-button :disabled="loading" @click="resetFilters">重置筛选</el-button>
+        <el-button type="primary" :loading="loading" @click="fetchAllProcess">刷新记录</el-button>
       </div>
-    </div>
+    </section>
 
-    <el-card
-      class="disposal-shell-card glass-card mb-6 rounded-[2.125rem]"
-      :body-style="{ padding: '1.25rem' }"
-    >
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <el-input
-          v-model="filters.serverIp"
-          clearable
-          placeholder="服务器 IP"
-        />
-        <el-input
-          v-model="filters.component"
-          clearable
-          placeholder="组件"
-        />
-        <el-input
-          v-model="filters.keyword"
-          clearable
-          placeholder="搜索关键词"
-        />
-      </div>
-    </el-card>
+    <section class="metric-strip">
+      <div class="metric-tile metric-tile--mint"><span>当前记录</span><strong>{{ total }}</strong><small>条方案记录</small></div>
+      <div class="metric-tile metric-tile--green"><span>关联服务器</span><strong>{{ serverCount }}</strong><small>个目标节点</small></div>
+      <div class="metric-tile metric-tile--yellow"><span>涉及组件</span><strong>{{ componentCount }}</strong><small>类服务组件</small></div>
+      <div class="metric-tile metric-tile--peach"><span>最新发起</span><strong class="metric-tile__date">{{ latestProcessLabel }}</strong><small>最近一条记录</small></div>
+    </section>
 
-    <el-card
-      class="disposal-shell-card glass-card rounded-[2.125rem]"
-      :body-style="{ padding: '0' }"
-    >
-      <div class="disposal-table-wrap overflow-hidden rounded-[1.875rem]">
+    <section class="section-card filter-card">
+      <div class="filter-grid">
+        <el-input v-model="filters.serverIp" clearable placeholder="筛选服务器 IP" />
+        <el-input v-model="filters.component" clearable placeholder="筛选组件" />
+        <el-input v-model="filters.keyword" clearable placeholder="搜索问题或处理方案" />
+      </div>
+    </section>
+
+    <section class="section-card disposal-list-card">
+      <div class="section-header">
+        <div>
+          <div class="section-eyebrow">Selected actions</div>
+          <h3>方案列表</h3>
+          <p>筛选后共 {{ total }} 条，按发起时间倒序排列。</p>
+        </div>
+        <span class="status-pill status-pill--info">已发起记录</span>
+      </div>
+
+      <div class="disposal-table-wrap">
         <el-table
           :data="paginatedList"
-          style="width: 100% "
-          border
-          stripe
+          style="width: 100%"
           v-loading="loading"
         >
-          <el-table-column prop="processTime" label="时间" min-width="160"  >
+          <el-table-column prop="processTime" label="发起时间" min-width="175">
             <template #default="{ row }">
-              {{ formatDate(row.processTime) }}
+              <div class="time-cell"><span class="time-dot"></span>{{ formatDate(row.processTime) }}</div>
             </template>
           </el-table-column>
-
           <el-table-column prop="serverIp" label="服务器 IP" min-width="150">
             <template #default="{ row }">
-              {{ row.serverIp || '-' }}
+              <span class="mono-text">{{ row.serverIp || '-' }}</span>
             </template>
           </el-table-column>
-
           <el-table-column prop="component" label="组件" min-width="140">
             <template #default="{ row }">
-              {{ row.component || '-' }}
+              <span class="component-chip">{{ row.component || '-' }}</span>
             </template>
           </el-table-column>
-
-          <el-table-column
-            prop="problemLog"
-            label="日志"
-            min-width="260"
-            show-overflow-tooltip
-          >
+          <el-table-column prop="problemLog" label="问题摘要" min-width="260" show-overflow-tooltip>
             <template #default="{ row }">
               {{ formatMultilineText(row.problemLog) }}
             </template>
           </el-table-column>
-
-          <el-table-column
-            prop="processMethod"
-            label="处置"
-            min-width="250"
-            show-overflow-tooltip
-          >
+          <el-table-column prop="processMethod" label="选择的方案" min-width="280" show-overflow-tooltip>
             <template #default="{ row }">
               {{ formatMultilineText(row.processMethod) }}
             </template>
           </el-table-column>
-
           <el-table-column label="操作" min-width="140" fixed="right">
             <template #default="{ row }">
-              <el-button type="primary" link class="glass-link-button text-sm font-medium" @click="openDetail(row)">
-                查看详情
-              </el-button>
+              <el-button type="primary" link @click="openDetail(row)">查看详情</el-button>
             </template>
           </el-table-column>
         </el-table>
       </div>
 
-      <div v-if="total > 0" class="glass-table-footer flex justify-end rounded-none border-x-0 border-b-0 px-4 py-4">
+      <div v-if="total > 0" class="table-footer">
         <el-pagination
           v-model:current-page="currentPage"
           :page-size="pageSize"
           :total="total"
+          :pager-count="5"
           layout="total, prev, pager, next"
           background
         />
       </div>
-    </el-card>
+      <div v-else-if="!loading" class="empty-state">
+        <div class="empty-state__icon">✓</div>
+        <h4>暂无匹配记录</h4>
+        <p>从告警详情选择处理方案并交给助手后，会在这里留下发起记录。</p>
+      </div>
+    </section>
 
     <el-dialog
       v-model="detailVisible"
-      title="处置详情"
-      width="86vw"
+      title="处置方案详情"
+      width="min(58rem, calc(100vw - 2rem))"
       class="disposal-detail-dialog"
-      modal-class="keep-bright-overlay"
       append-to-body
-      :close-on-click-modal="true"
-      :close-on-press-escape="true"
+      :close-on-click-modal="false"
       destroy-on-close
     >
-      <div v-if="selectedProcess" class="disposal-detail-layout flex min-h-0 flex-col gap-6">
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div class="disposal-detail-chip glass-subcard rounded-[1.5rem] px-4 py-3">
-            <div class="disposal-detail-label text-xs mb-1">时间</div>
-            <div class="disposal-detail-value text-sm">{{ formatDate(selectedProcess.processTime) }}</div>
+      <div v-if="selectedProcess" class="detail-layout">
+        <div class="detail-notice">
+          <span class="status-pill status-pill--info">方案已发起</span>
+          <p>此记录保存用户选择的处理方案，不代表命令已经成功执行。</p>
+        </div>
+        <div class="detail-meta-grid">
+          <div class="soft-panel detail-meta">
+            <span>发起时间</span>
+            <strong>{{ formatDate(selectedProcess.processTime) }}</strong>
           </div>
-          <div class="disposal-detail-chip glass-subcard rounded-[1.5rem] px-4 py-3">
-            <div class="disposal-detail-label text-xs mb-1">服务器 IP</div>
-            <div class="disposal-detail-value text-sm">{{ selectedProcess.serverIp || '-' }}</div>
+          <div class="soft-panel detail-meta">
+            <span>服务器 IP</span>
+            <strong class="mono-text">{{ selectedProcess.serverIp || '-' }}</strong>
           </div>
-          <div class="disposal-detail-chip glass-subcard rounded-[1.5rem] px-4 py-3">
-            <div class="disposal-detail-label text-xs mb-1">组件</div>
-            <div class="disposal-detail-value text-sm">{{ selectedProcess.component || '-' }}</div>
+          <div class="soft-panel detail-meta">
+            <span>组件</span>
+            <strong>{{ selectedProcess.component || '-' }}</strong>
           </div>
         </div>
-
-        <div class="disposal-detail-content grid min-h-0 flex-1 grid-cols-1 gap-6 xl:grid-cols-2">
-          <section class="disposal-detail-section glass-subcard flex min-h-0 flex-col rounded-[1.75rem] p-5">
-            <div class="text-sm font-semibold text-ui-text mb-3">问题日志</div>
-            <div class="disposal-detail-block glass-code-block min-h-0 flex-1 overflow-y-auto rounded-[1.5rem] px-4 py-3 text-sm leading-6 text-ui-text">
-              {{ selectedProcess.problemLog || '-' }}
-            </div>
+        <div class="detail-content-grid">
+          <section>
+            <h4>问题日志</h4>
+            <pre class="code-panel detail-code">{{ selectedProcess.problemLog || '-' }}</pre>
           </section>
-
-          <section class="disposal-detail-section glass-subcard flex min-h-0 flex-col rounded-[1.75rem] p-5">
-            <div class="text-sm font-semibold text-ui-text mb-3">处置</div>
-            <div class="disposal-detail-block glass-code-block min-h-0 flex-1 overflow-y-auto rounded-[1.5rem] px-4 py-3 text-sm leading-6 text-ui-text">
-              {{ selectedProcess.processMethod || '-' }}
-            </div>
+          <section>
+            <h4>选择的处置方案</h4>
+            <div class="soft-panel detail-method">{{ selectedProcess.processMethod || '-' }}</div>
           </section>
         </div>
       </div>
@@ -203,6 +183,14 @@ const filteredList = computed(() => {
 })
 
 const total = computed(() => filteredList.value.length)
+const serverCount = computed(() => new Set(filteredList.value.map(item => String(item?.serverIp || '').trim()).filter(Boolean)).size)
+const componentCount = computed(() => new Set(filteredList.value.map(item => String(item?.component || '').trim()).filter(Boolean)).size)
+const latestProcessLabel = computed(() => {
+  const value = filteredList.value[0]?.processTime
+  if (!value) return '暂无'
+  const text = formatDate(value)
+  return text.length > 10 ? text.slice(0, 10) : text
+})
 
 const paginatedList = computed(() => {
   const start = (currentPage.value - 1) * pageSize
@@ -285,109 +273,24 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.disposal-shell-card {
-  border-radius: 2.125rem !important;
-}
-
-.disposal-shell-card :deep(.el-card__body) {
-  border-radius: inherit;
-}
-
-.disposal-table-wrap {
-  border-radius: 1.875rem;
-
-}
-
-.disposal-table-wrap :deep(.el-table) {
-  border-radius: 1.875rem;
-}
-
-.disposal-table-wrap :deep(.el-table__inner-wrapper) {
-  border-radius: inherit;
-  overflow: hidden;
-}
-
-.disposal-detail-chip {
-  border-color: rgba(255, 255, 255, 0.34) !important;
-}
-
-.disposal-detail-label {
-  color: #62748d;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-}
-
-.disposal-detail-value {
-  color: #0f172a;
-  font-weight: 700;
-}
-
-.disposal-detail-block {
-  border-color: rgba(255, 255, 255, 0.34) !important;
-  white-space: pre-wrap;
-}
-
-.disposal-detail-section {
-  border-color: rgba(255, 255, 255, 0.34) !important;
-}
-
-@media (max-width: 1280px) {
-  .disposal-shell-card {
-    border-radius: 1.75rem !important;
-  }
-  .disposal-table-wrap {
-    border-radius: 1.5rem;
-  }
-  .disposal-table-wrap :deep(.el-table) {
-    border-radius: 1.5rem;
-  }
-}
-
-:deep(.disposal-detail-dialog) {
-  width: min(86.25rem, calc(100vw - 6rem)) !important;
-  max-width: calc(100vw - 6rem);
-  height: 60vh;
-  max-height: 60vh;
-  margin: 20vh auto 0 !important;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.44) !important;
-  -webkit-backdrop-filter: blur(1.75rem) saturate(135%);
-  backdrop-filter: blur(1.75rem) saturate(135%);
-}
-
-:deep(.disposal-detail-dialog .el-dialog__headerbtn) {
-  top: 0.625rem;
-  right: 0.625rem;
-}
-
-:deep(.disposal-detail-dialog .el-dialog__header) {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.34);
-  padding: 1.375rem 1.75rem 1.125rem;
-}
-
-:deep(.disposal-detail-dialog .el-dialog__title) {
-  color: #0f172a;
-  font-weight: 700;
-  font-size: 1.125rem;
-}
-
-:deep(.disposal-detail-dialog .el-dialog__body) {
-  display: flex;
-  min-height: 0;
-  flex: 1 1 auto;
-  overflow: hidden;
-  padding: 0 1.75rem 1.75rem;
-  background: transparent;
-}
-
-@media (max-width: 768px) {
-  :deep(.disposal-detail-dialog) {
-    width: calc(100vw - 1.5rem) !important;
-    max-width: calc(100vw - 1.5rem);
-    max-height: calc(100vh - 1.5rem);
-    margin: 0.75rem auto 0 !important;
-  }
-}
+.disposal-page { display: grid; gap: 1.25rem; }
+.disposal-hero { background: linear-gradient(135deg, #fffdf6 0%, #fff3df 100%); }
+.hero-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .75rem; }
+.metric-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }
+.metric-tile { display: grid; gap: .3rem; min-height: 8rem; padding: 1.1rem 1.2rem; border: 1px solid var(--color-ui-border); border-radius: 20px; }
+.metric-tile--mint { background: #e8f8f4; }.metric-tile--green { background: #eff7e5; }.metric-tile--yellow { background: #fff6d8; }.metric-tile--peach { background: #fff0e4; }
+.metric-tile span { color: var(--color-ui-subtext); font-size: .74rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.metric-tile strong { color: var(--color-ui-text); font-size: 1.75rem; line-height: 1.1; }.metric-tile small { color: var(--color-ui-subtext); font-size: .75rem; }
+.metric-tile__date { font-size: 1.1rem !important; }
+.filter-card { padding-block: 1rem; }.filter-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.disposal-list-card { min-width: 0; }.disposal-table-wrap { overflow-x: auto; border: 1px solid var(--color-ui-border); border-radius: 18px; }
+.time-cell { display: flex; align-items: center; gap: .55rem; }.time-dot { width: .48rem; height: .48rem; flex: 0 0 auto; border-radius: 50%; background: #19bfae; box-shadow: 0 0 0 4px rgba(25,191,174,.12); }
+.component-chip { display: inline-flex; border-radius: 999px; background: #f3eddb; color: #725d42; padding: .28rem .65rem; font-size: .76rem; font-weight: 700; }
+.table-footer { display: flex; justify-content: flex-end; padding: 1rem 0 0; }
+.empty-state { display: grid; justify-items: center; gap: .6rem; padding: 3rem 1rem; text-align: center; color: var(--color-ui-subtext); }.empty-state__icon { display: grid; width: 3.5rem; height: 3.5rem; place-items: center; border-radius: 18px; background: #e8f8f4; color: #19bfae; font-size: 1.4rem; font-weight: 900; }.empty-state h4,.empty-state p { margin: 0; }.empty-state h4 { color: var(--color-ui-text); }
+.detail-layout { display: grid; gap: 1rem; }.detail-notice { display: flex; align-items: center; gap: .75rem; padding: .85rem 1rem; border: 1px solid #d8e5ef; border-radius: 16px; background: #f1f6fb; }.detail-notice p { margin: 0; color: var(--color-ui-subtext); font-size: .82rem; }
+.detail-meta-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: .75rem; }.detail-meta { display: grid; gap: .25rem; padding: .85rem 1rem; }.detail-meta span { color: var(--color-ui-subtext); font-size: .72rem; }.detail-meta strong { color: var(--color-ui-text); font-size: .88rem; }
+.detail-content-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }.detail-content-grid section { min-width: 0; }.detail-content-grid h4 { margin: 0 0 .6rem; color: var(--color-ui-text); font-size: .88rem; }.detail-code { max-height: 19rem; margin: 0; overflow: auto; white-space: pre-wrap; }.detail-method { min-height: 9rem; padding: 1rem; color: var(--color-ui-text); font-size: .86rem; line-height: 1.7; white-space: pre-wrap; }
+@media (max-width: 900px) { .metric-strip { grid-template-columns: 1fr 1fr; }.detail-content-grid { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { .hero-actions { justify-content: flex-start; }.metric-strip,.filter-grid,.detail-meta-grid { grid-template-columns: 1fr; }.detail-notice { align-items: flex-start; flex-direction: column; }.table-footer { justify-content: center; }.table-footer :deep(.el-pagination__total) { display: none; } }
 </style>

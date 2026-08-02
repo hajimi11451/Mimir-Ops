@@ -1,24 +1,20 @@
 <template>
-  <div v-loading="loadingContact" class="workspace-cool-glass notification-page h-full min-h-0 w-full overflow-y-auto custom-scrollbar p-4 sm:p-5 lg:p-6">
-    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+  <div v-loading="loadingContact" class="app-page notification-page">
+    <section class="page-hero notification-hero">
       <div>
-        <h2 class="text-xl font-bold text-ui-text">通知邮箱</h2>
-        <p class="mt-1 text-sm text-ui-subtext">
-          配置告警接收邮箱并验证链路。
-        </p>
+        <div class="section-eyebrow">Notification channel</div>
+        <h2>通知设置</h2>
+        <p>配置告警接收邮箱，验证从风险复检到邮件投递的完整链路。</p>
       </div>
+      <span class="status-pill" :class="savedEmail ? 'status-pill--success' : 'status-pill--warning'">{{ contactStatusText }}</span>
+    </section>
 
-      <div class="flex flex-wrap gap-2">
-        <el-tag :type="contactStatusType" effect="light">
-          {{ contactStatusText }}
-        </el-tag>
-      </div>
-    </div>
-
-    
-
-    <div class="notification-body-grid mt-6 min-h-0 flex-1">
-      <section class="notification-form-panel glass-subcard h-full min-h-0 rounded-[1.875rem] p-6">
+    <div class="notification-body-grid">
+      <section class="section-card notification-form-panel">
+        <div class="section-header">
+          <div><div class="section-eyebrow">Recipient</div><h3>收件邮箱</h3><p>每个登录用户维护自己的告警收件地址。</p></div>
+          <span class="account-chip">{{ username || '未登录' }}</span>
+        </div>
         <el-form
           ref="formRef"
           :model="form"
@@ -26,14 +22,6 @@
           label-position="top"
           @submit.prevent
         >
-          <el-form-item label="当前用户">
-            <el-input :model-value="username || '未登录'" disabled>
-              <template #prefix>
-                <el-icon><User /></el-icon>
-              </template>
-            </el-input>
-          </el-form-item>
-
           <el-form-item label="通知邮箱" prop="email">
             <el-input
               v-model="form.email"
@@ -45,69 +33,53 @@
                 <el-icon><Message /></el-icon>
               </template>
             </el-input>
-            <div class="mt-2 text-xs text-ui-subtext">
-              留空保存可清空当前邮箱。
-            </div>
+            <div class="field-help">留空保存可清空当前邮箱；建议使用运维团队公共邮箱。</div>
           </el-form-item>
 
           <el-form-item>
-            <div class="flex flex-wrap gap-3">
+            <div class="form-actions">
               <el-button type="primary" :loading="saving" @click="handleSave">
                 <el-icon class="mr-1"><Check /></el-icon>
                 保存设置
               </el-button>
-              <el-button class="mail-action-button" :loading="testing" @click="handleTestMail">
+              <el-button :loading="testing" @click="handleTestMail">
                 <el-icon class="mr-1"><Promotion /></el-icon>
                 测试邮件
               </el-button>
-              <el-button class="mail-action-button" :disabled="!form.email" @click="handleClear">
+              <el-button :disabled="!form.email" @click="handleClear">
                 <el-icon class="mr-1"><Delete /></el-icon>
                 清空输入
               </el-button>
-              <el-button class="mail-action-button" :disabled="!savedEmail" @click="handleRestoreSaved">
+              <el-button :disabled="!savedEmail" @click="handleRestoreSaved">
                 <el-icon class="mr-1"><RefreshLeft /></el-icon>
                 恢复
               </el-button>
             </div>
           </el-form-item>
         </el-form>
-        
-        <div style="margin: 1.25rem 0 0 0.625rem">
-        <p class="text-xl">注意：</p>
-        <div style="margin-left:0.625rem" class="mt-3 text-base text-ui-subtext">
-        <p>同一问题连续两次高风险才会发送邮件，冷却 30 分钟。</p>
-        <p>用户收到信息后请尽快检查服务器，本项目不能完美解决高风险问题</p>
-        <p>如遇到难解决的问题，联系管理员解决</p>
-        <p>管理员邮箱为**********@**.com</p>
-        </div>
+
+        <div class="delivery-preview soft-panel">
+          <div class="delivery-icon">✉</div>
+          <div>
+            <span>本次测试对象</span>
+            <strong>{{ effectiveEmail || '尚未指定收件邮箱' }}</strong>
+            <small>{{ lastTestMessage || '保存后可发送一封测试邮件验证链路。' }}</small>
+          </div>
         </div>
       </section>
 
-      <section class="status-panel glass-subcard h-full min-h-0 rounded-[1.875rem] p-5">
-        <div class="mb-4 font-semibold text-ui-text">当前状态</div>
-
-        <el-descriptions class="status-plain-descriptions" :column="1">
-          <el-descriptions-item label="当前用户">
-            {{ username || '未登录' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="已保存邮箱">
-            <span class="break-all">{{ savedEmail || '暂未保存' }}</span>
-          </el-descriptions-item>
-          <el-descriptions-item label="本次发送对象">
-            <span class="break-all">{{ effectiveEmail || '未指定' }}</span>
-          </el-descriptions-item>
-          <el-descriptions-item label="最近测试状态">
-            {{ lastTestMessage || '尚未测试邮件' }}
-          </el-descriptions-item>
-        </el-descriptions>
-
-        <el-alert
-          class="mt-4"
-          :type="savedEmail ? 'success' : 'warning'"
-          :closable="false"
-          show-icon
-          :title="savedEmail ? '已配置邮箱，可发送通知。' : '未配置邮箱，当前不会自动通知。'"
-        />
+      <section class="section-card notification-rules-panel">
+        <div class="section-header"><div><div class="section-eyebrow">Delivery policy</div><h3>通知规则</h3><p>邮件是风险提醒，不替代人工检查与处置确认。</p></div></div>
+        <div class="rule-list">
+          <div class="rule-item"><span>01</span><div><strong>连续复检</strong><p>同一问题连续两次判定为高风险后才会触发邮件。</p></div></div>
+          <div class="rule-item"><span>02</span><div><strong>30 分钟冷却</strong><p>相同风险进入冷却期，避免重复告警轰炸。</p></div></div>
+          <div class="rule-item"><span>03</span><div><strong>人工确认</strong><p>收到通知后请及时检查服务器，高风险问题仍需人工决策。</p></div></div>
+        </div>
+        <div class="saved-contact">
+          <span>当前已保存邮箱</span>
+          <strong>{{ savedEmail || '暂未保存' }}</strong>
+        </div>
+        <el-alert :type="savedEmail ? 'success' : 'warning'" :closable="false" show-icon :title="savedEmail ? '通知链路已配置，可发送测试邮件。' : '未配置邮箱，当前不会自动发送通知。'" />
       </section>
     </div>
   </div>
@@ -285,95 +257,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.notification-page {
-  display: flex;
-  flex-direction: column;
-}
-
-.notification-body-grid {
-  display: grid;
-  flex: 1;
-  min-height: 0;
-  gap: 1.25rem;
-  align-items: stretch;
-  grid-template-columns: minmax(0, 1.55fr) minmax(18.75rem, 0.95fr);
-}
-
-.notification-form-panel {
-  display: flex;
-  min-height: 0;
-  flex-direction: column;
-}
-
-.status-panel {
-  display: flex;
-  min-height: 0;
-  flex-direction: column;
-  min-width: 0;
-  border: 1px solid rgba(255, 255, 255, 0.26);
-}
-
-.status-plain-descriptions :deep(.el-descriptions__body) {
-  background: transparent;
-  padding: 0.625rem 0.625rem 0.625rem 1.25rem;
-}
-
-.status-plain-descriptions :deep(.el-descriptions__table) {
-  background: transparent;
-}
-
-.status-plain-descriptions :deep(.el-descriptions__cell) {
-  background: transparent !important;
-  border: 0 !important;
-  box-shadow: none !important;
-  padding: 0.5rem 0;
-}
-
-.status-plain-descriptions :deep(.el-descriptions__label) {
-  width: 5.5rem;
-  color: #5f6f87;
-  font-weight: 500;
-}
-
-.status-plain-descriptions :deep(.el-descriptions__content) {
-  color: #0f172a;
-}
-
-.status-plain-descriptions {
-  flex: 1;
-}
-
-.mail-action-button {
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.18),
-    0 0.875rem 1.625rem -1.125rem rgba(88, 110, 148, 0.22),
-    0 0 0 1px rgba(176, 197, 228, 0.16);
-}
-
-.custom-scrollbar::-webkit-scrollbar {
-  width: 0.375rem;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #c7d6ea;
-  border-radius: 62.4375rem;
-}
-
-@media (max-width: 1023px) {
-  .notification-body-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-@media (max-width: 1280px) {
-  .notification-form-panel,
-  .status-panel {
-    border-radius: 1.5rem;
-  }
-}
+.notification-page{display:grid;gap:1.25rem}.notification-hero{background:linear-gradient(135deg,#fffdf6 0%,#edf8ec 100%)}.notification-body-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(19rem,.75fr);gap:1.25rem;align-items:start}.notification-form-panel,.notification-rules-panel{min-width:0}.account-chip{display:inline-flex;align-items:center;border-radius:999px;background:#f3eddb;color:#725d42;padding:.45rem .75rem;font-size:.76rem;font-weight:750}.field-help{margin-top:.45rem;color:var(--color-ui-subtext);font-size:.75rem}.form-actions{display:flex;flex-wrap:wrap;gap:.7rem}.delivery-preview{display:flex;align-items:center;gap:.9rem;margin-top:.7rem;padding:1rem}.delivery-icon{display:grid;width:3rem;height:3rem;flex:0 0 auto;place-items:center;border-radius:17px;background:#e4f7f3;color:#158f84;font-size:1.25rem}.delivery-preview>div:last-child{display:grid;gap:.18rem;min-width:0}.delivery-preview span,.delivery-preview small{color:var(--color-ui-subtext);font-size:.72rem}.delivery-preview strong{overflow:hidden;color:var(--color-ui-text);font-size:.88rem;text-overflow:ellipsis}.rule-list{display:grid;gap:.75rem}.rule-item{display:grid;grid-template-columns:auto 1fr;gap:.8rem;padding:.9rem;border:1px solid var(--color-ui-border);border-radius:17px;background:#fffdf7}.rule-item>span{display:grid;width:2.25rem;height:2.25rem;place-items:center;border-radius:13px;background:#fff4d6;color:#ad7c08;font-size:.72rem;font-weight:900}.rule-item strong{color:var(--color-ui-text);font-size:.86rem}.rule-item p{margin:.2rem 0 0;color:var(--color-ui-subtext);font-size:.75rem;line-height:1.55}.saved-contact{display:grid;gap:.2rem;margin:1rem 0;padding:.9rem 1rem;border-radius:16px;background:#f3eddb}.saved-contact span{color:var(--color-ui-subtext);font-size:.72rem}.saved-contact strong{overflow-wrap:anywhere;color:var(--color-ui-text);font-size:.86rem}
+@media(max-width:900px){.notification-body-grid{grid-template-columns:1fr}}
 </style>
 

@@ -1,84 +1,75 @@
 <template>
-  <div class="workspace-cool-glass mx-auto max-w-6xl space-y-6">
-    <div class="flex items-center justify-between gap-3">
+  <div class="app-page alert-detail-page">
+    <section class="page-hero detail-hero">
       <div>
-        <h2 class="text-xl font-bold text-ui-text">告警详情</h2>
-        <p class="text-sm text-ui-subtext mt-1">查看诊断信息，并将处理方案交给助手执行。</p>
+        <div class="section-eyebrow">Alert investigation</div>
+        <h2>告警详情</h2>
+        <p>核对诊断结论和原始日志，选择方案后可直接交给灵枢助手继续排查。</p>
       </div>
-      <div class="flex items-center gap-2">
-        <el-button type="danger" plain :loading="deleting" @click="handleDeleteCurrent">
-          删除
-        </el-button>
-        <el-button @click="goBack">返回</el-button>
-        <el-button type="primary" plain class="alert-assistant-button" @click="goAssistant">助手</el-button>
+      <div class="hero-actions">
+        <el-button @click="goBack">返回告警中心</el-button>
+        <el-button @click="goAssistant">打开助手</el-button>
       </div>
-    </div>
+    </section>
 
-    <el-skeleton v-if="loading" :rows="8" animated />
+    <section v-if="loading" class="section-card"><el-skeleton :rows="8" animated /></section>
 
     <template v-else-if="info">
-      <el-card class="alert-detail-card glass-card rounded-[2.125rem]" :body-style="{ padding: '1.25rem' }">
-        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div class="text-lg font-semibold text-ui-text">{{ info.errorSummary || '未命名告警' }}</div>
-          <el-tag :type="getTagType(info.riskLevel)" effect="light">{{ formattedRiskLevel }}</el-tag>
-        </div>
-
-        <el-descriptions :column="2" border>
-          <el-descriptions-item label="记录 ID">{{ info.id || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="发生时间">{{ formatDate(info.createdAt) || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="服务器 IP">{{ info.serverIp || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="组件">{{ info.component || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="风险等级">{{ formattedRiskLevel }}</el-descriptions-item>
-          <el-descriptions-item label="问题摘要">{{ info.errorSummary || '-' }}</el-descriptions-item>
-        </el-descriptions>
-      </el-card>
-
-      <el-card class="alert-detail-card glass-card rounded-[2.125rem]" :body-style="{ padding: '1.25rem' }">
-        <template #header>
-          <div class="font-semibold text-ui-text">问题详情</div>
-        </template>
-        <pre class="glass-code-block detail-pre">{{ info.analysisResult || '-' }}</pre>
-      </el-card>
-
-      <el-card class="alert-detail-card glass-card rounded-[2.125rem]" :body-style="{ padding: '1.25rem' }">
-        <template #header>
-          <div class="font-semibold text-ui-text">处理建议</div>
-        </template>
-
-        <div v-if="actionList.length > 0" class="space-y-3">
-          <div
-            v-for="(action, index) in actionList"
-            :key="`${index}-${action}`"
-            class="alert-action-card glass-subcard flex flex-col gap-3 rounded-[1.5rem] p-4 md:flex-row md:items-start md:justify-between"
-          >
-            <div class="min-w-0 flex-1 whitespace-pre-wrap break-all text-sm leading-6 text-ui-text md:pr-4">
-              <span class="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand/10 text-xs font-semibold text-brand">
-                {{ index + 1 }}
-              </span>
-              {{ action }}
-            </div>
-            <el-button
-              type="primary"
-              class="shrink-0 self-start"
-              :loading="submittingActionIndex === index"
-              @click="handleSelectAction(action, index)"
-            >
-              交给助手执行
-            </el-button>
+      <section class="section-card incident-summary" :class="`incident-summary--${formattedRiskLevel}`">
+        <div class="incident-heading">
+          <div class="risk-mark" :class="`risk-mark--${formattedRiskLevel}`">{{ formattedRiskLevel }}</div>
+          <div>
+            <div class="section-eyebrow">Incident #{{ info.id || '-' }}</div>
+            <h3>{{ info.errorSummary || '未命名告警' }}</h3>
+            <p>{{ formatDate(info.createdAt) || '时间未知' }} · {{ info.component || '未知组件' }}</p>
           </div>
         </div>
-        <el-empty v-else description="无处理建议" />
-      </el-card>
+        <div class="incident-meta-grid">
+          <div class="soft-panel incident-meta"><span>服务器</span><strong class="mono-text">{{ info.serverIp || '-' }}</strong></div>
+          <div class="soft-panel incident-meta"><span>组件</span><strong>{{ info.component || '-' }}</strong></div>
+          <div class="soft-panel incident-meta"><span>风险等级</span><el-tag :type="getTagType(info.riskLevel)" effect="light">{{ formattedRiskLevel }}风险</el-tag></div>
+        </div>
+      </section>
 
-      <el-card class="alert-detail-card glass-card rounded-[2.125rem]" :body-style="{ padding: '1.25rem' }">
-        <template #header>
-          <div class="font-semibold text-ui-text">原始日志</div>
-        </template>
-        <pre class="glass-code-block detail-pre raw-log">{{ info.rawLog || '-' }}</pre>
-      </el-card>
+      <section class="detail-grid">
+        <article class="section-card analysis-card">
+          <div class="section-header">
+            <div><div class="section-eyebrow">AI analysis</div><h3>问题分析</h3><p>由诊断流程生成的原因与影响说明。</p></div>
+          </div>
+          <div class="analysis-content">{{ info.analysisResult || '-' }}</div>
+        </article>
+
+        <article class="section-card raw-log-card">
+          <div class="section-header">
+            <div><div class="section-eyebrow">Source evidence</div><h3>原始日志</h3><p>执行前请结合日志核对目标服务器与组件。</p></div>
+          </div>
+          <pre class="code-panel detail-pre raw-log">{{ info.rawLog || '-' }}</pre>
+        </article>
+      </section>
+
+      <section class="section-card action-section">
+        <div class="section-header">
+          <div><div class="section-eyebrow">Suggested actions</div><h3>处理建议</h3><p>选择后会记录方案并跳转助手；实际执行仍受连接状态与高风险确认约束。</p></div>
+          <span class="status-pill status-pill--info">{{ actionList.length }} 个可选方案</span>
+        </div>
+
+        <div v-if="actionList.length" class="action-list">
+          <article v-for="(action, index) in actionList" :key="`${index}-${action}`" class="action-card">
+            <span class="action-index">{{ String(index + 1).padStart(2, '0') }}</span>
+            <p>{{ action }}</p>
+            <el-button type="primary" :loading="submittingActionIndex === index" @click="handleSelectAction(action, index)">交给助手执行</el-button>
+          </article>
+        </div>
+        <el-empty v-else description="当前诊断未生成处理建议" />
+      </section>
+
+      <section class="danger-zone">
+        <div><strong>删除这条告警</strong><p>删除后无法恢复，但不会影响服务器监控配置。</p></div>
+        <el-button type="danger" plain :loading="deleting" @click="handleDeleteCurrent">删除告警</el-button>
+      </section>
     </template>
 
-    <el-empty v-else description="未找到对应告警详情" />
+    <section v-else class="section-card"><el-empty description="未找到对应告警详情"><el-button type="primary" @click="goBack">返回告警中心</el-button></el-empty></section>
   </div>
 </template>
 
@@ -318,55 +309,10 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.alert-detail-card {
-  border-radius: 2.125rem !important;
-}
-
-.alert-detail-card :deep(.el-card__body),
-.alert-detail-card :deep(.el-card__header) {
-  border-radius: inherit;
-}
-
-.alert-action-card {
-  background: linear-gradient(180deg, rgba(250, 253, 255, 0.36), rgba(238, 245, 253, 0.24));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    0 0.875rem 1.5rem -1.375rem rgba(88, 110, 148, 0.14);
-}
-
-@media (max-width: 1280px) {
-  .alert-detail-card {
-    border-radius: 1.75rem !important;
-  }
-}
-
-.alert-assistant-button {
-  border-color: rgba(96, 165, 250, 0.28) !important;
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.96), rgba(96, 165, 250, 0.94)) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 1.125rem 2rem -1.5rem rgba(37, 99, 235, 0.52) !important;
-  color: #ffffff !important;
-}
-
-.alert-assistant-button :deep(span) {
-  color: #ffffff !important;
-}
-
-.alert-assistant-button:hover,
-.alert-assistant-button:focus-visible {
-  color: #ffffff !important;
-  border-color: rgba(96, 165, 250, 0.34) !important;
-  background: linear-gradient(135deg, rgba(29, 78, 216, 0.98), rgba(96, 165, 250, 0.96)) !important;
-}
-
-.detail-pre {
-  max-width: 100%;
-  border-radius: 1.5rem;
-}
-
-.raw-log {
-  max-height: 22.5rem;
-  overflow: auto;
-}
+.alert-detail-page{display:grid;gap:1.25rem}.detail-hero{background:linear-gradient(135deg,#fffdf6 0%,#fff0e2 100%)}.hero-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:.7rem}
+.incident-summary{display:grid;gap:1rem;border-left:5px solid #e6ab20}.incident-summary--高{border-left-color:#d95656}.incident-summary--中{border-left-color:#e6ab20}.incident-summary--低{border-left-color:#6f91c8}.incident-summary--无{border-left-color:#69ad38}.incident-heading{display:flex;align-items:center;gap:1rem}.incident-heading>div:last-child{min-width:0}.incident-heading h3{margin:.2rem 0;overflow-wrap:anywhere;color:var(--color-ui-text);font-size:1.25rem}.incident-heading p{margin:0;color:var(--color-ui-subtext);font-size:.82rem}.risk-mark{display:grid;width:3.75rem;height:3.75rem;flex:0 0 auto;place-items:center;border-radius:20px;background:#fff4d6;color:#b98200;font-size:1.15rem;font-weight:900}.risk-mark--高{background:#fdebea;color:#c94444}.risk-mark--低{background:#edf3fb;color:#5679b0}.risk-mark--无{background:#edf7e7;color:#548f2c}.incident-meta-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem}.incident-meta{display:grid;align-content:center;gap:.2rem;min-height:4.2rem;padding:.8rem 1rem}.incident-meta span{color:var(--color-ui-subtext);font-size:.72rem}.incident-meta strong{overflow-wrap:anywhere;color:var(--color-ui-text);font-size:.88rem}
+.detail-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:1.25rem}.analysis-content{overflow-wrap:anywhere;color:var(--color-ui-text);font-size:.9rem;line-height:1.85;white-space:pre-wrap}.detail-pre{max-width:100%;margin:0;white-space:pre-wrap}.raw-log{max-height:24rem;overflow:auto}
+.action-list{display:grid;gap:.75rem}.action-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:1rem;padding:1rem;border:1px solid var(--color-ui-border);border-radius:18px;background:#fffdf7;transition:transform .2s ease,border-color .2s ease}.action-card:hover{transform:translateY(-1px);border-color:rgba(25,191,174,.38)}.action-index{display:grid;width:2.35rem;height:2.35rem;place-items:center;border-radius:14px;background:#e4f7f3;color:#158f84;font-size:.76rem;font-weight:900}.action-card p{min-width:0;margin:0;overflow-wrap:anywhere;color:var(--color-ui-text);font-size:.87rem;line-height:1.7;white-space:pre-wrap}.danger-zone{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 1.1rem;border:1px dashed #e7b7b2;border-radius:18px;background:#fff8f6}.danger-zone strong{color:#b94a4a}.danger-zone p{margin:.2rem 0 0;color:var(--color-ui-subtext);font-size:.78rem}
+@media(max-width:850px){.detail-grid{grid-template-columns:1fr}.incident-meta-grid{grid-template-columns:1fr 1fr}.action-card{grid-template-columns:auto 1fr}.action-card .el-button{grid-column:2;justify-self:start}}
+@media(max-width:600px){.hero-actions{justify-content:flex-start}.incident-heading{align-items:flex-start}.incident-meta-grid{grid-template-columns:1fr}.action-card{grid-template-columns:1fr}.action-card .el-button{grid-column:auto}.danger-zone{align-items:flex-start;flex-direction:column}}
 </style>

@@ -1,262 +1,138 @@
 <template>
-  <div class="workspace-cool-glass mx-auto max-w-7xl space-y-6">
-    <el-card
-      class="diagnosis-shell-card glass-card rounded-[2.125rem]"
-      :body-style="{ padding: '1.5rem' }"
-    >
-      <h2 class="text-lg font-bold mb-4 text-ui-text flex items-center">
-        <svg
-          class="w-5 h-5 mr-2 text-brand"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-          />
-        </svg>
-        新增监控
-      </h2>
-
-      <el-alert
-        v-if="errorMessage"
-        :title="errorMessage"
-        type="error"
-        show-icon
-        :closable="true"
-        @close="errorMessage = ''"
-        class="mb-4"
-      >
-        <template #default>
-          <div class="text-sm">
-            {{ errorMessage }}
-            <div class="mt-2 text-xs text-ui-subtext">
-              请检查 IP、账号密码、日志路径和 sudo 权限后重试。
-            </div>
-          </div>
-        </template>
-      </el-alert>
-
-      <el-form :model="config" label-position="top">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <el-form-item
-            class="mb-0"
-            label="服务器 IP"
-            prop="serverIp"
-          >
-            <template #label>
-              <span class="block text-sm font-medium text-ui-subtext mb-1">
-                服务器 IP
-                <span class="text-xs text-ui-subtext font-normal ml-2">
-                  (支持 IP:Port，默认 22)
-                </span>
-              </span>
-            </template>
-            <el-input
-              v-model="config.serverIp"
-              placeholder="输入服务器ip"
-              clearable
-            />
-          </el-form-item>
-
-          <el-form-item
-            class="mb-0"
-            label="SSH 用户名"
-          >
-            <el-input
-              v-model="config.username"
-              placeholder="请输入用户名"
-              clearable
-            />
-          </el-form-item>
-
-          <el-form-item
-            class="mb-0"
-            label="SSH 密码"
-          >
-            <el-input
-              v-model="config.password"
-              type="password"
-              placeholder="请输入密码"
-              show-password
-            />
-          </el-form-item>
-
-          <el-form-item class="mb-0" label="日志提权">
-            <div class="glass-subcard flex min-h-[2.5rem] items-center justify-between px-4 py-3 w-full">
-              <div>
-                <div class="text-sm font-medium text-ui-text">使用 sudo 读取日志</div>
-                <div class="text-xs text-ui-subtext">当前 SSH 用户需要具备 sudo 权限</div>
-              </div>
-              <el-switch
-                v-model="config.useSudo"
-                inline-prompt
-                active-text="开"
-                inactive-text="关"
-                @change="handlePrivilegeToggle"
-              />
-            </div>
-          </el-form-item>
-
-          <el-form-item
-            class="mb-0"
-            label="组件名称"
-            prop="component"
-          >
-            <el-input
-              v-model="config.component"
-              @blur="handleComponentChange"
-              placeholder="如 MySQL"
-              clearable
-            />
-          </el-form-item>
-
-          <el-form-item class="mb-0" label="日志路径">
-            <template #label>
-              <label class="block text-sm font-medium text-ui-subtext mb-1 flex justify-between items-center">
-                <span>日志路径 <span class="text-xs text-ui-subtext font-normal ml-2">(若为空则由ai自动识别)</span></span>
-                <span
-                  v-if="config.logPath"
-                  :class="isVerified ? 'text-ui-success' : 'text-ui-warning'"
-                  class="text-xs font-bold"
-                >
-                  {{ isVerified ? '已验证' : '识别中' }}
-                </span>
-                
-              </label>
-            </template>
-            <div class="relative w-full">
-              <el-input
-                v-model="config.logPath"
-                placeholder="留空自动探测"
-                clearable
-              />
-              <div v-if="pathLoading" class="absolute right-3 top-3">
-                <div class="animate-spin h-4 w-4 border-2 border-brand border-t-transparent rounded-full"></div>
-              </div>
-            </div>
-          </el-form-item>
-        </div>
-      </el-form>
-
-      <div class="mt-6 flex justify-end">
-        <el-button
-          type="primary"
-          class="px-6"
-          :loading="loading"
-          :disabled="loading || !config.serverIp || !config.component"
-          @click="handleAddConfig"
-        >
-          <span v-if="loading">保存中...</span>
-          <span v-else>保存</span>
+  <div class="app-page diagnosis-page">
+    <section class="page-hero diagnosis-hero">
+      <div>
+        <div class="section-eyebrow">Service observability</div>
+        <h2>诊断配置</h2>
+        <p>为已接入服务器配置组件与日志路径，自动发现异常并进入告警闭环。</p>
+      </div>
+      <div class="hero-actions">
+        <div class="status-pill status-pill--success">{{ activeMonitorCount }} 项监控中</div>
+        <el-button type="primary" @click="showCreateForm = !showCreateForm">
+          {{ showCreateForm ? '收起配置' : '新增监控配置' }}
         </el-button>
       </div>
-    </el-card>
+    </section>
 
-    <el-card
-      class="diagnosis-shell-card glass-card rounded-[2.125rem]"
-      :body-style="{ padding: '1.5rem' }"
-    >
-      <h2 class="text-lg font-bold mb-4 text-ui-text flex items-center">
-        <svg
-          class="w-5 h-5 mr-2 text-brand"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
+    <el-collapse-transition>
+      <section v-show="showCreateForm" class="section-card diagnosis-create-card">
+        <div class="section-header">
+          <div>
+            <div class="section-eyebrow">New monitor</div>
+            <h3>连接服务器并定位日志</h3>
+            <p>这里配置的是组件日志监控，不会重复创建整机监控。</p>
+          </div>
+          <span class="step-badge">01 · 连接与验证</span>
+        </div>
+
+        <el-alert
+          v-if="errorMessage"
+          :title="errorMessage"
+          type="error"
+          show-icon
+          closable
+          class="mb-5"
+          @close="errorMessage = ''"
         >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-          />
-        </svg>
-        监控列表
-      </h2>
+          <template #default>
+            <div class="text-sm">请检查 IP、账号密码、日志路径和 sudo 权限后重试。</div>
+          </template>
+        </el-alert>
 
-      <div class="diagnosis-table-wrap overflow-x-auto">
+        <el-form :model="config" label-position="top">
+          <div class="form-grid">
+            <el-form-item label="服务器 IP" prop="serverIp">
+              <el-input v-model="config.serverIp" placeholder="192.168.1.10 或 192.168.1.10:22" clearable @input="invalidatePathVerification" />
+            </el-form-item>
+            <el-form-item label="SSH 用户名">
+              <el-input v-model="config.username" placeholder="例如 root" clearable @input="invalidatePathVerification" />
+            </el-form-item>
+            <el-form-item label="SSH 密码">
+              <el-input v-model="config.password" type="password" placeholder="仅用于连接验证" show-password @input="invalidatePathVerification" />
+            </el-form-item>
+            <el-form-item label="组件名称" prop="component">
+              <el-input v-model="config.component" placeholder="例如 Nginx / MySQL" clearable @input="invalidatePathVerification" @blur="handleComponentChange" />
+            </el-form-item>
+            <el-form-item class="form-grid__wide" label="日志路径">
+              <div class="path-field">
+                <el-input v-model="config.logPath" placeholder="可留空，系统将自动探测" clearable @input="invalidatePathVerification">
+                  <template #suffix>
+                    <span v-if="isVerified" class="verified-label">已验证</span>
+                  </template>
+                </el-input>
+                <el-button :loading="pathLoading" :disabled="!config.serverIp || !config.component" @click="handleComponentChange">
+                  自动探测
+                </el-button>
+              </div>
+            </el-form-item>
+            <el-form-item class="form-grid__wide" label="读取权限">
+              <div class="soft-panel privilege-row">
+                <div>
+                  <strong>使用 sudo 读取日志</strong>
+                  <span>仅在普通账号无法读取目标日志时启用，账号需要具备 sudo 权限。</span>
+                </div>
+                <el-switch v-model="config.useSudo" inline-prompt active-text="开" inactive-text="关" @change="handlePrivilegeToggle" />
+              </div>
+            </el-form-item>
+          </div>
+        </el-form>
+
+        <div class="form-actions">
+          <el-button @click="showCreateForm = false">取消</el-button>
+          <el-button type="primary" :loading="loading" :disabled="loading || !config.serverIp || !config.component" @click="handleAddConfig">
+            保存并开始监控
+          </el-button>
+        </div>
+      </section>
+    </el-collapse-transition>
+
+    <section class="section-card">
+      <div class="section-header">
+        <div>
+          <div class="section-eyebrow">Configured services</div>
+          <h3>组件监控列表</h3>
+          <p>共 {{ monitorList.length }} 项配置，{{ pausedMonitorCount }} 项已暂停。</p>
+        </div>
+        <el-button :loading="listLoading" :disabled="loading" @click="fetchConfigs">刷新列表</el-button>
+      </div>
+
+      <div class="diagnosis-table-wrap">
         <el-table
           :data="monitorList"
           style="width: 100%"
-          border
-          stripe
-          :header-cell-class-name="() => 'text-xs font-medium uppercase tracking-wider text-ui-subtext'"
-          :cell-class-name="() => 'text-sm text-ui-text'"
+          v-loading="listLoading"
         >
-          <el-table-column
-            prop="serverIp"
-            label="服务器 IP"
-            min-width="160"
-          >
+          <el-table-column prop="serverIp" label="服务器" min-width="180">
             <template #default="{ row }">
-              <span class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                {{ row.serverIp }}
-              </span>
+              <div class="server-cell">
+                <span class="server-dot"></span>
+                <span class="mono-text">{{ row.serverIp }}</span>
+              </div>
             </template>
           </el-table-column>
-
-          <el-table-column
-            prop="component"
-            label="组件"
-            min-width="120"
-          >
+          <el-table-column prop="component" label="组件" min-width="130">
             <template #default="{ row }">
-              <span class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {{ row.component }}
-              </span>
+              <strong class="component-name">{{ row.component }}</strong>
             </template>
           </el-table-column>
-
-          <el-table-column
-            prop="configValue"
-            label="日志路径"
-            min-width="220"
-          >
+          <el-table-column prop="configValue" label="日志路径" min-width="280" show-overflow-tooltip>
             <template #default="{ row }">
-              <span class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
-                {{ row.configValue }}
-              </span>
+              <code class="path-code">{{ row.configValue || '自动探测' }}</code>
             </template>
           </el-table-column>
-
-          <el-table-column
-            label="读取方式"
-            min-width="120"
-          >
+          <el-table-column label="读取方式" min-width="120">
             <template #default="{ row }">
-              <span
-                class="glass-chip px-2.5 py-1 text-xs leading-5 font-semibold"
-                :class="row.useSudo ? 'border-amber-200/30 bg-amber-400/10 text-ui-warning' : 'border-sky-200/30 bg-sky-400/10 text-sky-700'"
-              >
-                {{ row.useSudo ? 'sudo' : '普通读取' }}
-              </span>
+              <span class="status-pill" :class="row.useSudo ? 'status-pill--warning' : 'status-pill--info'">{{ row.useSudo ? 'sudo' : '普通读取' }}</span>
             </template>
           </el-table-column>
-
-          <el-table-column
-            label="状态"
-            min-width="120"
-          >
+          <el-table-column label="状态" min-width="120">
             <template #default="{ row }">
-              <span
-                class="glass-chip px-2.5 py-1 text-xs leading-5 font-semibold"
-                :class="getMonitorStatusClass(row.isEnabled)"
-              >
-                {{ Number(row.isEnabled) === 0 ? '已暂停' : '监控中' }}
-              </span>
+              <span class="status-pill" :class="getMonitorStatusClass(row.isEnabled)">{{ Number(row.isEnabled) === 0 ? '已暂停' : '监控中' }}</span>
             </template>
           </el-table-column>
-
-          <el-table-column
-            label="操作"
-            align="left"
-            width="220"
-          >
+          <el-table-column label="操作" align="right" width="210" fixed="right">
             <template #default="{ row }">
-              <div class="flex items-center justify-end gap-3">
+              <div class="table-actions">
                 <el-popconfirm
                   :title="Number(row.isEnabled) === 0 ? '确定要恢复该监控任务吗？' : '确定要暂停该监控任务吗？'"
                   confirm-button-text="确定"
@@ -264,11 +140,7 @@
                   @confirm="handleToggleStatus(row)"
                 >
                   <template #reference>
-                    <el-button
-                      link
-                      :type="Number(row.isEnabled) === 0 ? 'primary' : 'warning'"
-                      class="glass-link-button text-sm font-medium"
-                    >
+                    <el-button link :type="Number(row.isEnabled) === 0 ? 'primary' : 'warning'">
                       {{ Number(row.isEnabled) === 0 ? '恢复检测' : '暂停检测' }}
                     </el-button>
                   </template>
@@ -281,13 +153,7 @@
                   @confirm="handleDelete(row.id)"
                 >
                   <template #reference>
-                    <el-button
-                      link
-                      type="danger"
-                      class="glass-link-button text-sm font-medium"
-                    >
-                      删除
-                    </el-button>
+                    <el-button link type="danger">删除</el-button>
                   </template>
                 </el-popconfirm>
               </div>
@@ -295,19 +161,19 @@
           </el-table-column>
         </el-table>
 
-        <div
-          v-if="monitorList.length === 0"
-          class="px-6 py-12 text-center text-ui-subtext text-sm"
-        >
-          暂无监控配置
+        <div v-if="!monitorList.length && !listLoading" class="empty-state">
+          <div class="empty-state__icon">⌁</div>
+          <h4>还没有组件监控</h4>
+          <p>先新增一项组件与日志路径配置，系统会开始自动诊断。</p>
+          <el-button type="primary" @click="showCreateForm = true">新增监控配置</el-button>
         </div>
       </div>
-    </el-card>
+    </section>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { computed, ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getLogPath, addConfig, listConfigs, deleteConfig, updateConfigStatus } from '../api/diagnosis'
 
@@ -323,18 +189,28 @@ const config = reactive({
 const isVerified = ref(false)
 const pathLoading = ref(false)
 const loading = ref(false)
+const listLoading = ref(true)
 const monitorList = ref([])
 const errorMessage = ref('')
+const showCreateForm = ref(false)
+
+const activeMonitorCount = computed(() => monitorList.value.filter(item => Number(item?.isEnabled) !== 0).length)
+const pausedMonitorCount = computed(() => monitorList.value.filter(item => Number(item?.isEnabled) === 0).length)
 
 const getMonitorStatusClass = isEnabled => (
   Number(isEnabled) === 0
-    ? 'border-amber-200/30 bg-amber-400/10 text-ui-warning'
-    : 'border-emerald-200/30 bg-emerald-400/10 text-ui-success'
+    ? 'status-pill--warning'
+    : 'status-pill--success'
 )
+
+const invalidatePathVerification = () => {
+  isVerified.value = false
+}
 
 const handleComponentChange = async () => {
   if (!config.serverIp || !config.component) return
 
+  isVerified.value = false
   pathLoading.value = true
   errorMessage.value = ''
   try {
@@ -392,8 +268,9 @@ const handleAddConfig = async () => {
     config.useSudo = false
     isVerified.value = false
     errorMessage.value = ''
+    showCreateForm.value = false
 
-    fetchConfigs()
+    await fetchConfigs()
   } catch (error) {
     console.error('Failed to add config', error)
     // 显示错误信息（如SSH认证失败），用户可重新输入账号密码
@@ -404,6 +281,7 @@ const handleAddConfig = async () => {
 }
 
 const fetchConfigs = async () => {
+  listLoading.value = true
   try {
     const res = await listConfigs()
     // 经过 request.js 拦截后，如果后端为 { code, data: [...] }
@@ -418,6 +296,8 @@ const fetchConfigs = async () => {
     }
   } catch (error) {
     console.error('Failed to list configs', error)
+  } finally {
+    listLoading.value = false
   }
 }
 
@@ -425,7 +305,7 @@ const handleDelete = async id => {
   try {
     await deleteConfig(id)
     ElMessage.success('监控任务已删除')
-    fetchConfigs()
+    await fetchConfigs()
   } catch (error) {
     console.error('Failed to delete config', error)
     ElMessage.error(error?.message || '删除监控任务失败')
@@ -437,7 +317,7 @@ const handleToggleStatus = async row => {
     const nextEnabled = Number(row?.isEnabled) === 0 ? 1 : 0
     await updateConfigStatus(row.id, nextEnabled)
     ElMessage.success(nextEnabled === 1 ? '监控已恢复' : '监控已暂停')
-    fetchConfigs()
+    await fetchConfigs()
   } catch (error) {
     console.error('Failed to update config status', error)
     ElMessage.error(error?.message || '更新监控状态失败')
@@ -450,39 +330,40 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* 已经移除了所有会导致画面发脏的覆盖背景，一切由全局 glass-card/glass-subcard 接管 */
-.diagnosis-shell-card {
-  border-radius: 2.125rem !important;
+.diagnosis-page { display: grid; gap: 1.25rem; }
+.diagnosis-hero { background: linear-gradient(135deg, #fffdf6 0%, #f1f8ec 100%); }
+.hero-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .75rem; }
+.diagnosis-create-card { border-color: rgba(25, 191, 174, .28); }
+.step-badge { border-radius: 999px; background: #e4f7f3; color: #158f84; padding: .5rem .85rem; font-size: .75rem; font-weight: 800; }
+.form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .25rem 1rem; }
+.form-grid__wide { grid-column: span 3; }
+.path-field { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .75rem; width: 100%; }
+.verified-label { color: #69ad38; font-size: .75rem; font-weight: 800; }
+.privilege-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; width: 100%; padding: .9rem 1rem; }
+.privilege-row div { display: grid; gap: .2rem; }
+.privilege-row strong { color: var(--color-ui-text); font-size: .875rem; }
+.privilege-row span { color: var(--color-ui-subtext); font-size: .75rem; }
+.form-actions { display: flex; justify-content: flex-end; gap: .75rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--color-ui-border); }
+.diagnosis-table-wrap { overflow-x: auto; border: 1px solid var(--color-ui-border); border-radius: 18px; }
+.server-cell { display: flex; align-items: center; gap: .6rem; }
+.server-dot { width: .55rem; height: .55rem; border-radius: 50%; background: #69ad38; box-shadow: 0 0 0 4px rgba(105, 173, 56, .12); }
+.component-name { color: var(--color-ui-text); }
+.path-code { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; color: #725d42; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .78rem; white-space: nowrap; }
+.table-actions { display: flex; justify-content: flex-end; gap: .25rem; }
+.empty-state { display: grid; justify-items: center; gap: .65rem; padding: 3rem 1rem; text-align: center; color: var(--color-ui-subtext); }
+.empty-state__icon { display: grid; width: 3.5rem; height: 3.5rem; place-items: center; border-radius: 20px; background: #e4f7f3; color: #19bfae; font-size: 2rem; }
+.empty-state h4 { margin: .25rem 0 0; color: var(--color-ui-text); font-size: 1rem; }
+.empty-state p { margin: 0 0 .35rem; font-size: .85rem; }
+@media (max-width: 900px) {
+  .form-grid { grid-template-columns: 1fr 1fr; }
+  .form-grid__wide { grid-column: span 2; }
 }
-
-.diagnosis-shell-card :deep(.el-card__body) {
-  border-radius: inherit;
-}
-
-.diagnosis-table-wrap {
-  overflow: hidden;
-  border-radius: 1.75rem;
-}
-
-.diagnosis-table-wrap :deep(.el-table) {
-  border-radius: 1.75rem;
-}
-
-.diagnosis-table-wrap :deep(.el-table__inner-wrapper) {
-  border-radius: inherit;
-  overflow: hidden;
-}
-
-@media (max-width: 1280px) {
-  .diagnosis-shell-card {
-    border-radius: 1.75rem !important;
-  }
-  .diagnosis-table-wrap {
-    border-radius: 1.5rem;
-  }
-  .diagnosis-table-wrap :deep(.el-table) {
-    border-radius: 1.5rem;
-  }
+@media (max-width: 640px) {
+  .hero-actions { justify-content: flex-start; }
+  .form-grid { grid-template-columns: 1fr; }
+  .form-grid__wide { grid-column: auto; }
+  .path-field { grid-template-columns: 1fr; }
+  .privilege-row { align-items: flex-start; }
 }
 </style>
 

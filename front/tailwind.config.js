@@ -8,26 +8,41 @@ export default {
     extend: {
       colors: {
         brand: {
-          DEFAULT: '#4299e1', // 2.1 品牌蓝
-          hover: '#3182ce',   // 2.4 悬停色
-          dark: '#1a2530',    // 2.1 深蓝灰
-          light: '#90cdf4',   // 2.2 浅蓝
+          DEFAULT: '#19bfae',
+          hover: '#31cdbc',
+          dark: '#109b8f',
+          light: '#dff6f1',
         },
-        sidebar: '#2d3748', // 2.1 侧边栏蓝灰
+        sidebar: '#fffdf6',
         ui: {
-          bg: '#f7fafc',      // 2.3 背景浅灰
-          card: '#ffffff',    // 2.3 内容卡片
-          border: '#e2e8f0',  // 2.3 边框灰
-          text: '#2d3748',    // 2.3 主要文字
-          subtext: '#718096', // 2.3 次要文字
-          success: '#48bb78', // 2.2 成功绿
-          warning: '#ed8936', // 2.2 高负载/警告
-          error: '#f56565'    // 2.2 故障/错误
-        }
+          bg: '#f7f4e8',
+          panel: '#fffdf6',
+          card: '#fffdf6',
+          soft: '#f3eddb',
+          border: '#ddd2b9',
+          text: '#4f3b2b',
+          body: '#725d42',
+          subtext: '#8f806d',
+          success: '#69ad38',
+          warning: '#e6ab20',
+          error: '#d95656',
+          info: '#6f91c8',
+        },
       },
       fontFamily: {
-        sans: ['PingFang SC', 'Microsoft YaHei', 'Segoe UI', 'sans-serif'], // 4.1 字体族
-      }
+        sans: ['Nunito', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', 'sans-serif'],
+        mono: ['SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', 'monospace'],
+      },
+      borderRadius: {
+        'app-control': '14px',
+        'app-card': '20px',
+        'app-page': '24px',
+      },
+      boxShadow: {
+        'app-panel': '0 16px 40px -30px rgba(79, 59, 43, 0.36)',
+        'app-soft': '0 10px 26px -24px rgba(79, 59, 43, 0.3)',
+        'app-primary': '0 4px 0 #0f8f84',
+      },
     },
   },
   plugins: [],
