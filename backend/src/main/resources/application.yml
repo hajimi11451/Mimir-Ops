@@ -1,16 +1,23 @@
+server:
+  port: ${SERVER_PORT:9003}
+
 spring:
   application:
-    name: backend
+    name: linshu-ops
+  
+  # 数据库配置
   datasource:
-    url: jdbc:mysql://localhost:3306/linshu_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
-    username: root
-    password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:linshu_db}?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD}
+  
+  # 邮件配置
   mail:
-    host: smtp.qq.com
-    port: 465
-    username: 
-    password: 
+    host: ${MAIL_HOST:smtp.qq.com}
+    port: ${MAIL_PORT:465}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
     protocol: smtp
     default-encoding: UTF-8
     properties:
@@ -20,42 +27,57 @@ spring:
       "[mail.smtp.timeout]": 5000
       "[mail.smtp.writetimeout]": 5000
 
-server:
-  port: 9003
-
+# MyBatis-Plus配置
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    log-impl: ${MYBATIS_LOG_IMPL:org.apache.ibatis.logging.stdout.StdOutImpl}
   global-config:
     db-config:
       id-type: auto
 
-qianfan:
-  v2:
-    # 千帆 OpenAI 兼容接口地址（固定到 v2）
-    base-url: https://qianfan.baidubce.com/v2
-    # 鉴权 Token
-    token: 
-    # 日志审核/日志分析使用的模型
-    audit-model-name: glm-5
-    # 聊天助手（含命令规划）使用的模型
-    chat-model-name: glm-5
-    # AI 接口读取超时时间（单位：秒）
-    read-timeout-seconds: 120
-    # Agent/工具调用链路读取超时时间（单位：秒）
-    agent-read-timeout-seconds: 30
-onds: 120
-# 监控采集频率，单位毫秒，默认 30000 (30秒)
+# 监控配置
 monitor:
   schedule:
-    fixed-rate: 30000
+    fixed-rate: ${MONITOR_INTERVAL:30000}
 
+# 告警配置
 alert:
   schedule:
-    fixed-rate: 120000 
+    fixed-rate: ${ALERT_INTERVAL:120000}
   recheck:
-    lookback-minutes: 20
+    lookback-minutes: ${ALERT_LOOKBACK:20}
   mail:
-    from: 1431668312@qq.com
-    cooldown-minutes: 30
+    from: ${MAIL_FROM:${MAIL_USERNAME}}
+    cooldown-minutes: ${MAIL_COOLDOWN:30}
+
+# 千帆AI配置
+qianfan:
+  v2:
+    base-url: ${QIANFAN_BASE_URL:https://qianfan.baidubce.com/v2}
+    token: ${QIANFAN_TOKEN}
+    audit-model-name: ${QIANFAN_MODEL:glm-5}
+    chat-model-name: ${QIANFAN_MODEL:glm-5}
+    read-timeout-seconds: ${QIANFAN_TIMEOUT:120}
+    agent-read-timeout-seconds: ${QIANFAN_AGENT_TIMEOUT:30}
+
+# JWT配置
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION:86400000}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+  cookie-name: ${JWT_COOKIE_NAME:linshu_token}
+
+# 加密配置
+encryption:
+  key: ${ENCRYPTION_KEY}
+  algorithm: AES/CBC/PKCS5Padding
+  iv-length: 16
+
+# 日志配置
+logging:
+  level:
+    root: ${LOG_LEVEL:INFO}
+    com.example.backend: ${APP_LOG_LEVEL:DEBUG}
+  file:
+    name: ${LOG_FILE:logs/linshu-ops.log}

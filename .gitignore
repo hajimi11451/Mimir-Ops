@@ -1,0 +1,19 @@
+# 后端
+backend/.env
+backend/.env.*
+backend/logs/
+backend/target/
+
+# 前端
+front/.env.local
+front/dist/
+front/node_modules/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# 日志
+*.log
