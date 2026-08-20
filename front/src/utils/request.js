@@ -1,8 +1,11 @@
 import axios from 'axios'
+import { ElMessage } from 'element-plus'
+import router from '../router'
 
 const request = axios.create({
   baseURL: '/', // 去除 /api 前缀，直接使用根路径配合 Vite 代理
-  timeout: 10000
+  timeout: 10000,
+  withCredentials: true // 自动携带cookie（JWT token）
 })
 
 // 响应拦截器
@@ -24,6 +27,20 @@ request.interceptors.response.use(
     return res
   },
   error => {
+    // 处理401未授权 - 跳转到登录页
+    if (error.response && error.response.status === 401) {
+      ElMessage.error('登录已过期，请重新登录')
+      localStorage.removeItem('user')
+      router.push('/login')
+      return Promise.reject(new Error('未授权，请重新登录'))
+    }
+    
+    // 处理403禁止访问
+    if (error.response && error.response.status === 403) {
+      ElMessage.error('没有访问权限')
+      return Promise.reject(new Error('没有访问权限'))
+    }
+    
     // 处理HTTP错误（如400, 500等）
     if (error.response && error.response.data) {
       const res = error.response.data

@@ -37,6 +37,7 @@ const router = createRouter({
           component: Dashboard,
           meta: {
             title: '总览',
+            requiresAuth: true,
           },
         },
         {
@@ -45,6 +46,7 @@ const router = createRouter({
           component: DiagnosisView,
           meta: {
             title: '诊断',
+            requiresAuth: true,
           },
         },
         {
@@ -53,6 +55,7 @@ const router = createRouter({
           component: OpsAssistantView,
           meta: {
             title: '灵枢助手',
+            requiresAuth: true,
           },
         },
         {
@@ -61,6 +64,7 @@ const router = createRouter({
           component: AutoExecutionView,
           meta: {
             title: '处置',
+            requiresAuth: true,
           },
         },
         {
@@ -69,6 +73,7 @@ const router = createRouter({
           component: InfoListView,
           meta: {
             title: '告警',
+            requiresAuth: true,
           },
         },
         {
@@ -77,6 +82,7 @@ const router = createRouter({
           component: InfoDetailView,
           meta: {
             title: '告警详情',
+            requiresAuth: true,
           },
         },
         {
@@ -85,11 +91,29 @@ const router = createRouter({
           component: AlertSettingsView,
           meta: {
             title: '通知',
+            requiresAuth: true,
           },
         },
       ],
     },
   ],
+})
+
+// 路由守卫：检查认证状态
+router.beforeEach((to, from, next) => {
+  const isLoggedIn = localStorage.getItem('user')
+  
+  // 如果路由需要认证但用户未登录，重定向到登录页
+  if (to.meta.requiresAuth && !isLoggedIn) {
+    next('/login')
+  } 
+  // 如果已登录但访问登录页，重定向到dashboard
+  else if (to.path === '/login' && isLoggedIn) {
+    next('/dashboard')
+  } 
+  else {
+    next()
+  }
 })
 
 export default router
