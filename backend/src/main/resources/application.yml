@@ -20,6 +20,9 @@ spring:
       "[mail.smtp.timeout]": 5000
       "[mail.smtp.writetimeout]": 5000
 
+server:
+  port: 9003
+
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true

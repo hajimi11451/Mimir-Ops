@@ -18,25 +18,26 @@ export default defineConfig({
     },
   },
   server: {
+    port: 9000,
     proxy: {
       '/user': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:9003',
         changeOrigin: true
       },
       '/info': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:9003',
         changeOrigin: true
       },
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:9003',
         changeOrigin: true
       },
       '/diagnosis': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:9003',
         changeOrigin: true
       },
       '/ws': {
-        target: 'ws://localhost:8080',
+        target: 'ws://localhost:9003',
         ws: true,
         changeOrigin: true
       }
