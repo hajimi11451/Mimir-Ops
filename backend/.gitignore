@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Local dependency jars (managed by Maven, do not commit)
+lib/

@@ -579,6 +579,7 @@ public class AiUtils {
                 messages.add(userMsg);
 
                 requestBody.put("messages", messages);
+                //ai辅助生成：Trae用户端 2026年3月11日
                 log.info("AI request start, requestId={}, model={}, attempt={}/{}, url={}, messageCount={}, systemPromptLength={}, userPromptLength={}, promptPreview={}",
                         requestId,
                         targetModel,
@@ -866,6 +867,7 @@ public class AiUtils {
         requestBody.put("model", chatModelName);
         requestBody.put("messages", messages == null ? Collections.emptyList() : messages);
         requestBody.put("tools", tools == null ? Collections.emptyList() : tools);
+        //ai辅助生成：Trae用户端 2026年3月11日
         log.info("AI tools request start, requestId={}, model={}, url={}, messageCount={}, toolCount={}, messagePreview={}, toolPreview={}",
                 requestId,
                 chatModelName,

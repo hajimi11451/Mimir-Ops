@@ -147,6 +147,7 @@ public class LlmClient {
 
         for (int attempt = 0; attempt <= REQUEST_MAX_RETRIES; attempt++) {
             try {
+                //ai辅助生成：Trae用户端 2026年3月11日
                 log.info("LLM request start, requestId={}, type={}, attempt={}/{}, model={}, url={}, messageCount={}, toolCount={}, responseFormat={}, messagePreview={}, toolPreview={}",
                         requestId,
                         requestType,

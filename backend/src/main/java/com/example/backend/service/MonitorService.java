@@ -83,6 +83,7 @@ public class MonitorService {
      * 定时任务：每隔一段时间执行一次 (由 monitor.schedule.fixed-rate 配置，默认 60000ms)
      * 遍历数据库中的服务器配置，远程采集启用的系统监控指标
      */
+    //AI辅助生成：“deepseek网页端2026年1月18-2026年2月2号”（后端）
     @Scheduled(
             initialDelayString = "${monitor.schedule.fixed-rate:60000}",
             fixedRateString = "${monitor.schedule.fixed-rate:60000}"
@@ -177,6 +178,7 @@ public class MonitorService {
         }
     }
 
+    //AI辅助生成：“deepseek网页端2026年1月18-2026年2月2号”（后端）
     private MetricSnapshot collectMetricSnapshot(String host, String user, String password, MonitorSettings settings) throws Exception {
         Session session = null;
         try {
